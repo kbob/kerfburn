@@ -24,9 +24,16 @@ back/fw: $(fw_ofiles)
 back/%.o: back/%.c
 	$(BACK_CC) $(BACK_CFLAGS) $(BACK_CPPFLAGS) -c $< -o $@
 
+back/%.hex: back/%
+	$(BACK_OBJCOPY) -O ihex -R .eeprom $< $@
+
 all-back:   build-back
 build-back: back-programs
+load-back:  back/fw.hex
+	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
+
 clean-back:
 	cd back && rm -f fw *~ *.o .*.d TAGS $(JUNK)
 
-.PHONY: back-programs all-back build-back clean-back
+.PHONY: back-programs all-back build-back load-back clean-back
+JUNK += *.hex

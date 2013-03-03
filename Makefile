@@ -1,7 +1,5 @@
-# Good targets:
-# build all load test tests programs libs clean
-# all-front build-front test-front front-tests clean-front
-# all-back build-back load-back clean-back
+# Top level makefile.
+# XXX explain this.
 
 default: help
 help:
@@ -24,18 +22,10 @@ help:
 	@echo '    clean-front    - remove generated files in front end'
 	@echo '    clean-back     - remove generated files in back end'
 	@echo ''
-	@echo 'Individual Programs'
-	@$(foreach p, $(PROGRAMS),      echo '    $(patsubst ./%,%,$p)';)
-	@echo ''
-	@echo 'Individual Test Programs'
-	@$(foreach t, $(TEST_PROGRAMS), echo '    $(patsubst ./%,%,$t)';)
-	@echo ''
-	@echo 'Individual Test Scripts'
-	@$(foreach t, $(TEST_SCRIPTS), echo '    $(patsubst ./%,%,$t)';)
-	@echo ''
 
 all:      all-front all-back
 test:     test-front
+load:     load-back
 build:    build-front build-back
 clean:    clean-front clean-back
 
@@ -44,7 +34,8 @@ libs:     front-libs
 tests:    front-tests
 
 
-.PHONY: default help all test tests load build frontend backend programs clean
+.PHONY: all backend build clean default frontend help libs load programs \
+        test tests
 
 include front/Make.inc
 include back/Make.inc

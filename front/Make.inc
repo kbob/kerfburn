@@ -9,3 +9,6 @@ all-front:
 test-front:
 build-front:
 clean-front:
+
+.PHONY: front-libs front-programs front-tests \
+	all-front test-front build-front clean-front
