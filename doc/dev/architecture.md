@@ -28,20 +28,21 @@ shaft has 20 threads per inch.  So each motor rotation moves the table
 
 There are five microswitches.  All The microswitches are wired in the
 normally closed configuration.  Four are limit switches: X minimum, Y
-minimum, Z minimum and Z maximum.  The Z min and max switches are not
-yet wired in.  The fifth switch is on the top door.  Only the X min
-and Y min switches are presently wired in.
+minimum, Z minimum and Z maximum.  The fifth switch detects when the
+door is open.  All five switches are installed, but the Z min, Z max,
+and door open switches are not yet wired in.
 
 There will be a main laser.  It will be a 40 watt CO2 laser.  It will
-be about 50mm in diameter and 700mm long.  It will have a separate
-high voltage power supply.  The supply will, I am told, have an input
-that accepts an analog voltage or PWM input to control its output
-level, and will have a second input which switches its output on or
-off.
+be in a glass tube about 50mm in diameter and 700mm long.  It will
+have a separate high voltage power supply.  The supply will, I am
+told, have an input that accepts an analog voltage or PWM input to
+control its output level, and will have a second input which switches
+its output on or off.
 
-The main laser will be water cooled.  There is a water pump that runs
-off 110V house current.  It will pump water through the laser tube and
-then throgh a radiator and back to a reservoir.
+The main laser will be water cooled.  The glass tube includes a water
+jacket.  There is a water pump that runs off 110V house current.  It
+will pump water through the laser tube and then throgh a radiator and
+back to a reservoir.
 
 There will be a temperature sensor in the water line and a flow sensor
 in the water line.
