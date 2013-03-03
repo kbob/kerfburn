@@ -5,8 +5,8 @@
 ## Latencies and Priorities
 
 I don't know exactly how fast the motors will run.  If they could hit
-1000 mm/sec on a rapid movement, that would represent 78K steps per
-second, or an interrupt about every 12.7 microseconds.
+1000 mm/sec on a rapid movement, that would represent 78K microsteps
+per second, or an interrupt about every 12.7 microseconds.
 
 Serial receive latency is easier to calculate.  There is no flow
 control and no buffering of the serial input.  If the baud rate is
@@ -63,6 +63,18 @@ If the CPU can't keep up, we'll just slow down the max motor speed
 as needed.
 
 
+### Interrupt Priorities
+
+The AVR has hardwired interrupt priorities.  I should list them and 
+see how they affect these latency requirements.
+
+**XXX List interrupts here.**
+
+I think the PCINTn interrupts are high priority.  In the worst case, I
+could run an external wire from the counter comparator outputs to PCINTn
+pins and use the PCINTn interrupt instead of the compare match interrupt.
+
+
 ## Tasks and Interrupts
 
 These hardware interrupts will be active, possibly not all at once.
@@ -94,7 +106,6 @@ main loop will poll for work to do
 * Accept and verify serial input
 * Enqueue commands for motors and lasers
 * Monitor sensors and switches
-
 
 
 ## Memory
