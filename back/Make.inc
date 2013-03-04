@@ -9,10 +9,10 @@
  BACK_AVRDUDE := avrdude
 
 BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L
-  BACK_CFLAGS := -g -O3 -Wall -Werror
+  BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
 
-   fw_sources := main.c
+   fw_sources := main.c softint.c
     fw_cfiles := $(filter %.c, $(fw_sources:%=back/%))
     fw_ofiles := $(fw_cfiles:%.c=%.o)
 
