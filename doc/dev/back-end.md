@@ -298,3 +298,13 @@ These seem like a useful set of LED states.
   * Some kind of animation at the beginning of a job.
 
 I've prototyped the green, red and amber.
+
+
+## Assertions
+
+I need some sort of assertion mechanism.  The protocol should allow
+sending a fatal error message: "Print this and abort."  The firmware
+will emit that message repeatedly until reset.
+
+The message should not be a string -- that takes too much space.
+I could define a list of fatal error codes...
