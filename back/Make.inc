@@ -1,6 +1,8 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file included by toplevel makefile
 
+   fw_sources := main.c abort.c softint.c timer.c
+
      BACK_MCU := atmega2560
       BACK_CC := avr-gcc
       BACK_AR := avr-ar
@@ -12,9 +14,16 @@ BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L
   BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
 
-   fw_sources := main.c softint.c
     fw_cfiles := $(filter %.c, $(fw_sources:%=back/%))
     fw_ofiles := $(fw_cfiles:%.c=%.o)
+
+all-back:   build-back
+build-back: back-programs
+load-back:  back/fw.hex
+	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
+
+clean-back:
+	cd back && rm -f fw *~ *.o .*.d TAGS $(JUNK)
 
 back-programs: back/fw
 
@@ -27,13 +36,13 @@ back/%.o: back/%.c
 back/%.hex: back/%
 	$(BACK_OBJCOPY) -O ihex -R .eeprom $< $@
 
-all-back:   build-back
-build-back: back-programs
-load-back:  back/fw.hex
-	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
+# C source dependency generation.
+back/.%.d : back/%.c
+	@rm -f "$@"
+	@$(BACK_CC) -M -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< || \
+	    rm -f "$@"
 
-clean-back:
-	cd back && rm -f fw *~ *.o .*.d TAGS $(JUNK)
-
-.PHONY: back-programs all-back build-back load-back clean-back
+.PHONY: all-back build-back load-back clean-back back-programs
 JUNK += *.hex
+-include $(fw_cfiles:back/%.c=back/.%.d)
+

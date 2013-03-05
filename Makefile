@@ -1,5 +1,5 @@
 # Top level makefile.
-# XXX explain this.
+# XXX write a doc on the build system.
 
 default: help
 help:

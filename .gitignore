@@ -1,5 +1,10 @@
 *~
 *.o
+*.a
+*.so
 *.hex
+.*.d
+*.pyc
 .DS_Store
+a.out
 back/fw

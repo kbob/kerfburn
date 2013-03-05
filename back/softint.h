@@ -1,7 +1,10 @@
 #ifndef SOFTINT_included
 #define SOFTINT_included
 
+#include <stdbool.h>
 #include <stdint.h>
+
+#include <util/atomic.h>
 
 // Software interrupt is intermediate in priority between hardware
 // interrupt and base-level (non-interrupt) code.  A software interrupt
@@ -24,11 +27,9 @@ typedef enum softint_task {
     ST_TIMER   = 1 << 1,
 } softint_task;
 
-extern void trigger_softint_from_base(uint8_t task);
-extern void trigger_softinit_from_softint(uint8_t task);
-extern void trigger_softint_from_hardint(uint8_t task);
-
-extern void softint_dispatch(void); // private
+static inline void trigger_softint_from_base     (uint8_t task);
+static inline void trigger_softinit_from_softint (uint8_t task);
+static inline void trigger_softint_from_hardint  (uint8_t task);
 
 #define ISR_TRIGGERS_SOFTINT(vector)                            \
     void f_##vector(void);                                      \
@@ -54,6 +55,7 @@ extern void softint_dispatch(void); // private
                          "push   r31");                         \
                                                                 \
         f_##vector();                                           \
+        softint_private.is_active = true;                       \
         sei();                                                  \
         softint_dispatch();                                     \
                                                                 \
@@ -76,5 +78,51 @@ extern void softint_dispatch(void); // private
                          "reti");                               \
     }                                                           \
     void f_##vector(void)
+
+extern struct softint_private {
+    bool    is_active;
+    uint8_t pending_tasks;
+} softint_private;
+
+extern void softint_dispatch(void); // private
+
+// trigger_softint_from_base()
+//
+// Assume that interrupts are enabled and that we are called from base
+// level.  Also assume that no soft interrupts are already pending.
+// (Otherwise we would already have serviced them.)
+
+static inline void trigger_softint_from_base(uint8_t task)
+{
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+        softint_private.pending_tasks = task;
+        softint_private.is_active = true;
+    }
+    softint_dispatch();
+}
+
+// trigger_softint_from_softint()
+//
+// Simply set the task flag.  The dispatcher will see it next time
+// through.
+
+static inline void trigger_softinit_from_softint(uint8_t task)
+{
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+        softint_private.pending_tasks |= task;
+    }
+}
+
+// trigger_softint_from_hardint()
+//
+// When called, we do not know whether the soft interrupt is active.
+// We simply set the task flag here.  When this ISR returns, because
+// it was declared with ISR_TRIGGERS_SOFTINT, the soft interrupt will
+// be delivered.
+
+static inline void trigger_softint_from_hardint(uint8_t task)
+{
+    softint_private.pending_tasks |= task;
+}
 
 #endif /* !SOFTINT_included */
