@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "serial.h"
 #include "timer.h"
 
 // Test these.
@@ -18,6 +19,7 @@ static void initialize_devices(void)
     // Enable interrupts.
     // (That's enough for now.)
     init_timer();
+    init_serial();
     sei();
 }
 
@@ -61,7 +63,20 @@ void do_housekeeping(void)
     if (!toggler_enqueued) {
         toggler_enqueued = true;
         next += inc;
-        if ((inc >>= 1) < 1) inc = 2000;
+        if ((inc >>= 1) < 1) {
+            inc = 2000;
+        }
+        for (int i = 0; i < 300; i++) {
+            while (!serial_tx_is_available())
+                continue;
+            serial_tx_put_char('/' + i % 11);
+        }
+       while (!serial_tx_is_available())
+            continue;
+        serial_tx_put_char('\r');
+        while (!serial_tx_is_available())
+            continue;
+        serial_tx_put_char('\n');
         static timeout toggler;
         toggler.to_func = toggler_done;
         enqueue_timeout(&toggler, next);
