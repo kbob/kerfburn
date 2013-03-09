@@ -1,5 +1,6 @@
 Just some scattered notes...
 
+
 # Hardware
 
 The firmware is closely targeted at the hardware I am building.  So
@@ -146,7 +147,6 @@ another Arduino or similar to manage the front panel.
 
 # Firmware Overview
 
-
 ## Division of Responsibility
 
 The Raspberry Pi will handle front end duties.  It will implement the
@@ -181,6 +181,7 @@ The Pi announces itself on the local network using the ZeroConf
 protocol.  It appears as a web server and as an ssh terminal.
 It will also
 
+
 ## External File Formats
 
 The first external file format will be G-Code.  G-Code is a good match
@@ -192,7 +193,6 @@ will not have full access to all of the laser cutter's capabilities.
 
 
 ## Internal Interfaces
-
 
 I have a catchy name for the serial protocol between the Pi and the
 Azteeg.  It call it Specificode.  The name indicates that the protocol

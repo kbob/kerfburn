@@ -1,3 +1,6 @@
+(The information in this document is incomplete and obsolete.  See
+specificode.md for possibly better info.)
+
 There is a protocol used between the Pi and the Azteeg.  I am calling
 it Specificode to indicate that it is nonportable.
 
