@@ -22,7 +22,7 @@ const param_descriptor param_descriptors[PARAM_COUNT] = {
     { "yd", PT_SIGNED,   {  0  } }, // y distance
 };
 
-xparam_index lookup_param(const char *name)
+param_index lookup_param(const char *name)
 {
     uint8_t lo = 0, hi = PARAM_COUNT;
     while (lo < hi) {
