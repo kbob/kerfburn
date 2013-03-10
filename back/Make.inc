@@ -1,7 +1,7 @@
 #!/usr/bin/make -*- makefile-gmake -*-
-# This file included by toplevel makefile
+# This file is included by the toplevel makefile.
 
-   fw_sources := main.c abort.c fw_assert.c serial.c softint.c timer.c
+   fw_sources := main.c abort.c fw_assert.c param.c parser.c serial.c softint.c timer.c
 
      BACK_MCU := atmega2560
       BACK_CC := avr-gcc
@@ -44,5 +44,7 @@ back/.%.d : back/%.c
 
 .PHONY: all-back build-back load-back clean-back back-programs
 JUNK += *.hex
--include $(fw_cfiles:back/%.c=back/.%.d)
 
+ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''
+  -include $(fw_cfiles:back/%.c=back/.%.d)
+endif

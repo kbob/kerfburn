@@ -1,7 +1,9 @@
 # Top level makefile.
 # XXX write a doc on the build system.
 
-default: help
+MAKEFLAGS += -j
+
+.MAKE_DEFAULT: help
 help:
 	@echo 'Common Targets'
 	@echo '    all            - build everything, run all tests'
@@ -34,8 +36,7 @@ libs:     front-libs
 tests:    front-tests
 
 
-.PHONY: all backend build clean default frontend help libs load programs \
-        test tests
+.PHONY: all build clean default help libs load programs test tests
 
 include front/Make.inc
 include back/Make.inc
