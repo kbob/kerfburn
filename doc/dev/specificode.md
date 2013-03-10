@@ -34,8 +34,8 @@ Just define some ASCII commands.  One per line.
 An assignment look like
 
    name=value
-   
-Variable names are one or two lowercase letters long.
+
+Variable names are exactly two lowercase letters long.
 
 Each variable has a type.  There are three types.
 
@@ -51,10 +51,10 @@ Enumeration.  Enumeration values are represented as single characters.
 
 ### Variables
 
-#### t &mdash; Time
+#### dt &mdash; Dwell Time
 *unsigned integer*  
-Duration of next-enqueued movement in clock ticks.
-The clock ticks at 16 MHz.
+Duration of next-enqueued dwell in CPU clock ticks.
+The CPU clock ticks at 16 MHz.
 
 
 #### xd, yd &mdash; X, Y Distance
@@ -92,8 +92,14 @@ These values are legal.
 Set the current laser's firing mode.  These values are legal.
 
 + **c** - continuous
-+ **p** - pulsed
-+ **o** - none
++ **t** - timed pulse
+* **d** - distance pulse
++ **o** - off
+
+In continuous mode, the laser fires continuously.
+In timed pulse mode, the laser pulses every **pi** CPU ticks.
+In distance pulse mode, the laser pulses each time the motors have
+moved the cutting point by **pd** microsteps along the major axis.
 
 
 #### lp &mdash; Laser Power
@@ -101,46 +107,57 @@ Set the current laser's firing mode.  These values are legal.
 Set the main laser's power level.
 Legal values range from 0, off, to 1023, full power.
 
-The visible laser's power level can not be changed &mdash;
-it is always at full power.
+The visible laser's power level can not be changed.
+It always fires at full power.
 
 
-#### pd &mdash; Pulse Duration
+#### pd &mdash; Pulse Distance
+*unsigned integer*  
+Distance between laser pulses.
+Only used when laser is in distance pulse mode.
+
+
+#### pi &mdash; Pulse Interval
+*unsigned integer*  
+Laser pulse repetition interval in CPU clock ticks.
+Only used when laser is in timed pulsed mode.
+
+
+#### pl &mdash; Pulse Length
 *unsigned integer*  
 Laser pulse duration in CPU clock ticks.
 
 
-#### ps Pulse Separation
+#### il &mdash; Illumination Level
 *unsigned integer*  
-Laser pulse separation time in CPU clock ticks.
-Only used during Dwell action.
+The bed illumination level.  Legal values are 0, off, to 127, full brightness.
 
 
 #### ia &mdash; Illumination Animation
 *enumeration*  
-The preset light animation.
-White and gray are steady state, used to illuminate the work piece.
-Blue burst indicates the laser cutter waking up
-Green throb indicates successful completion.
-Amber warning indicates a safety override.
-Red alert indicates a fault.
-Off is off.
+Selects one of the compiled-in animated sequences for the illumination.
+
+The laser cutter starting up is indicated by a blue burst.
+A successful job completion is indicated by a throbbing green animation.
+A warning is indicated by a blinking amber.
+A fault is indicated by a blinking red.
+
+The startup animation terminates after a few seconds.
+The other animations loop until cancelled.
 
 These values are legal.
 
-+ **w** - white, 100% brightness
-+ **q** - gray, 25% brightness (q stands for quarter)
-+ **b** - blue burst
-+ **g** - green throb
-+ **a** - amber warning
-+ **r** - red alert
-+ **o** - off
++ **s** - startup
++ **c** - complete
++ **w** - warning
++ **a** - alert
++ **n** - none
 
 
 ## Enqueue Action
 
 An action is enqueued to be performed when the previous action completes.
-Most actions require implicit paramters.  Those will be taken from the
+Most actions require implicit parameters.  Those will be taken from the
 values of the variables at the time the action is enqueued.
 An action is represented by the letter 'Q' and one other letter.
 
@@ -152,25 +169,29 @@ An action is represented by the letter 'Q' and one other letter.
 Stop movement for a specified time.
 If a laser is selected and the laser mode is continuous,
 continue to fire at the current power level.
-If the mode is pulsed, pulse at the rate.
+If the mode is timed pulse, pulse at the current rate.
 
 Implicit Parameters
 
- * **t** - Time
+ * **dt** - Dwell Time
  * **ls** - Laser Select
  * **lm** - Laser Mode
  * **lp** - Laser Power
- * **pd** - Pulse Duration
- * **ps** - Pulse Separation
+ * **pi** - Pulse Interval
+ * **pl** - Pulse Length
 
 
 #### Qm &mdash; Move
 
 Move the cutting position.  The lasers will not fire.
 
+IF **xa** or
+**ya** are nonzero, the cutting position will accelerate linearly
+for the whole move.  It is the front end's responsibility to enqueue
+successive moves to accelerate, cruise, and declerate.
+
 Implicit Parameters
 
- * **t** - Time
  * **xd** - X distance
  * **yd** - Y distance
  * **x0** - Initial X param
@@ -181,22 +202,38 @@ Implicit Parameters
 
 #### Qc &mdash; Cut
 
-Move the cutting position, firing the selected laser.
+Move the cutting position, firing the laser selected by **ls** according
+to the mode in **lm**.
+
+If the laser's mode is continuous, it will be fired for the duration
+of the cut at the power level specified by **lp**.
+
+If the mode is timed pulse,the laser will be pulsed at the interval
+specified by **pi** and duration specified by **pl**.  The power level
+will be as specified by **lp**.
+
+If the mode is distance pulse,the laser will be pulsed every **pd**
+microsteps along the cut's major axis.  The major axis is the axis
+along which the cutting point will travel furthest during the cut.
+The laser's pulse duration and power level will be as specified by
+**pl** and **lp**.
+
+If the laser mode is off, the laser will not fire.
 
 Implicit Parameters
 
- * **t** - Time
  * **xd** - X distance
  * **yd** - Y distance
  * **x0** - Initial X param
  * **y0** - Initial Y param
- * **xa** - X acceleration 
+ * **xa** - X acceleration
  * **ya** - Y acceleration
  * **ls** - Laser Select
  * **lm** - Laser Mode
  * **lp** - Laser Power
- * **pd** - Pulse Duration
- * **ps** - Pulse Separation
+ * **pd** - Pulse Distance
+ * **pi** - Pulse Interval
+ * **pl** - Pulse Length
 
 
 #### Qe &mdash; Engrave
@@ -213,6 +250,18 @@ The laser does not fire.
 Implicit Parameters: *none*
 
 
+## Status Commands
+
+(Define some commands that request status of various sorts.
+They start with S.  They are immediate.)
+Maybe rename S - Stop to H - Halt or E - Emergency Stop??
+
+- queue status
+- reader status
+- power status
+- what else?
+
+
 ## Immediate Actions
 
 These commands are executed immediately.  In most cases,
@@ -220,7 +269,7 @@ you want to execute a Wait command before other immediate
 commands.
 
 
-#### S &mdash; Stop.
+#### H &mdash; Halt.
 
 Shut off lasers, stop motors, flush action queue.
 Variable values are not affected.
@@ -240,11 +289,13 @@ Wait for enqueued actions to complete before executing another command.
 #### Ez, Dz &mdash; Enable, Disable Z Motor
 
 
+#### I &mdash; Illuminate.
 
-#### I &mdash; Set Illumination
-
-Set the LED illumination pattern to the current preset value.
+Set the bed illumination.  If an animation is selected by the **ia**
+variable, then that animation runs.  If that animation terminates,
+then the illumination is ramped to the level set by the **il** variable.
 
 Implicit Parameters
 
- * ip
+ * **ia** - illumination animation
+ * **il** - illumination level
