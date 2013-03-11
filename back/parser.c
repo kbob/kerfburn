@@ -23,9 +23,9 @@
 #define CMD_NOT_FOUND 0xFF      // returned by lookup_command()
 #define CMD_NAME_SIZE    3      // max command name size, including NUL byte
 
-typedef char            command_name[CMD_NAME_SIZE];
-typedef command_name    c_name;
-typedef void            command_function(void);
+typedef char             command_name[CMD_NAME_SIZE];
+typedef void             command_function(void);
+typedef command_name     c_name;
 typedef command_function c_func;
 
 typedef struct command_descriptor {
