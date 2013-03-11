@@ -2,11 +2,20 @@
 
 ## Design
 
-* The parser feeds the planner.  The parser blocks when the planner is busy.
-The planner blocks when either there is no input or the command queue is
-full.  What does the flow control to enable this look like?
+* The parser feeds the planner.  The parser blocks when the planner is
+  busy.  The planner blocks when either there is no input or the
+  command queue is full.  What does the flow control to enable this
+  look like?
 
-* Right now, the Emergency Stop command gets stuck in the queue and is not seen until the queue unblocks.  Can I do better?
+* Right now, the Emergency Stop command gets stuck in the queue and is
+  not seen until the queue unblocks.  Can I do better?
+
+* What are x0 and y0?  Do we really have all the right parameters to
+  start a movement or cut?
+
+* Add the Z axis variables.
+
+* Decide what the Send Status commands should be.
 
 
 ## Testing
@@ -24,7 +33,7 @@ full.  What does the flow control to enable this look like?
 
 * Document the build system?
 * Coding style document?
-* Write spec for the Send Status commands,
+* Document the Z axis variables.
 
 
 ## Coding
