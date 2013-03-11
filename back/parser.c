@@ -1,25 +1,146 @@
 #include "parser.h"
 
 #include <stdint.h>
+#include <string.h>
 
 #include "actions.h"
 #include "fw_assert.h"
-#include "param.h"
 #include "serial.h"
+#include "variables.h"
 
-#if 0
-Params
-dt ia il lm lp ls pd pi pl x0 xa xd y0 ya yd
+// Variables
+// dt ia il lm lp ls pd pi pl x0 xa xd y0 ya yd
+//
+// Commands
+// Da Dh Dl Dw Dx Dy Dz
+// Ea Eh El Ew Ex Ey Ez
+// H
+// I
+// Qc Qd Qe Qh Qm
+// Sb Sf Sz
+// W
 
-Commands
-Da Dh Dl Dw Dx Dy Dz
-El Eh Ea Ew Ex Ey Ez
-H
-I
-Qc Qd Qe Qh Qm
-S? S? S?
-W
+#define CMD_NOT_FOUND 0xFF      // returned by lookup_command()
+#define CMD_NAME_SIZE    3      // max command name size, including NUL byte
+
+typedef char            command_name[CMD_NAME_SIZE];
+typedef command_name    c_name;
+typedef void            command_function(void);
+typedef command_function c_func;
+
+typedef struct command_descriptor {
+    PGM_P   cd_name;
+    c_func *cd_func;
+} command_descriptor, c_desc;
+
+#define DEFINE_COMMAND_NAME(cmd) \
+    static const char cmd##_name[] PROGMEM = #cmd
+
+DEFINE_COMMAND_NAME(Da);
+DEFINE_COMMAND_NAME(Dh);
+DEFINE_COMMAND_NAME(Dl);
+DEFINE_COMMAND_NAME(Dw);
+DEFINE_COMMAND_NAME(Dx);
+DEFINE_COMMAND_NAME(Dy);
+DEFINE_COMMAND_NAME(Dz);
+DEFINE_COMMAND_NAME(Ea);
+DEFINE_COMMAND_NAME(Eh);
+DEFINE_COMMAND_NAME(El);
+DEFINE_COMMAND_NAME(Ew);
+DEFINE_COMMAND_NAME(Ex);
+DEFINE_COMMAND_NAME(Ey);
+DEFINE_COMMAND_NAME(Ez);
+DEFINE_COMMAND_NAME(H);
+DEFINE_COMMAND_NAME(I);
+DEFINE_COMMAND_NAME(Qc);
+DEFINE_COMMAND_NAME(Qd);
+DEFINE_COMMAND_NAME(Qe);
+DEFINE_COMMAND_NAME(Qh);
+DEFINE_COMMAND_NAME(Qm);
+DEFINE_COMMAND_NAME(Sb);
+DEFINE_COMMAND_NAME(Sf);
+DEFINE_COMMAND_NAME(Sz);
+DEFINE_COMMAND_NAME(W);
+
+
+static const c_desc command_descriptors[] PROGMEM = {
+    { Da_name, action_disable_air_pump     },
+    { Dh_name, action_disable_high_voltage },
+    { Dl_name, action_disable_low_voltage  },
+    { Dw_name, action_disable_water_pump   },
+    { Dx_name, action_disable_X_motor      },
+    { Dy_name, action_disable_Y_motor      },
+    { Dz_name, action_disable_Z_motor      },
+    { Ea_name, action_enable_air_pump      },
+    { Eh_name, action_enable_high_voltage  },
+    { El_name, action_enable_low_voltage   },
+    { Ew_name, action_enable_water_pump    },
+    { Ex_name, action_enable_X_motor       },
+    { Ey_name, action_enable_Y_motor       },
+    { Ez_name, action_enable_Z_motor       },
+    { H_name,  action_emergency_stop       },
+    { I_name,  action_illuminate           },
+    { Qc_name, action_enqueue_cut          },
+    { Qd_name, action_enqueue_dwell        },
+    { Qe_name, action_enqueue_engrave      },
+    { Qh_name, action_enqueue_home         },
+    { Qm_name, action_enqueue_move         },
+    { Sb_name, action_send_bar_status      },
+    { Sf_name, action_send_foo_status      },
+    { Sz_name, action_send_baz_status      },
+    { W_name,  action_wait                 },
+};
+
+static const uint8_t COMMAND_COUNT =
+    sizeof command_descriptors / sizeof command_descriptors[0];
+
+static void get_cmd_name(uint8_t i, c_name out)
+{
+    fw_assert(i < COMMAND_COUNT);
+    PGM_P ptr = (PGM_P)pgm_read_word(&command_descriptors[i].cd_name);
+    strncpy_P(out, ptr, sizeof out);
+    out[sizeof out - 1] = '\0';
+}
+
+static c_func *get_cmd_func(uint8_t i)
+{
+    fw_assert(i < COMMAND_COUNT);
+    return (c_func *)pgm_read_word(&command_descriptors[i].cd_func);
+}
+
+#ifndef FW_NDEBUG
+
+__attribute__((constructor))
+static void verify_commands(void)
+{
+    c_name prev_name, curr_name;
+    for (uint8_t i = 0; i < COMMAND_COUNT; i++) {
+        get_cmd_name(i, curr_name);
+        if (i)
+            fw_assert(strcmp(prev_name, curr_name) < 0);
+        strncpy(prev_name, curr_name, sizeof prev_name);
+    }
+}
+
 #endif
+
+static uint8_t lookup_command(c_name name)
+{
+    uint8_t lo = 0, hi = COMMAND_COUNT;
+    while (lo < hi) {
+        uint8_t mid = (lo + hi) / 2;
+        c_name mid_name;
+        get_cmd_name(mid, mid_name);
+        int c = strcmp(name, mid_name);
+        if (c == 0)
+            return mid;
+        if (c < 0)
+            hi = mid;
+        else
+            lo = mid + 1;
+    }
+    return CMD_NOT_FOUND;
+}
 
 static void error(void)
 {
@@ -37,7 +158,7 @@ static inline bool is_digit(uint8_t c)
     return c >= '0' && c <= '9';
 }
 
-static bool check_at_eol(uint8_t pos)
+static bool consume_line(uint8_t pos)
 {
     uint8_t c = serial_rx_peek_char(pos);
     if (!is_eol(c)) {
@@ -48,190 +169,23 @@ static bool check_at_eol(uint8_t pos)
     return true;
 }
 
-static inline void parse_enable_action(void)
-{
-    uint8_t c1 = serial_rx_peek_char(1);
-    if (!check_at_eol(2)) {
-        error();
-        return;
-    }
-    switch (c1) {
-
-    case 'a':
-        action_enable_air_pump();
-        break;
-
-    case 'h':
-        action_enable_high_voltage();
-        break;
-
-    case 'l':
-        action_enable_low_voltage();
-        break;
-
-    case 'w':
-        action_enable_water_pump();
-        break;
-
-    case 'x':
-        action_enable_X_motor();
-        break;
-
-    case 'y':
-        action_enable_Y_motor();
-        break;
-
-    case 'z':
-        action_enable_Z_motor();
-        break;
-
-    default:
-        error();
-    }
-}
-
-static inline void parse_disable_action(void)
-{
-    uint8_t c1 = serial_rx_peek_char(1);
-    if (!check_at_eol(2)) {
-        error();
-        return;
-    }
-    switch (c1) {
-
-    case 'a':
-        action_disable_air_pump();
-        break;
-
-    case 'h':
-        action_disable_high_voltage();
-        break;
-
-    case 'l':
-        action_disable_low_voltage();
-        break;
-
-    case 'w':
-        action_disable_water_pump();
-        break;
-
-    case 'x':
-        action_disable_X_motor();
-        break;
-
-    case 'y':
-        action_disable_Y_motor();
-        break;
-
-    case 'z':
-        action_disable_Z_motor();
-        break;
-
-    default:
-        error();
-    }
-}
-
-static inline void parse_enqueue_action(void)
-{
-    uint8_t c1 = serial_rx_peek_char(1);
-    if (!check_at_eol(2)) {
-        error();
-        return;
-    }
-    switch (c1) {
-
-    case 'd':
-        action_enqueue_dwell();
-        break;
-
-    case 'm':
-        action_enqueue_move();
-        break;
-
-    case 'c':
-        action_enqueue_cut();
-        break;
-
-    case 'e':
-        action_enqueue_engrave();
-        break;
-
-    case 'h':
-        action_enqueue_home();
-        break;
-
-    default:
-        error();
-        break;
-    }
-}
-
-static inline void parse_status_action(void)
-{
-    uint8_t c1 = serial_rx_peek_char(1);
-    if (!check_at_eol(2)) {
-        error();
-        return;
-    }
-    switch (c1) {
-
-    case 'f':
-        action_send_foo_status();
-        break;
-
-    case 'b':
-        action_send_bar_status();
-        break;
-
-    case 'z':
-        action_send_baz_status();
-        break;
-
-    default:
-        error();
-        break;
-    }
-}
-
 static inline void parse_action(uint8_t c0)
 {
-    switch (c0) {
-
-    case 'D':
-        parse_disable_action();
-        break;
-
-    case 'E':
-        parse_enable_action();
-        break;
-
-    case 'H':
-        if (check_at_eol(1))
-            action_emergency_stop();
-        break;
-
-    case 'I':
-        if (check_at_eol(1))
-            action_illuminate();
-        break;
-
-    case 'Q':
-        parse_enqueue_action();
-        break;
-
-    case 'S':
-        parse_status_action();
-        break;
-
-    case 'W':
-        if (check_at_eol(1))
-            action_wait();
-        break;
-
-    default:
+    c_name name;
+    name[0] = c0;
+    uint8_t pos = 1;
+    uint8_t c1 = serial_rx_peek_char(1);
+    if (!is_eol(c1))
+        name[pos++] = c1;
+    name[pos] = '\0';
+    uint8_t index = lookup_command(name);
+    if (index == CMD_NOT_FOUND) {
         error();
-        break;
+        return;
+    }
+    if (consume_line(pos)) {
+        c_func *action = get_cmd_func(index);
+        (*action)();
     }
 }
 
@@ -247,20 +201,18 @@ static inline void parse_assignment(uint8_t c0)
         error();
         return;
     }
-    char vname[3] = { c0, c2, '\0' };;
-    uint8_t index = lookup_param(vname);
-    if (index == 0xFF) {
+    v_name name = { c0, c1, '\0' };;
+    uint8_t index = lookup_variable(name);
+    if (index == VAR_NOT_FOUND) {
         error();
         return;
     }
-    const param_descriptor *desc = &param_descriptors[index];
-    uint8_t type = desc->p_type;
-    param_value value;
+    v_value value;
     uint8_t pos = 3;
     bool is_negative = false;
-    switch (type) {
+    switch (get_variable_type(index)) {
 
-    case PT_SIGNED:
+    case VT_SIGNED:
         {
             uint8_t c3 = serial_rx_peek_char(3);
             pos++;
@@ -273,39 +225,39 @@ static inline void parse_assignment(uint8_t c0)
         }
         // Fall through.
 
-    case PT_UNSIGNED:
+    case VT_UNSIGNED:
         {
             uint32_t n = 0;
             uint8_t c;
             while (is_digit((c = serial_rx_peek_char(pos++))))
                 n = 10 * n + (c - '0');
             if (is_negative)
-                value.pv_signed = -(int32_t)n;
+                value.vv_signed = -(int32_t)n;
             else
-                value.pv_unsigned = n;
+                value.vv_unsigned = n;
         }
         break;
 
-    case PT_ENUM:
+    case VT_ENUM:
         {
             uint8_t c3 = serial_rx_peek_char(3);
             pos++;
-            if (!param_enum_is_OK(index, c3)) {
+            if (!variable_enum_is_OK(index, c3)) {
                 error();
                 return;
             }
-            value.pv_enum = c3;
+            value.vv_enum = c3;
         }
         break;
 
     default:
         fw_assert(false);
     }
-    if (check_at_eol(pos))
-        assign_param(index, value);
+    if (consume_line(pos))
+        set_variable(index, value);
 }
 
-void parse(void)
+void parse_line(void)
 {
     uint8_t c0 = serial_rx_peek_char(0);
     if (is_eol(c0)) {
@@ -313,7 +265,7 @@ void parse(void)
         return;
     }
 
-    const uint8_t hi_mask = 0xC0;
+    const uint8_t hi_mask = 0xE0;
     uint8_t c0_hi_bits = c0 & hi_mask;
     if (c0_hi_bits == ('A' & hi_mask))
         parse_action(c0);

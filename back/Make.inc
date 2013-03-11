@@ -1,7 +1,8 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file is included by the toplevel makefile.
 
-   fw_sources := main.c abort.c fw_assert.c param.c parser.c serial.c softint.c timer.c
+   fw_sources := main.c abort.c fw_assert.c parser.c serial.c softint.c \
+                 timer.c variables.c
 
      BACK_MCU := atmega2560
       BACK_CC := avr-gcc

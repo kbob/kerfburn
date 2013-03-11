@@ -1,7 +1,9 @@
 #include <stdbool.h>
 
+#include "parser.h"
 #include "serial.h"
 #include "timer.h"
+#include "variables.h"
 
 // Test these.
 // DONE millisecond time updates.
@@ -15,11 +17,10 @@ uint32_t next = 0;
 
 static void initialize_devices(void)
 {
-    // Start the millisecond timer.
-    // Enable interrupts.
-    // (That's enough for now.)
+    init_variables();
     init_timer();
     init_serial();
+    // XXX more devices coming...
     sei();
 }
 
@@ -82,6 +83,7 @@ void do_housekeeping(void)
         enqueue_timeout(&toggler, next);
     }
 #endif
+    parse_line();
 }
 
 int main()

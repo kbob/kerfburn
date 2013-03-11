@@ -11,7 +11,7 @@
 
 #define fw_assert(expr) ((expr) ? (void)0 : fw_assertion_failed(__LINE__))
 
-extern void fw_assertion_failed(int lineno) __attribute__((noreturn));
+extern void fw_assertion_failed(int line_no) __attribute__((noreturn));
 
 #endif
 
