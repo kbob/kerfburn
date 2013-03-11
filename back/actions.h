@@ -1,8 +1,6 @@
 #ifndef ACTIONS_included
 #define ACTIONS_included
 
-#include <stdbool.h>
-
 #define DECLARE_ACTION(name) extern void action_##name(void)
 
 DECLARE_ACTION(emergency_stop);
