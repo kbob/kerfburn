@@ -26,17 +26,18 @@ help:
 	@echo ''
 
 all:      all-front all-back
-test:     test-front
+test:     test-front test-back
 load:     load-back
 build:    build-front build-back
 clean:    clean-front clean-back
 
 programs: front-programs back-programs
 libs:     front-libs
-tests:    front-tests
+tests:    front-tests back-tests
 
 
 .PHONY: all build clean help libs load programs test tests
+FORCE:
 
 include front/Make.inc
 include back/Make.inc

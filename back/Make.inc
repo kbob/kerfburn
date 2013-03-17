@@ -1,8 +1,11 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file is included by the toplevel makefile.
 
-   fw_sources := main.c abort.c fw_assert.c parser.c serial.c softint.c \
-                 timer.c variables.c
+      subdirs := test
+     programs := fw
+
+   fw_sources := main.c abort.c actions.c e-stop.c fw_assert.c parser.c \
+                 serial.c softint.c timer.c variables.c
 
      BACK_MCU := atmega2560
       BACK_CC := avr-gcc
@@ -11,22 +14,26 @@
  BACK_OBJCOPY := avr-objcopy
  BACK_AVRDUDE := avrdude
 
-BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L
+BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback
   BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
+         JUNK += *.hex
 
     fw_cfiles := $(filter %.c, $(fw_sources:%=back/%))
     fw_ofiles := $(fw_cfiles:%.c=%.o)
 
-all-back:   build-back
-build-back: back-programs
+
+all-back:   build-back test-back
+build-back: back-programs back-tests
+test-back:  build-back $(subdirs:%=test-back/%)
 load-back:  back/fw.hex
 	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
-clean-back:
+clean-back: $(subdirs:%=clean-back/%)
 	cd back && rm -f fw *~ *.o .*.d TAGS $(JUNK)
 
-back-programs: back/fw
+back-programs: back/fw $(test_programs:%=back/%)
+back-tests: $(subdirs:%:back/%-tests)
 
 back/fw: $(fw_ofiles)
 	$(BACK_LD) $(BACK_LDFLAGS) $^ $(fw_ldlibs) -o $@
@@ -44,8 +51,9 @@ back/.%.d : back/%.c
 	    rm -f "$@"
 
 .PHONY: all-back build-back load-back clean-back back-programs
-JUNK += *.hex
 
 ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''
   -include $(fw_cfiles:back/%.c=back/.%.d)
 endif
+
+include $(subdirs:%=back/%/Make.inc)
