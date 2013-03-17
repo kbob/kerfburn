@@ -57,23 +57,24 @@ Duration of next-enqueued dwell in CPU clock ticks.
 The CPU clock ticks at 16 MHz.
 
 
-#### xd, yd &mdash; X, Y Distance
+#### xd, yd, zd &mdash; X, Y, Z Distance
 *signed integer*  
 
-Change of x or y motor position in microsteps.
+Change of x, y, or z motor position in microsteps.
 An X or Y microstep is 0.0127 millimeters (0.0005 inch).
+A Z microstep is ~0.000165 millimeters (0.0000065 inch).
 
 
-#### x0, y0 &mdash;  Initial X, Y Param
+#### x0, y0, z0 &mdash;  Initial X, Y, Z Param
 *unsigned integer*  
 
-Reciprocal of initial x or y motor velocity.
+Reciprocal of initial x, y, or z motor velocity.
 Expressed in ticks per microstep
 
 
-#### xa, ya &mdash; X, Y Acceleration
+#### xa, ya, za &mdash; X, Y, Z Acceleration
 *signed integer*  
-X or Y Acceleration.
+X, Y, or Z Acceleration.
 Acceleration in microsteps per 16777216 clock ticks (roughly 1.05 seconds).
 
 
@@ -194,10 +195,13 @@ Implicit Parameters
 
  * **xd** - X distance
  * **yd** - Y distance
+ * **zd** = Z distance
  * **x0** - Initial X param
  * **y0** - Initial Y param
+ * **z0** - Initial Z param
  * **xa** - X acceleration
  * **ya** - Y acceleration
+ * **za** - Z acceleration
 
 
 #### Qc &mdash; Cut
@@ -219,6 +223,8 @@ The laser's pulse duration and power level will be as specified by
 **pl** and **lp**.
 
 If the laser mode is off, the laser will not fire.
+
+The Z motor can not move during a cut.
 
 Implicit Parameters
 
@@ -244,7 +250,7 @@ TBD
 #### Qh &mdash; Home
 
 Move the cutting position to the home position.
-The home position is at minimum X and maxiumum Y.
+The home position is at minimum X, minimum Y, and minimum Z.
 The laser does not fire.
 
 Implicit Parameters: *none*

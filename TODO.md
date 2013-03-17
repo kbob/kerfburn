@@ -1,25 +1,52 @@
 # There Is Much To Do.
 
+
 ## Design
+
 
 * The parser feeds the planner.  The parser blocks when the planner is
   busy.  The planner blocks when either there is no input or the
   command queue is full.  What does the flow control to enable this
   look like?
 
+  **Answer:** the background task blocks waiting for serial input.  When it
+  has some, it calls the parser, and the parser calls the planner.  When
+  the command queue fills, the planner blocks waiting for space there.
+
+  The main loop spins waiting for input &mdash; there's nothing it can
+  interrupt.  The planner spins waiting for command queue space &mdash;
+  there's nothing it can interrupt either.
+
+
 * Right now, the Emergency Stop command gets stuck in the queue and is
   not seen until the queue unblocks.  Can I do better?
+
+  **Answer:** Yes.  Use an ASCII CAN character for the E-Stop command.
+  Have the serial driver call the e-stop handler directly from
+  interrupt.  The E-stop handler atomically turns off both lasers
+  (exact action TBD), flushes all three motor queues, sets the E-Stop
+  flag.
+
+  The serial driver part of this is implemented now.
+
 
 * What are x0 and y0?  Do we really have all the right parameters to
   start a movement or cut?
 
-* Add the Z axis variables.
+
+* <strike>Add the Z axis variables.</strike>
+  **Done.**
+
 
 * Decide what the Send Status commands should be.
+
 
 * Need a list of fault states.  In particular, need fault states when
   we fail to move off the limit switches.  If you move 1 cm, and
   you're still on the switch, the switch must be disconnected.
+
+  Also need to think about how faults are stored and reported.
+
 
 ## Testing
 
@@ -36,7 +63,7 @@
 
 * Document the build system?
 * Coding style document?
-* Document the Z axis variables.
+* <strike>Document the Z axis variables.</strike>  **Done.**
 
 
 ## Coding
@@ -60,3 +87,4 @@
 * Replace nylon bushings in X, Y and Z idler pulleys with aluminum.
 * Connect ATX power-ready pin to Azteeg.
 * Affix heat sinks to stepper drivers and adjust the current to max.
+* Add a limit switch for Y max.
