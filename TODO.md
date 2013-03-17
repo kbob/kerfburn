@@ -17,6 +17,9 @@
 
 * Decide what the Send Status commands should be.
 
+* Need a list of fault states.  In particular, need fault states when
+  we fail to move off the limit switches.  If you move 1 cm, and
+  you're still on the switch, the switch must be disconnected.
 
 ## Testing
 
@@ -47,3 +50,13 @@
 ## Cleanup
 
 * Use sig_atomic_t where appropriate.
+* Standardize filenames on "_" or "-" separators.
+    I think I prefer "-" for C and "_" for Python.
+
+
+## Hardware
+
+* Replace nylon bushings in Y V-wheels with aluminum.
+* Replace nylon bushings in X, Y and Z idler pulleys with aluminum.
+* Connect ATX power-ready pin to Azteeg.
+* Affix heat sinks to stepper drivers and adjust the current to max.
