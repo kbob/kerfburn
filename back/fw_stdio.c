@@ -6,8 +6,13 @@
 
 static int my_putc(char c, FILE *stream)
 {
-    if (c == '\n')
+    if (c == '\n') {
+        while (!serial_tx_is_available())
+            continue;
         serial_tx_put_char('\r');
+    }
+    while (!serial_tx_is_available())
+        continue;
     serial_tx_put_char(c);
     return 0;
 }
