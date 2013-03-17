@@ -8,3 +8,5 @@
 .DS_Store
 a.out
 back/fw
+back/test/cat/cat
+back/test/softint/softint
