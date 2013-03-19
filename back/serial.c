@@ -10,8 +10,7 @@
 #define TX_BUF_SIZE  256
 
 #define RX_BUF_SIZE  256
-#define RX_HI_WATER  (RX_BUF_SIZE - 64)
-#define RX_LO_WATER   64
+#define RX_FLOW_SHIFT  4
 
 #define ASCII_CAN  '\003'
 #define ASCII_LF     '\n'
@@ -29,13 +28,7 @@ static uint8_t  rx_buf[RX_BUF_SIZE] __attribute__((aligned(256)));
 static uint16_t rx_head;
 static uint16_t rx_tail;
 static uint8_t  rx_errs;
-static bool     rx_is_stopped;
 static uint8_t  rx_line_count;
-
-uint8_t get_line_count(void)    // XXX temporary
-{
-    return rx_line_count;
-}
 
 void init_serial(void)
 {
@@ -89,14 +82,6 @@ uint8_t serial_tx_is_available(void)
     return h != (t + 1) % TX_BUF_SIZE;
 }
 
-static inline void tx_send_oob_NONATOMIC(uint8_t c)
-{
-    if (bit_is_set(UCSR0A, UDRE0))
-        UDR0 = c;
-    else
-        tx_oob_char = c;
-}
-
 bool serial_tx_put_char(uint8_t c)
 {
     bool ok = true;
@@ -114,6 +99,15 @@ bool serial_tx_put_char(uint8_t c)
     return ok;
 }
 
+static inline void tx_send_oob_NONATOMIC(uint8_t c)
+{
+    if (bit_is_set(UCSR0A, UDRE0)) {
+        UDR0 = c;
+    } else {
+        tx_oob_char = c;
+    }
+}
+
 ISR(USART0_UDRE_vect)
 {
     if (tx_oob_char) {
@@ -127,6 +121,14 @@ ISR(USART0_UDRE_vect)
 
 // //  // //   // //  // //    // //  // //   // //  // //     // //  // //
 
+void serial_rx_start(void)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        rx_head = rx_tail = 0;
+        tx_send_oob_NONATOMIC(-(1 << RX_FLOW_SHIFT));
+    }    
+}
+
 uint8_t serial_rx_errors(void)
 {
     uint8_t errs = rx_errs;
@@ -139,25 +141,25 @@ uint8_t serial_rx_peek_errors(void)
     return rx_errs;
 }
 
-// XXX have two functions: is there any input and is there a line of input.
-bool serial_rx_is_ready(void)
+bool serial_rx_has_chars(void)
 {
-#if 0
     bool ready;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         ready = rx_errs || rx_head != rx_tail;
     }
     return ready;
-#else
+}
+
+bool serial_rx_has_lines(void)
+{
     bool ready;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         ready = rx_errs || rx_line_count;
     }
     return ready;
-#endif
 }
 
-uint16_t serial_rx_count(void)
+uint16_t serial_rx_char_count(void)
 {
     uint16_t h, t;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -167,11 +169,16 @@ uint16_t serial_rx_count(void)
     return (RX_BUF_SIZE + t - h) % RX_BUF_SIZE;
 }
 
+uint16_t serial_rx_line_count(void)
+{
+    return rx_line_count;
+}
+
 uint8_t serial_rx_peek_char(uint16_t pos)
 {
     uint8_t c;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fw_assert(pos < serial_rx_count());
+        fw_assert(pos < serial_rx_char_count());
         c = rx_buf[(rx_head + pos) % RX_BUF_SIZE];
     }
     return c;
@@ -180,12 +187,16 @@ uint8_t serial_rx_peek_char(uint16_t pos)
 void serial_rx_consume(uint16_t count)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fw_assert(count <= serial_rx_count());
+        fw_assert(count <= serial_rx_char_count());
         for (uint16_t i = 0; i < count; i++) {
             uint8_t c = rx_buf[rx_head];
             if (is_eol_char(c))
                 --rx_line_count;
             rx_head = (rx_head + 1) % RX_BUF_SIZE;
+            if (!(rx_head & ~-(1 << RX_FLOW_SHIFT))) {
+                uint8_t ack = rx_head >> RX_FLOW_SHIFT | -(1 << RX_FLOW_SHIFT);
+                tx_send_oob_NONATOMIC(ack);
+            }
         }
     }
 }
@@ -206,14 +217,6 @@ ISR(USART0_RX_vect)
                 rx_tail = new_tail;
                 if (is_eol_char(c))
                     rx_line_count++;
-            }
-            uint8_t nc = (RX_BUF_SIZE + rx_tail - rx_head) % RX_BUF_SIZE;
-            if (nc >= RX_HI_WATER && !rx_is_stopped) {
-                rx_is_stopped = true;
-                tx_send_oob_NONATOMIC(ASCII_XOFF);
-            } else if (nc < RX_LO_WATER && rx_is_stopped) {
-                rx_is_stopped = false;
-                tx_send_oob_NONATOMIC(ASCII_XON);
             }
         }
     }

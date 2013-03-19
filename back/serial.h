@@ -15,10 +15,12 @@ typedef enum serial_error_bit {
 
 extern void    init_serial(void);
 
+extern void     serial_rx_start        (void);
 extern uint8_t  serial_rx_errors       (void);
 extern uint8_t  serial_rx_peek_errors  (void);
-extern bool     serial_rx_is_ready     (void);
-extern uint16_t serial_rx_count        (void);
+extern bool     serial_rx_has_chars    (void);
+extern bool     serial_rx_has_lines    (void);
+extern uint16_t serial_rx_char_count   (void);
 extern uint8_t  serial_rx_peek_char    (uint16_t pos);
 extern void     serial_rx_consume      (uint16_t count);
 
