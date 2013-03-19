@@ -1,7 +1,6 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file is included by the toplevel makefile.
 
-# VPATH := back/test/cat back
 cat_sources := back/test/cat/cat.c back/e-stop.c back/fw_assert.c \
                back/fw_stdio.c back/serial.c back/softint.c back/timer.c
 
