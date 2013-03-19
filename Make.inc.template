@@ -1,0 +1,24 @@
+# -*- makefile-gmake -*-
+
+            T := ../../ <as many as needed>
+            P := <parent directory>
+            D := $D/<this directory>
+      subdirs := d1 d2 d3
+     programs := p1 p2 p3
+test_programs := tp1 tp2 tp3
+ test_targets := tt1 tt2 tt3
+
+include $T/Make.accum.inc
+include $(subdirs:%=$D/%/Make.inc)
+
+            T := ../../ <as many as needed>
+            P := <parent directory>
+            D := $D/<this directory>
+
+# ---
+
+   p1_sources := d1a.c d1b.c++ d1c.y
+   p1_libs    := path/to/lib1a.a
+   p1_ldlibs  := path/to/lib1b.a
+
+include $T/Make.rules.inc
