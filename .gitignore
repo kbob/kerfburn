@@ -7,6 +7,9 @@
 *.pyc
 .DS_Store
 a.out
+core
+front/thruport/thruport
 back/fw
 back/test/cat/cat
+back/test/cat/feeder
 back/test/softint/softint
