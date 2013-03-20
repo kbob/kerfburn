@@ -30,7 +30,7 @@ load-back:  back/fw.hex
 	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
 clean-back: $(subdirs:%=clean-back/%)
-	cd back && rm -f fw *~ *.o .*.d TAGS $(JUNK)
+	cd back && rm -f fw a.out core *~ *.o .*.d TAGS $(JUNK)
 
 back-programs: back/fw $(test_programs:%=back/%)
 back-tests: $(subdirs:%:back/%-tests)
