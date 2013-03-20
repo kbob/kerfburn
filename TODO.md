@@ -72,6 +72,8 @@
 * Add flow controller to serial RX driver.
 * Change serial RX driver to use 256 byte buffer.
 * Have serial RX driver count newlines and trigger the parser when it sees one.
+* Use a higher baud rate than 9600.  See comments in ftdi_sio.c near line 1122.
+  Also see http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
 
 
 ## Cleanup
@@ -83,7 +85,8 @@
 
 ## Hardware
 
-* Replace nylon bushings in Y V-wheels with aluminum.
+* <strike>Replace nylon bushings in Y V-wheels with aluminum.</strike>
+    **Done.**
 * Replace nylon bushings in X, Y and Z idler pulleys with aluminum.
 * Connect ATX power-ready pin to Azteeg.
 * Affix heat sinks to stepper drivers and adjust the current to max.
