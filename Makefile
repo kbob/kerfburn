@@ -1,7 +1,6 @@
 # Top level makefile.
-# XXX write a doc on the build system.
 
-    MAKEFLAGS += -j
+    MAKEFLAGS += -j4
 .DEFAULT_GOAL := help
 
 help:
