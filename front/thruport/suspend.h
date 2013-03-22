@@ -1,6 +1,6 @@
 #ifndef SUSPEND_included
 #define SUSPEND_included
 
-extern int suspend_main(int argc, char *argv[]);
+// XXX Feed me!
 
 #endif /* !SUSPEND_included */

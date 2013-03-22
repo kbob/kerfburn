@@ -1,10 +1,12 @@
 #include "daemon.h"
 
+#include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -12,19 +14,22 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
+#include "iocore.h"
 #include "paths.h"
+#include "serial.h"
 
-static const struct option daemon_options[] = {
-    { "debug", no_argument, NULL, 'd' },
-    { NULL,    0,           NULL,  0  }
-};
-
-bool debug = false;
+static bool debug_daemon = false;
 static int listen_socket;
+
+// XXX We only need to fork twice if the parent is going to stay alive.
+
+// XXX In the double fork case, the intermediate process should open a
+//     pipe for the daemon process to write error messages to, and should
+//     copy those messages to stderr.
 
 static int daemonize(void)
 {
-    if (debug)
+    if (debug_daemon)
         return 0;
     pid_t child = fork();
     if (child < 0) {
@@ -44,24 +49,24 @@ static int daemonize(void)
                     WCOREDUMP(status) ? " (core dumped)" : "");
             return -1;
         }
-        if (WEXITSTATUS(status))
+        if (WEXITSTATUS(status) != EXIT_SUCCESS)
             return -1;
         return child;
     } else {
         pid_t grandchild = fork();
         if (grandchild < 0) {
             perror("forkfork");
-            _exit(1);
+            _exit(EXIT_FAILURE);
         }
         if (grandchild > 0)
-            _exit(0);
+            _exit(EXIT_SUCCESS);
 
         // do stuff with descriptors, current directory, whatever
         umask(0);
         if (setsid() < 0)
-            perror("setsid"), exit(1);
+            perror("setsid"), exit(EXIT_FAILURE);
          if (chdir("/") < 0)
-            perror("chdir /"), exit(1);
+            perror("chdir /"), exit(EXIT_FAILURE);
         freopen("/dev/null", "r", stdin);
         freopen("/dev/null", "w", stdout);
         freopen("/dev/null", "w", stderr);
@@ -92,7 +97,7 @@ static int init_service(void)
     if (lstat(sockdir, &s) < 0 || S_ISDIR(s.st_mode)) {
         (void)unlink(sockdir);
         (void)rmdir(sockdir);
-        if (mkdir(sockdir, 0700) < 0) {
+        if (mkdir(sockdir, 0700) < 0 && errno != EEXIST) {
             perror(sockdir);
             return -1;
         }
@@ -105,6 +110,7 @@ static int init_service(void)
             return -1;
         }
     }
+    (void)unlink(sockpath);
     listen_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (listen_socket < 0) {
         (void)rmdir(sockdir);
@@ -127,46 +133,22 @@ static int init_service(void)
 __attribute__((noreturn))
 static void run_daemon(void)
 {
+    int option = debug_daemon ? LOG_PERROR : 0;
+    openlog("thruport", option, LOG_USER);
+    if (init_serial())
+        exit(EXIT_FAILURE);
     if (init_service())
-        exit(1);
-    while (1)
-        sleep(1);
+        exit(EXIT_FAILURE);
+    run_iocore();
 }
 
-int start_daemon(void)
+int start_daemon(bool debug)
 {
+    debug_daemon = debug;
     int r = daemonize();
-    if (r <= 0)
+    if (r < 0)
         return r;
+    if (r > 0)
+        return 0;               // nonzero PID => success
     run_daemon();
-}
-
-static void usage(FILE *out)
-{
-    fprintf(out, "Usage:\n");
-    exit(out != stdout);
-}
-
-int daemon_main(int argc, char *argv[])
-{
-    optind = 1;
-    while (true) {
-        int c = getopt_long(argc, argv, "d", daemon_options, NULL);
-        if (c == -1)
-            break;
-
-        switch (c) {
-
-        case 'd':
-            debug = true;
-            break;
-
-        default:
-            usage(stderr);
-        }
-    }
-    if (optind < argc)
-        usage(stderr);
-
-    return start_daemon();
 }

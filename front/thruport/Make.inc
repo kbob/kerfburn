@@ -6,8 +6,8 @@
 
         programs := thruport
 
-thruport_sources := main.c control.c daemon.c lock.c monitor.c paths.c \
-                    suspend.c
+thruport_sources := main.c control.c daemon.c iocore.c lock.c paths.c \
+                    receiver.c serial.c
 
  thruport_cfiles := $(filter %.c, $(thruport_sources:%=%))
  thruport_ofiles := $(thruport_cfiles:%.c=$D/%.o)

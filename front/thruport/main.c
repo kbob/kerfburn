@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -17,9 +18,126 @@ typedef struct action {
     action_func *a_main;
 } action;
 
+static void usage(FILE *out) __attribute__((noreturn));
+
+///////////////////////////////////////////////////////////////////////////////
+// Control Main and Control Options
+
+static const struct option control_options[] = {
+    {  NULL,                      0, NULL,  0  }
+};
+
+static const char *control_options_usage = 
+    "Control Options:\n"
+    "  (TBD)\n"
+    "\n";
+
+static int control_main(int argc, char *argv[])
+{
+    assert(false && "Write me!");
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Send Main and Send Options
+
+static const struct option send_options[] = {
+    {  NULL,                      0, NULL,  0  }
+};
+
+static const char *send_options_usage = 
+    "Send Options:\n"
+    "  (TBD)\n"
+    "\n";
+
+static int send_main(int argc, char *argv[])
+{
+    assert(false && "Write me!");
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Receive Main and Receive Options
+
+static const struct option receive_options[] = {
+    {  NULL,                      0, NULL,  0  }
+};
+
+static const char *receive_options_usage = 
+    "Receive Options:\n"
+    "  (TBD)\n"
+    "\n";
+
+static int receive_main(int argc, char *argv[])
+{
+    assert(false && "Write me!");
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Suspend Main and Suspend Options
+
+static const struct option suspend_options[] = {
+    {  NULL,                      0, NULL,  0  }
+};
+
+static const char *suspend_options_usage = 
+    "Suspend Options:\n"
+    "  (TBD)\n"
+    "\n";
+
+static int suspend_main(int argc, char *argv[])
+{
+    assert(false && "Write me!");
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Daemon Main and Daemon Options
+
+static const struct option daemon_options[] = {
+    { "debug",          no_argument, NULL, 'd' },
+    {  NULL,                      0, NULL,  0  }
+};
+
+static const char *daemon_options_usage = 
+    "Daemon Options:\n"
+    "  -d, --debug         Run in foreground, print debug messages.\n"
+    "\n";
+
+static int daemon_main(int argc, char *argv[])
+{
+    bool debug = false;
+    optind = 1;
+    while (true) {
+        int c = getopt_long(argc, argv, "d", daemon_options, NULL);
+        if (c == -1)
+            break;
+
+        switch (c) {
+
+        case 'd':
+            debug = true;
+            break;
+
+        default:
+            usage(stderr);
+        }
+    }
+    if (optind < argc)
+        usage(stderr);
+
+    return start_daemon(debug);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Main and General Options
+
 static const struct action actions[] = {
     { "control", control_main },
-    { "monitor", monitor_main },
+    { "send",    send_main    },
+    { "receive", receive_main },
     { "suspend", suspend_main },
     { "daemon",  daemon_main  },
 };
@@ -31,34 +149,32 @@ static const struct option general_options[] = {
     {  NULL,                      0, NULL,  0  }
 };
 
-void usage(FILE *out)
-{
-    static const char *msg =
-    "Use: thruport [options] control [control-options]\n"
-    "     thruport [options] receive [monitor-options]\n"
-    "     thruport [options] send    [suspend-options] -- program args...\n"
-    "     thruport [options] daemon  [daemon-options]\n"
-    "\n"
-    "Multiplexes access to serial port.\n"
-    "\n"
+static const char *general_options_usage =
     "General Options:\n"
-    "  -h, --help   Display help text.\n"
-    "  (TBD)\n"
-    "\n"
-    "Control Options:\n"
-    "  (TBD)\n"
-    "\n"
-    "Monitor Options:\n"
-    "  (TBD)\n"
-    "\n"
-    "Suspend Options:\n"
-    "  (TBD)\n"
-    "\n"
-    "Daemon Options:\n"
-    "  (TBD)\n"
+    "  -p, --port=DEVICE   Select serial port.\n"
+    "  -h, --help          Display help text.\n"
     "\n";
 
-    fputs(msg, out);
+static void usage(FILE *out)
+{
+    static const char *msg =
+        "Use: thruport [options] control [control-options]\n"
+        "     thruport [options] send    [send-options]\n"
+        "     thruport [options] receive [receive-options]\n"
+        "     thruport [options] suspend [suspend-options] "
+                                         "-- program args...\n"
+        "     thruport [options] daemon  [daemon-options]\n"
+        "\n"
+        "Multiplexes access to serial port.\n"
+        "\n";
+
+    fputs(msg,                   out);
+    fputs(general_options_usage, out);
+    fputs(control_options_usage, out);
+    fputs(send_options_usage,    out);
+    fputs(receive_options_usage, out);
+    fputs(suspend_options_usage, out);
+    fputs(daemon_options_usage,  out);
     exit(out != stdout);
 }
 

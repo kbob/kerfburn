@@ -81,7 +81,7 @@ const char *get_lock_dir(void)
     return "/var/lock";
 }
 
-const char *get_lock_file(void)
+const char *get_lock_path(void)
 {
     if (!pc.pc_lck_path) {
         const char *dev = get_device();

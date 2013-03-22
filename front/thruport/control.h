@@ -1,6 +1,6 @@
 #ifndef CONTROL_included
 #define CONTROL_included
 
-extern int control_main(int argc, char *argv[]);
+// XXX Feed me!
 
 #endif /* !CONTROL_included */

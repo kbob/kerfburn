@@ -74,6 +74,7 @@
 * Have serial RX driver count newlines and trigger the parser when it sees one.
 * Use a higher baud rate than 9600.  See comments in ftdi_sio.c near line 1122.
   Also see http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
+* See double fork comments in `front/thruport/daemon.c`.
 
 
 ## Cleanup
