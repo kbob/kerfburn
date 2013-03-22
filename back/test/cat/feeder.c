@@ -78,14 +78,14 @@ int main()
     int outfd = fileno(stdout);
     int ttyfd = open("/dev/ttyUSB0", O_RDWR | O_NONBLOCK | O_NOCTTY, 0666);
     if (ttyfd < 0)
-        perror("/dev/ttyUSB0"), exit(1);
+        perror("/dev/ttyUSB0"), exit(EXIT_FAILURE);
 
     pstat(infd, "standard input");
     pstat(outfd, "standard output");
     pstat(ttyfd, "serial");
 
     if (tcgetattr(ttyfd, &orig_tios) != 0)
-        perror("tcgetattr"), exit(1);
+        perror("tcgetattr"), exit(EXIT_FAILURE);
     raw_tios = orig_tios;
     raw_tios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP |
                           INLCR | IGNCR | ICRNL | IXON);
@@ -94,7 +94,7 @@ int main()
     raw_tios.c_cflag &= ~(CSIZE | PARENB);
     raw_tios.c_cflag |=   CS8;
     if (tcsetattr(ttyfd, TCSAFLUSH, &raw_tios) != 0)
-        perror("tcsetattr"), exit(1);
+        perror("tcsetattr"), exit(EXIT_FAILURE);
 
     while (true) {
         int nfds = ttyfd + 1;;
@@ -113,14 +113,14 @@ int main()
         }
         int r_nfds = select(nfds, &readfds, writefdp, NULL, NULL);
         if (r_nfds < 0)
-            perror("select"), exit(1);
+            perror("select"), exit(EXIT_FAILURE);
 
         if (FD_ISSET(ttyfd, &readfds)) {
 
             // Read from serial (Highest priority)
             ssize_t nr = read(ttyfd, buf1, sizeof buf1);
             if (nr == -1)
-                perror("read tty"), exit(1);
+                perror("read tty"), exit(EXIT_FAILURE);
             else {
                 size_t i;
                 for (i = 0; i < nr; i++) {
@@ -140,7 +140,7 @@ int main()
             // Read from stdin.
             ssize_t nr = read(infd, buf0, sizeof buf0);
             if (nr < 0)
-                perror("read stdin"), exit(1);
+                perror("read stdin"), exit(EXIT_FAILURE);
             count0 = nr;
             // printf("read %zd; count0=%zd\n", nr, count0);
         }
@@ -152,7 +152,7 @@ int main()
                 ntw = count0;
             ssize_t nw = write(ttyfd, buf0, ntw);
             if (nw < 0)
-                perror("write"), exit(1);
+                perror("write"), exit(EXIT_FAILURE);
             else {
                 if (nw && nw < count0)
                     memmove(buf0, buf0 + nw, count0 - nw);
@@ -164,6 +164,6 @@ int main()
     }
 
     if (tcsetattr(ttyfd, TCSAFLUSH, &orig_tios) != 0)
-        perror("tcsetattr"), exit(1);
-    return 0;
+        perror("tcsetattr"), exit(EXIT_FAILURE);
+    return EXIT_SUCCESS;
 }

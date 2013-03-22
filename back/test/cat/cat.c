@@ -20,7 +20,7 @@ void do_background_task(void)
 {
     serial_rx_start();
     uint32_t t = 0;
-    while (1) {
+    while (true) {
         while (!serial_rx_has_chars())
             continue;
         uint8_t e = serial_rx_errors();

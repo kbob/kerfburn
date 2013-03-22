@@ -12,7 +12,8 @@ back/test/cat-tests: back/test/cat/cat
 test-back/test/cat:  back/test/cat-tests
 
 clean-back/test/cat:
-	cd back/test/cat && rm -f cat a.out core *~ *.o .*.d TAGS $(JUNK)
+	cd back/test/cat && rm -f cat feeder a.out core *~ *.o .*.d TAGS \
+                                  $(JUNK)
 
 cat_cfiles := $(filter %.c, $(cat_sources))
 # cat_ofiles := $(cat_cfiles:%.c=back/test/cat/%.o)
