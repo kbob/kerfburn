@@ -1,6 +1,6 @@
 #ifndef RECEIVER_included
 #define RECEIVER_included
 
-extern void enable_reception(void);
+// XXX write me!
 
 #endif /* RECEIVER_included */

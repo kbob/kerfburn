@@ -43,6 +43,8 @@ static fd_data *get_fd_data(int fd)
         }
         memset(new_array + fd_data_count, 0,
                (new_count - fd_data_count) * sizeof *new_array);
+        fd_data_array = new_array;
+        fd_data_count = new_count;
     }
     return fd_data_array + fd;
 }
@@ -141,18 +143,24 @@ extern void run_iocore(void)
     const size_t max_events = 3;
     struct epoll_event events[max_events];
     int epfd = get_epoll_fd();
-    printf("epfd = %d\n", epfd);
-    {
-        #include <sys/types.h>
-        #include <unistd.h>
-        char cmd[100];
-        snprintf(cmd, sizeof cmd, "ls -l /proc/%d/fd", getpid());
-        system(cmd);
-    }
     while (true) {
         memset(events, 0, sizeof events);
         int ne = epoll_wait(epfd, events, max_events, -1);
-        printf("epoll_wait returned %d\n", ne);
+        {
+            if (ne < 0)
+                printf("epoll => %m\n");
+            else if (ne == 0)
+                printf("epoll => {}\n");
+            else {
+                printf("epoll => {");
+                const char *sep = "";
+                for (int i = 0; i < ne; i++) {
+                    printf("%s%d", sep, events[i].data.fd);
+                    sep = ", ";
+                }
+                printf("};\n");
+            }
+        }
         if (ne < 0) {
             syslog(LOG_ERR, "epoll_wait failed: %m");
             exit(EXIT_FAILURE);
@@ -160,8 +168,9 @@ extern void run_iocore(void)
         for (size_t i = 0; i < ne; i++) {
             struct epoll_event *ep = &events[i];
             int fd = ep->data.fd;
-            printf("fd = %d, events = %#x\n", fd, ep->events);
             fd_data *data = get_fd_data(fd);
+            printf("data = %p\n", data);
+            printf("d_events = %#x, handler = %p\n", data->d_events, data->d_handler);
             io_event_set ioe = map_epoll_events_to_io(ep->events);
             (*data->d_handler)(fd, ioe, data->d_closure);
         }

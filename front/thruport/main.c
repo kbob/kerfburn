@@ -9,7 +9,7 @@
 #include "daemon.h"
 #include "monitor.h"
 #include "paths.h"
-#include "suspend.h"
+#include "sender.h"
 
 typedef int action_func(int argc, char *argv[]);
 
@@ -34,7 +34,7 @@ static const char *control_options_usage =
 
 static int control_main(int argc, char *argv[])
 {
-    assert(false && "Write me!");
+    assert(false && "XXX Write me!");
 
 }
 
@@ -52,8 +52,30 @@ static const char *send_options_usage =
 
 static int send_main(int argc, char *argv[])
 {
-    assert(false && "Write me!");
+    optind = 1;
+    while (true) {
+        int c = getopt_long(argc, argv, "", send_options, NULL);
+        if (c == -1)
+            break;
 
+        switch (c) {
+
+        default:
+            usage(stderr);
+        }
+    }
+    const char **files = NULL;
+    if (optind < argc) {
+        files = (const char **)argv + optind;
+        {
+            fprintf(stderr, "sender: optind = %d, argc = %d\n", optind, argc);
+            fprintf(stderr, "sender: files =");
+            for (const char **p = files; *p; p++)
+                printf(" %s", *p);
+            printf("\n");
+        }
+    }
+    return be_sender(files);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -70,7 +92,7 @@ static const char *receive_options_usage =
 
 static int receive_main(int argc, char *argv[])
 {
-    assert(false && "Write me!");
+    assert(false && "XXX Write me!");
 
 }
 
@@ -88,7 +110,7 @@ static const char *suspend_options_usage =
 
 static int suspend_main(int argc, char *argv[])
 {
-    assert(false && "Write me!");
+    assert(false && "XXX Write me!");
 
 }
 
@@ -159,10 +181,9 @@ static void usage(FILE *out)
 {
     static const char *msg =
         "Use: thruport [options] control [control-options]\n"
-        "     thruport [options] send    [send-options]\n"
+        "     thruport [options] send    [send-options]    [file...]\n"
         "     thruport [options] receive [receive-options]\n"
-        "     thruport [options] suspend [suspend-options] "
-                                         "-- program args...\n"
+        "     thruport [options] suspend [suspend-options] program args...\n"
         "     thruport [options] daemon  [daemon-options]\n"
         "\n"
         "Multiplexes access to serial port.\n"

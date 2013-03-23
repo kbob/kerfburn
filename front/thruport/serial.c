@@ -16,7 +16,7 @@
 #include "iocore.h"
 #include "lock.h"
 #include "paths.h"
-#include "receiver.h"
+#include "sender.h"
 
 static int ttyfd = -1;
 static struct stat tty_stat;
@@ -54,8 +54,6 @@ static inline bool eat_flow_char(char c)
     else
         return false;
 }
-
-
 
 static void make_raw(struct termios *tiosp)
 {
@@ -114,7 +112,7 @@ static void handle_tty_io(int ttyfd, io_event_set events, void *closure)
         tx_sent += nw;
         tx_space = tx_received + 0xFF - tx_sent;
         if (tty_out_count == 0)
-            enable_reception();
+            enable_sender();
     }
     io_enable_descriptor(ttyfd, events);
 }
@@ -173,7 +171,22 @@ int init_serial(void)
 
     // Register handlers.
     atexit(restore_serial);
-    io_register_descriptor(ttyfd, IE_READ, handle_tty_io, NULL);
+    if (io_register_descriptor(ttyfd, IE_READ, handle_tty_io, NULL))
+        exit(EXIT_FAILURE);
 
     return 0;
+}
+
+char *serial_get_write_buf(size_t *size_out)
+{
+    if (tty_out_count)
+        return NULL;
+    *size_out = tty_bufsize;
+    return tty_writebuf;
+}
+
+void serial_send_data(size_t count)
+{
+    tty_out_count = count;
+    io_enable_descriptor(ttyfd, count ? IE_READ | IE_WRITE : IE_READ);
 }
