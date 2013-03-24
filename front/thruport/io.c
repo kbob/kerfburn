@@ -3,8 +3,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
-#include <sys/select.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+
+size_t fd_blksize(int fd)
+{
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
+        // XXX syslog if daemon, else stderr.
+        syslog(LOG_WARNING, "fstat failed: %m");
+        return BUFSIZ;
+    } else
+        return (size_t)s.st_blksize;
+}
 
 ssize_t read_line(int fd, char *buf, size_t max)
 {
@@ -22,41 +33,10 @@ ssize_t read_line(int fd, char *buf, size_t max)
     return i;
 }
 
-int write_string(int fd, const char *str)
-{
-    size_t n = strlen(str);
-    return write(fd, str, n);
-}
-
-size_t fd_blksize(int fd)
-{
-    struct stat s;
-    if (fstat(fd, &s) < 0) {
-        // XXX syslog if daemon, else stderr.
-        syslog(LOG_WARNING, "fstat failed: %m");
-        return BUFSIZ;
-    } else
-        return (size_t)s.st_blksize;
-}
-
-ssize_t write_when_ready(int fd, const char *buf, size_t count)
-{
-    while (1) {
-        fd_set writefds;
-        FD_ZERO(&writefds);
-        FD_SET(fd, &writefds);
-        int nfds = select(fd + 1, NULL, &writefds, NULL, NULL);
-        if (nfds < 0) {
-            return -1;
-        }
-        if (FD_ISSET(fd, &writefds))
-            return write(fd, buf, count);
-    }
-}
+// XXX implement highlighting (colorizing).
 
 const char *char_repr(int c, bool highlighted)
 {
-    
     static char rep[10];
     if (c >= ' ' && c < '\177')
         snprintf(rep, sizeof rep, "%c", c);

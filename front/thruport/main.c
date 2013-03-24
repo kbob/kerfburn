@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "control.h"
 #include "daemon.h"
-#include "monitor.h"
 #include "paths.h"
 #include "receiver_client.h"
 #include "sender_client.h"
@@ -20,6 +18,7 @@ typedef struct action {
 } action;
 
 static void usage(FILE *out) __attribute__((noreturn));
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Control Main and Control Options
@@ -36,8 +35,8 @@ static const char *control_options_usage =
 static int control_main(int argc, char *argv[])
 {
     assert(false && "XXX Write me!");
-
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Send Main and Send Options
@@ -71,6 +70,7 @@ static int send_main(int argc, char *argv[])
     return be_sender(files);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Receive Main and Receive Options
 
@@ -103,6 +103,7 @@ static int receive_main(int argc, char *argv[])
     return be_receiver(files);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Suspend Main and Suspend Options
 
@@ -118,8 +119,8 @@ static const char *suspend_options_usage =
 static int suspend_main(int argc, char *argv[])
 {
     assert(false && "XXX Write me!");
-
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Daemon Main and Daemon Options
@@ -186,6 +187,7 @@ static const char *general_options_usage =
 
 static void usage(FILE *out)
 {
+    // XXX refactor the usage message out into the modes' sections.
     static const char *msg =
         "Use: thruport [options] control [control-options]\n"
         "     thruport [options] send    [send-options]    [file...]\n"

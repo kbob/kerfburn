@@ -6,9 +6,10 @@
 
         programs := thruport
 
-thruport_sources := main.c client.c control.c daemon.c debug.c io.c lock.c \
-                    paths.c serial.c \
-                    sender_client.c   sender_service.c \
+thruport_sources := client.c daemon.c debug.c io.c lock.c main.c paths.c \
+                    serial.c \
+                    \
+                    sender_client.c sender_service.c \
                     receiver_client.c receiver_service.c
 
  thruport_ldlibs := -lpthread
@@ -30,7 +31,7 @@ front/thruport/thruport: $(thruport_ofiles)
 # C source dependency generation.
 front/thruport/.%.d: front/thruport/%.c
 	@rm -f "$@"
-	@$(FRONT_CC) -M -MP -MT 'back/$*.o $@' -MF $@ $(FRONT_CPPFLAGS) $< || \
+	@$(FRONT_CC) -M -MP -MT '$D/$*.o $@' -MF $@ $(FRONT_CPPFLAGS) $< || \
 	    rm -f "$@"
 
 ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''

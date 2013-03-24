@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-// Start daemon in background; current process need not exit..
+// Start daemon in background; current process need not exit.
 extern int spawn_daemon(void);
 
 // Start daemon, possibly in foreground.

@@ -1,10 +1,10 @@
 #include "paths.h"
 
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 static struct path_cache {
@@ -24,24 +24,6 @@ void set_port(const char *port)
     free(pc.pc_lck_path);
     pc.pc_sock_dir = pc.pc_sock_path = pc.pc_dev_path = pc.pc_lck_path = NULL;
     pc.pc_port = port ? strdup(port) : NULL;
-}
-
-const char *get_socket_dir(void)
-{
-    if (pc.pc_port) {
-        if (!pc.pc_sock_dir)
-            asprintf(&pc.pc_sock_dir, "/tmp/thruport-%s",
-                     basename(pc.pc_port));
-        return pc.pc_sock_dir;
-    }
-    return "/tmp/thruport";
-}
-
-const char *get_socket_path(void)
-{
-    if (!pc.pc_sock_path)
-        asprintf(&pc.pc_sock_path, "%s/socket", get_socket_dir());
-    return pc.pc_sock_path;
 }
 
 const char *get_device(void)
@@ -74,6 +56,24 @@ const char *get_device(void)
     }
     fprintf(stderr, "USB serial device not found\n");
     return NULL;
+}
+
+const char *get_socket_dir(void)
+{
+    if (pc.pc_port) {
+        if (!pc.pc_sock_dir)
+            asprintf(&pc.pc_sock_dir, "/tmp/thruport-%s",
+                     basename(pc.pc_port));
+        return pc.pc_sock_dir;
+    }
+    return "/tmp/thruport";
+}
+
+const char *get_socket_path(void)
+{
+    if (!pc.pc_sock_path)
+        asprintf(&pc.pc_sock_path, "%s/socket", get_socket_dir());
+    return pc.pc_sock_path;
 }
 
 const char *get_lock_dir(void)

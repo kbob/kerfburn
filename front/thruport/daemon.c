@@ -1,13 +1,11 @@
 #include "daemon.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -15,7 +13,6 @@
 #include <sys/wait.h>
 
 #include "client.h"
-#include "debug.h"
 #include "io.h"
 #include "paths.h"
 #include "receiver_service.h"
@@ -114,69 +111,6 @@ static char *alloc_data_buf(int fd, size_t *size_out)
     return buf;
 }
 
-#if 0
-static void handle_new_client_io(int sock, io_event_set events, void *closure)
-{
-    // We're only doing this once.
-    io_delist_descriptor(sock);
-
-    assert(events == IE_READ);
-    if (events & IE_READ) {
-        char msg0[16 + 1];
-        memset(msg0, 0, sizeof msg0);
-        ssize_t nr = read(sock, msg0, sizeof msg0 - 1);
-        if (nr < 0) {
-            syslog(LOG_WARNING, "can't receive from client: %m");
-            close(sock);
-            return;
-        }
-        if (nr == 0) {
-            syslog(LOG_WARNING, "client sent no data");
-            close(sock);
-            return;
-        }
-        char c;
-        int ns = sscanf(msg0, "Client Type %c\n", &c);
-        if (ns != 1) {
-            syslog(LOG_WARNING, "client's first message malformed");
-            close(sock);
-            return;
-        }
-        for (size_t i = 0; i < service_count; i++) {
-            if (c == services[i].s_client_type) {
-                (*services[i].s_instantiate)(sock);
-                return;
-            }
-        }
-        syslog(LOG_WARNING, "client type %d unknown", c & 0xFF);
-        close(sock);
-        return;
-    }
-}
-#endif
-
-#if 0
-static void handle_listener_io(int fd, io_event_set events, void *closure)
-{
-    // Accept the new connection.
-    struct sockaddr_un sun;
-    socklen_t addrlen = sizeof sun;
-    memset(&sun, 0, sizeof sun);
-    int client_sock = accept(fd, (struct sockaddr *)&sun, &addrlen);
-    if (client_sock < 0) {
-        syslog(LOG_WARNING, "client accept failed: %m");
-        return;
-    }
-
-    // A newly connected client may become a controller, a sender, a
-    // receiver, or a suspender.  Initially, it is considered a
-    // generic client.  The generic read handler finds out the type
-    // and sets the type-specific read handler.
-
-    io_register_descriptor(client_sock, IE_READ, handle_new_client_io, NULL);
-}
-#endif
-
 static void shutdown_service(void)
 {
     const char *sockdir = get_socket_dir();
@@ -238,12 +172,6 @@ static int init_service(void)
         return -1;
     }
 
-#if 0
-    if (io_register_descriptor(listen_socket, IE_READ,
-                               handle_listener_io, NULL))
-        exit(EXIT_FAILURE);
-#endif
-
     return 0;
 }
 
@@ -253,27 +181,10 @@ static void accept_client_connection(void)
     socklen_t addrlen = sizeof sun;
     memset(&sun, 0, sizeof sun);
     int client_sock = accept(listen_socket, (struct sockaddr *)&sun, &addrlen);
-    HELLO;
     if (client_sock < 0) {
         syslog(LOG_WARNING, "client accept failed: %m");
         return;
     }
-#if 0
-    FILE *fsock = fdopen(client_sock, "r+");
-    if (!fsock) {
-        syslog(LOG_ERR, "client fdopen failed: %m");
-        close(client_sock);
-        return;
-    }
-    
-    char c;
-    int ns = fscanf(fsock, "Client Type %c\n", &c);
-    if (ns != 1) {
-        syslog(LOG_WARNING, "client's first message malformed");
-        fclose(fsock);
-        return;
-    }
-#else
     char line[100];
     ssize_t nr = read_line(client_sock, line, sizeof line);
     if (nr <= 0) {
@@ -289,7 +200,6 @@ static void accept_client_connection(void)
         close(client_sock);
         return;
     }
-#endif
 
     for (size_t i = 0; i < service_count; i++) {
         service *sp = &services[i];
@@ -319,7 +229,6 @@ static void *send_thread_main(void *p)
                 syslog(LOG_INFO, "EOF on sender");
                 break;          // XXX stop daemon and clean up
             }
-            HELLO;
             if (serial_transmit(buf, nr))
                 report_sender_error(LOG_ERR, "serial transmit failed");
         }
@@ -334,24 +243,14 @@ static void *receive_thread_main(void *p)
     while (true) {
         char buf[TTY_BUFSIZ];
         ssize_t nr = serial_receive(buf, sizeof buf);
-        if (nr > 0) {
-            // DBG("%s", str_repr(buf, nr, false));
-            // printf("receive main: %s");
-            // for (int i = 0; i < nr; i++)
-            //     printf(" %o", buf[i]);
-            // printf("\n");
+        if (nr > 0)
             broadcast_to_receivers(buf, nr);
-        }
     }
     return NULL;
 }
 
 static int create_daemon_threads(void)
 {
-    // XXX set receive thread's scheduling.
-    //       * policy SCHED_FIFO.
-    //       * priority sched_get_priority_max().
-
     // Create send thread.
     int r = pthread_create(&send_thread, NULL, send_thread_main, NULL);
     if (r) {

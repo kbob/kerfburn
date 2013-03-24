@@ -1,9 +1,9 @@
 #include "client.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 

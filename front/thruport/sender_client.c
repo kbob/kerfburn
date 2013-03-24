@@ -8,7 +8,6 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "debug.h"
 
 static FILE *sockrf, *sockwf;
 

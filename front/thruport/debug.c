@@ -3,7 +3,6 @@
 #include <libgen.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 static pthread_mutex_t dbg_lock = PTHREAD_MUTEX_INITIALIZER;
