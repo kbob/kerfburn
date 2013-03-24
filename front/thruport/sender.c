@@ -29,13 +29,7 @@ static void next_file(void);
 
 static void alloc_data_buf(int fd)
 {
-    struct stat s;
-    size_t new_size;
-    if (fstat(fd, &s) < 0) {
-        new_size = BUFSIZ;
-        fprintf(stderr, "warning: using default block size %zd\n", new_size);
-    } else
-        new_size = s.st_blksize;
+    size_t new_size = fd_blksize(fd);;
     if (data_size != new_size) {
         data_size = new_size;
         free(data_buf);

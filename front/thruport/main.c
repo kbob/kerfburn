@@ -9,7 +9,8 @@
 #include "daemon.h"
 #include "monitor.h"
 #include "paths.h"
-#include "sender.h"
+#include "receiver_client.h"
+#include "sender_client.h"
 
 typedef int action_func(int argc, char *argv[]);
 
@@ -65,16 +66,8 @@ static int send_main(int argc, char *argv[])
         }
     }
     const char **files = NULL;
-    if (optind < argc) {
+    if (optind < argc)
         files = (const char **)argv + optind;
-        {
-            fprintf(stderr, "sender: optind = %d, argc = %d\n", optind, argc);
-            fprintf(stderr, "sender: files =");
-            for (const char **p = files; *p; p++)
-                printf(" %s", *p);
-            printf("\n");
-        }
-    }
     return be_sender(files);
 }
 
@@ -92,8 +85,22 @@ static const char *receive_options_usage =
 
 static int receive_main(int argc, char *argv[])
 {
-    assert(false && "XXX Write me!");
+    optind = 1;
+    while (true) {
+        int c = getopt_long(argc, argv, "", receive_options, NULL);
+        if (c == -1)
+            break;
 
+        switch (c) {
+
+        default:
+            usage(stderr);
+        }
+    }
+    const char **files = NULL;
+    if (optind < argc)
+        files = (const char **)argv + optind;
+    return be_receiver(files);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
