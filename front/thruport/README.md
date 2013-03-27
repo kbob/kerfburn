@@ -38,20 +38,20 @@ status updates.
 
 ## Suspend Mode
 
-In order to download new firmware to the back end, there will be
-a way to tell thruport to close the serial port temporarily.
+In order to download new firmware to the back end, thruport can be
+suspended.  When suspended, the daemon closes the serial port and
+waits to be resumed before reopening it.
 
-
-There will be a mode to suspend thruport to download new firmware.
-That will look something like this.
+The suspend command looks like this.  `avrdude` is the *AVR
+Downloader/UploaDEr*.
 
 > **$** thruport suspend avrdude args...
 
-If the thruport daemon is not already running, this command just execs
-avrdude (or whatever program is specified).  If thruport ia already
-running, it tells the daemon to close the USB serial descriptor, runs
-avrdude, waits for it to exit, then tells the daemon to reopen the
-descriptor.
+If the thruport daemon is not already running, this command will just
+exec avrdude (or whatever program is specified).  If thruport ia
+already running, it tells the daemon to close the USB serial
+descriptor, runs avrdude, waits for it to exit, then tells the daemon
+to reopen the descriptor.
 
 
 ## Control

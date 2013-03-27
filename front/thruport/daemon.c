@@ -1,5 +1,6 @@
 #include "daemon.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -13,10 +14,12 @@
 #include <sys/wait.h>
 
 #include "client.h"
+#include "debug.h"
 #include "io.h"
 #include "paths.h"
 #include "receiver_service.h"
 #include "sender_service.h"
+#include "suspender_service.h"
 #include "serial.h"
 
 // The daemon has three threads.
@@ -36,14 +39,23 @@ static service services[] = {
     // { "controller", CT_CONTROLLER, instantiate_controller_service },
     { "sender",     CT_SENDER,     instantiate_sender_service     },
     { "receiver",   CT_RECEIVER,   instantiate_receiver_service   },
-    // { "suspender",  CT_SUSPENDER,  instantiate_suspender_service  },
+    { "suspender",  CT_SUSPENDER,  instantiate_suspender_service  },
 };
 static size_t service_count = sizeof services / sizeof services[0];
 
 static bool      debug_daemon  = false;
 static int       listen_socket = -1;
+static pthread_t main_thread;
 static pthread_t send_thread;
 static pthread_t receive_thread;
+
+static void report_daemon_error(const char *label)
+{
+    int e = errno;
+    if (debug_daemon)
+        perror(label);
+    syslog(LOG_ERR, "%s: %s", label, strerror(e));
+}
 
 // XXX We only need to fork twice if the parent is going to stay alive.
 
@@ -308,6 +320,59 @@ static int create_daemon_threads(void)
     return 0;                   // Yay!
 }
 
+static int destroy_daemon_threads(void)
+{
+    // Any error here will kill the daemon at a higher level;
+    // don't worry about keeping state consistent.
+
+    int r = pthread_cancel(send_thread);
+    if (r) {
+        report_daemon_error("can't cancel send thread");
+        return r;
+    }        
+    r = pthread_join(send_thread, NULL);
+    if (r) {
+        report_daemon_error("can't join send thread");
+        return r;
+    }        
+    r = pthread_cancel(receive_thread);
+    if (r) {
+        report_daemon_error("can't cancel receive thread");
+        return r;
+    }        
+    r = pthread_join(receive_thread, NULL);
+    if (r) {
+        report_daemon_error("can't join receive thread");
+        return r;
+    }        
+    return 0;
+}
+
+int suspend_daemon(void)
+{
+    assert(pthread_self() == main_thread);
+    static char suspend_msg[] = "\n[suspend]\n";
+    broadcast_to_receivers(suspend_msg, sizeof suspend_msg - 1);
+    int r = destroy_daemon_threads();
+    if (r)
+        return r;
+    close_serial();
+    return 0;
+}
+
+int resume_daemon(void)
+{
+    int r = open_serial();
+    if (r)
+        return r;
+    r = create_daemon_threads();
+    if (r)
+        return r;
+    static char resume_msg[] = "[resume]\n";
+    broadcast_to_receivers(resume_msg, sizeof resume_msg - 1);
+    return 0;
+}
+
 __attribute__((noreturn))
 static void run_daemon(void)
 {
@@ -317,6 +382,9 @@ static void run_daemon(void)
         exit(EXIT_FAILURE);
     if (init_service())
         exit(EXIT_FAILURE);
+    if (open_serial())
+        exit(EXIT_FAILURE);
+    // Serial must be open before starting threads.
     if (create_daemon_threads())
         exit(EXIT_FAILURE);
     syslog(LOG_INFO, "daemon running");
@@ -329,6 +397,7 @@ int start_daemon(bool debug)
 {
     debug_daemon = debug;
     int r = daemonize();
+    main_thread = pthread_self();
     if (r < 0)
         return r;
     if (r > 0)

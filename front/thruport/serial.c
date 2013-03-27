@@ -30,16 +30,15 @@ static void make_raw(struct termios *tiosp)
     tiosp->c_cflag |=   CS8;
 }
 
-static void restore_serial(void)
-{
-    if (ttyfd != -1) {
-        (void)tcsetattr(ttyfd, TCSANOW, &orig_termios);
-        (void)close(ttyfd);
-        ttyfd = -1;
-    }
-}
 
 int init_serial(void)
+{
+    // Register handlers.
+    atexit(close_serial);
+    return 0;
+}
+
+int open_serial(void)
 {
     // Get the lock.
     int r = lock_serial_port();
@@ -78,13 +77,27 @@ int init_serial(void)
     tty_bufsize = fd_blksize(ttyfd);
     tty_rawbuf  = malloc(tty_bufsize);
     if (!tty_rawbuf) {
-        syslog(LOG_CRIT, "malloc failed: %m");
+        syslog(LOG_CRIT, "out of memory: %m");
         exit(EXIT_FAILURE);
     }
 
-    // Register handlers.
-    atexit(restore_serial);
+    // Init flow control.
+    tx_sent = tx_received = tx_space = 0;
+
     return 0;
+}
+
+void close_serial(void)
+{
+    if (ttyfd != -1) {
+        (void)tcsetattr(ttyfd, TCSANOW, &orig_termios);
+        (void)close(ttyfd);
+        (void)unlock_serial_port();
+        ttyfd = -1;
+        free(tty_rawbuf);
+        tty_rawbuf = NULL;
+        tty_bufsize = 0;
+    }
 }
 
 int serial_transmit(const char *buf, size_t size)

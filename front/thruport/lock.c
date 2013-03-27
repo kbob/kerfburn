@@ -16,8 +16,6 @@
 
 #define MAX_RETRIES 3
 
-static bool locked;
-
 static int create_tempfile(char *template, struct stat *stat_out)
 {
     char pidbuf[12];
@@ -60,12 +58,6 @@ static pid_t read_pid(const char *filename)
         return -1;
     fclose(f);
     return (pid_t)pid;
-}
-
-static void unlock_on_exit(void)
-{
-    if (locked)
-        (void)unlock_serial_port();
 }
 
 int lock_serial_port(void)
@@ -120,13 +112,6 @@ int lock_serial_port(void)
             break;
         }
 
-        // A different lock file exists.  Try to read a PID from it.
-        syslog(LOG_WARNING,
-               "lock file dev.ino %"PRIuMAX".%"PRIuMAX
-               " != expected %"PRIuMAX".%"PRIuMAX,
-               (uintmax_t)lck_stat.st_dev,  (uintmax_t)lck_stat.st_ino,
-               (uintmax_t)temp_stat.st_dev, (uintmax_t)temp_stat.st_ino);
-
         pid_t lockholder_pid = read_pid(lck_file);
         if (lockholder_pid == -1) {
             syslog(LOG_ERR, "device %s is locked.  No PID in lock file %s",
@@ -142,9 +127,6 @@ int lock_serial_port(void)
         syslog(LOG_INFO, "Failed to lock %s. Retrying.", device);
     }
 
-    // Use atexit() to automatically unlock it.
-    locked = true;
-    atexit(unlock_on_exit);
     return 0;
 }
 
@@ -153,7 +135,6 @@ int unlock_serial_port(void)
     const char *lck_path = get_lock_path();
     // Ignore error.  If this fails, it must be someone else's lock file.
     (void)unlink(lck_path);
-    locked = false;
     return 0;
 }
 

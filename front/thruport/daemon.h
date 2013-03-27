@@ -9,4 +9,7 @@ extern int spawn_daemon(void);
 // Start daemon, possibly in foreground.
 extern int start_daemon(bool debug);
 
+extern int suspend_daemon(void);
+extern int resume_daemon(void);
+
 #endif /* !DAEMON_included */

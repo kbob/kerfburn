@@ -8,9 +8,8 @@ typedef enum client_type {
     CT_SUSPENDER  = 'Z',        // mnemonic: ^Z suspends a job.
 } client_type;
 
-// XXX factor this out.  Have two functions, connect_to_daemon
-//     and connect_or_start_daemon.
-// Returns socket descriptor or -1 w/ errno set.
-extern int  connect_to_daemon(client_type);
+// These return socket descriptor or -1 w/ errno set.
+extern int connect_to_daemon(client_type);
+extern int connect_or_start_daemon(client_type);
 
 #endif /* !CLIENT_included */

@@ -1,11 +1,11 @@
-#ifndef RECEIVER_CLIENT_included
-#define RECEIVER_CLIENT_included
+#ifndef SUSPENDER_CLIENT_included
+#define SUSPENDER_CLIENT_included
 
 // Pass NULL to send standard input.
 // Otherwise, pass a NULL-terminated list of file names.
 // (E.g., the tail of argv.)
 //
 // Returns process exit status.
-extern int be_receiver(void);
+extern int be_suspender(const char **argv);
 
-#endif /* !RECEIVER_CLIENT_included */
+#endif /* !SUSPENDER_CLIENT_included */

@@ -86,6 +86,8 @@ int be_sender(const char **files)
         return 0;
     } else
         status = send_stdin();
+    (void)pthread_cancel(error_thread);
+    (void)pthread_join(error_thread, NULL);
     fclose(sockwf);
     fclose(sockrf);
     return status;

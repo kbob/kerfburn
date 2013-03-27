@@ -10,7 +10,8 @@ thruport_sources := client.c daemon.c debug.c io.c lock.c main.c paths.c \
                     serial.c \
                     \
                     sender_client.c sender_service.c \
-                    receiver_client.c receiver_service.c
+                    receiver_client.c receiver_service.c \
+                    suspender_client.c suspender_service.c
 
  thruport_ldlibs := -lpthread
 

@@ -112,7 +112,8 @@ Is this a bug database?
 
 * Write some error handling/reporting utilities.  Make sure all client
   errors go to `stderr` and all daemon errors go to syslog.  Make the
-  messages more consistent and user-centric.
+  messages more consistent and user-centric.  The utilities should also
+  prepend "thruport: " to stderr messages.
 
 * In `main.c`, refactor usage messages into fields in the action
   structure.  (And rename `action` since it won't be appropriate any

@@ -9,6 +9,7 @@
 #include "paths.h"
 #include "receiver_client.h"
 #include "sender_client.h"
+#include "suspender_client.h"
 
 typedef int action_func(int argc, char *argv[]);
 
@@ -97,10 +98,10 @@ static int receive_main(int argc, char *argv[])
             usage(stderr);
         }
     }
-    const char **files = NULL;
     if (optind < argc)
-        files = (const char **)argv + optind;
-    return be_receiver(files);
+        usage(stderr);
+
+    return be_receiver();
 }
 
 
@@ -118,7 +119,23 @@ static const char *suspend_options_usage =
 
 static int suspend_main(int argc, char *argv[])
 {
-    assert(false && "XXX Write me!");
+    optind = 1;
+    while (true) {
+        int c = getopt_long(argc, argv, "", suspend_options, NULL);
+        if (c == -1)
+            break;
+
+        switch (c) {
+
+        default:
+            usage(stderr);
+        }
+    }
+    if (optind >= argc)
+        usage(stderr);
+
+    const char **prog_argv = (const char **)argv + optind;
+    return be_suspender(prog_argv);
 }
 
 

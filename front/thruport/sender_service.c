@@ -9,6 +9,8 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#include "debug.h"
+
 static pthread_mutex_t sslock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  sscond = PTHREAD_COND_INITIALIZER;
 static bool            sender_active;
@@ -62,13 +64,27 @@ void disconnect_sender(void)
     pthread_mutex_unlock(&sslock);
 }
 
+static void unlock(void *arg)
+{
+    pthread_mutex_t *mutex = arg;
+    pthread_mutex_unlock(mutex);
+}
+
 int await_sender_socket(void)
 {
+    int sock;
     pthread_mutex_lock(&sslock);
-    while (!sender_active)
-        pthread_cond_wait(&sscond, &sslock);
-    int sock = sender_sock;
-    pthread_mutex_unlock(&sslock);
+    pthread_cleanup_push(unlock, &sslock); {
+        HELLO;
+        while (!sender_active) {
+            HELLO;
+            pthread_cond_wait(&sscond, &sslock);
+            HELLO;
+        }
+        HELLO;
+        sock = sender_sock;
+    } pthread_cleanup_pop(1);
+    //pthread_mutex_unlock(&sslock);
     return sock;
 }
 

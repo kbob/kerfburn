@@ -1,4 +1,4 @@
-#include "sender_client.h"
+#include "receiver_client.h"
 
 #include <stdio.h>
 #include <stdlib.h>
