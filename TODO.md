@@ -64,6 +64,7 @@ Is this a bug database?
 
     </strike>  **Done.  (Not automated; must hand-test.)**
 
+
 ## Documentation
 
 * Document the build system?
@@ -75,11 +76,21 @@ Is this a bug database?
 * Pull the hardware section out of the architecture section and make
   it a standalone document.
 
+
 ## Coding
 
 * <strike>Write front end serial manager.</strike> **Mostly done.**
 
 * The Makefiles need a lot of refactoring.
+
+* gen-pin-defs.py should compress \_READY\_READY or \_ENABLED\_DISABLED
+  to something more English-like.
+  
+* gen-pin-defs.py should emit a better autogen disclaimer.
+
+* I think gen-pin-defs.py needs to #define the raw pin name.
+
+* "make clean" should clean up tools/bin and config subdirectories.
 
 
 ### Back End

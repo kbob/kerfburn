@@ -4,17 +4,17 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c e-stop.c fw_assert.c parser.c \
-                 serial.c softint.c timer.c variables.c
+   fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c illum.c \
+                 parser.c serial.c softint.c timer.c variables.c
 
-     BACK_MCU := atmega2560
+#    BACK_MCU := atmega2560
       BACK_CC := avr-gcc
       BACK_AR := avr-ar
       BACK_LD := avr-gcc
  BACK_OBJCOPY := avr-objcopy
  BACK_AVRDUDE := avrdude
 
-BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback
+BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback -I.
   BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
          JUNK += *.hex
@@ -30,7 +30,7 @@ load-back:  back/fw.hex
 	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
 clean-back: $(subdirs:%=clean-back/%)
-	cd back && rm -f fw a.out core *~ *.o .*.d TAGS $(JUNK)
+	cd back && rm -f fw a.out core *~ *.o *.d TAGS $(JUNK)
 
 back-programs: back/fw $(test_programs:%=back/%)
 back-tests: $(subdirs:%:back/%-tests)
@@ -45,15 +45,15 @@ back/%.hex: back/%
 	$(BACK_OBJCOPY) -O ihex -R .eeprom $< $@
 
 # C source dependency generation.
-back/.%.d : back/%.c
-	@rm -f "$@"
-	@$(BACK_CC) -M -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< || \
-	    rm -f "$@"
+back/%.d : back/%.c
+	rm -f "$@"
+	$(BACK_CC) -M -MG -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< \
+            || rm -f "$@"
 
 .PHONY: all-back build-back load-back clean-back back-programs
 
 ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''
-  -include $(fw_cfiles:back/%.c=back/.%.d)
+  -include $(fw_cfiles:back/%.c=back/%.d)
 endif
 
 include $(subdirs:%=back/%/Make.inc)

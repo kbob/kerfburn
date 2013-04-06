@@ -3,7 +3,7 @@
 *.a
 *.so
 *.hex
-.*.d
+*.d
 *.pyc
 .DS_Store
 a.out

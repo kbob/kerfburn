@@ -1,7 +1,9 @@
 # Top level makefile.
 
-    MAKEFLAGS += -j4
+    MAKEFLAGS += -w -j4
 .DEFAULT_GOAL := help
+
+     BACK_MCU := atmega2560
 
 help:
 	@echo 'Common Targets'
@@ -36,7 +38,7 @@ tests:    front-tests back-tests
 
 
 .PHONY: all build clean help libs load programs test tests
-FORCE:
 
+include config/Make.inc
 include front/Make.inc
 include back/Make.inc

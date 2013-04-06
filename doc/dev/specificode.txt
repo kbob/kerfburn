@@ -66,9 +66,10 @@ Specificode is made of packets of up to 256 bytes.
 
      Power relay mask bits:
        0x01: ATX power on
-       0x02: main laser power on
-       0x04: water pump power on
-       0x08: air assist pump power on
+       0x02: ATX power ready
+       0x04: main laser power on
+       0x08: water pump power on
+       0x10: air assist pump power on
 
      Motor Status Word, one for each motor
        0x01: timer/counter active

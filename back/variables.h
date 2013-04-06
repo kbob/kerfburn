@@ -13,16 +13,16 @@
 #define VAR_DESC_SIZE   10      // descriptor size, including NUL byte
 
 typedef enum variable_index {
-    V_DT = 0,                   // dwell time
-    V_IA = 1,                   // illumination animation
-    V_IL = 2,                   // illumination level
-    V_LM = 3,                   // laser mode
-    V_LP = 4,                   // laser power
-    V_LS = 5,                   // laser select
-    V_PD = 6,                   // pulse distance
-    V_PI = 7,                   // pulse interval
-    V_PL = 8,                   // pulse length (duration)
-    V_X0 = 9,                   // X initial
+    V_DT =  0,                  // dwell time
+    V_IA =  1,                  // illumination animation
+    V_IL =  2,                  // illumination level
+    V_LM =  3,                  // laser mode
+    V_LP =  4,                  // laser power
+    V_LS =  5,                  // laser select
+    V_PD =  6,                  // pulse distance
+    V_PI =  7,                  // pulse interval
+    V_PL =  8,                  // pulse length (duration)
+    V_X0 =  9,                  // X initial
     V_XA = 10,                  // X acceleration
     V_XD = 11,                  // X distance
     V_Y0 = 12,                  // Y initial
@@ -43,7 +43,7 @@ typedef enum variable_type {
 typedef union variable_value {
     uint32_t    vv_unsigned;
     int32_t     vv_signed;
-    int32_t     vv_enum;
+    uint32_t    vv_enum;
 } variable_value, v_value;
 
 typedef char                variable_name      [VAR_NAME_SIZE];
@@ -64,12 +64,12 @@ extern        bool     variable_enum_is_OK   (uint8_t index, char e);
 static inline v_value  get_variable          (uint8_t index);
 static inline uint32_t get_unsigned_variable (uint8_t index);
 static inline int32_t  get_signed_variable   (uint8_t index);
-static inline int8_t   get_enum_variable     (uint8_t index);
+static inline uint8_t  get_enum_variable     (uint8_t index);
 
 static inline void     set_variable          (uint8_t, v_value);
 static inline void     set_unsigned_variable (uint8_t index, uint32_t);
 static inline void     set_signed_variable   (uint8_t index, int32_t);
-static inline void     set_enum_variable     (uint8_t index, int8_t);
+static inline void     set_enum_variable     (uint8_t index, uint8_t);
 
 extern struct variables_private {
     v_value vp_values[VARIABLE_COUNT];
@@ -91,7 +91,7 @@ static inline int32_t get_signed_variable(uint8_t index)
     return get_variable(index).vv_signed;
 }
 
-static inline int8_t get_enum_variable(uint8_t index)
+static inline uint8_t get_enum_variable(uint8_t index)
 {
     return get_variable(index).vv_enum;
 }
@@ -116,7 +116,7 @@ static inline void set_signed_variable(uint8_t index, int32_t s)
     set_variable(index, v);
 }
 
-static inline void set_enum_variable(uint8_t index, int8_t e)
+static inline void set_enum_variable(uint8_t index, uint8_t e)
 {
     v_value v;
     v.vv_enum = e;

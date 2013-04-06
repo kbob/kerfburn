@@ -31,7 +31,7 @@ Just define some ASCII commands.  One per line.
 
 ## Variable assignment
 
-An assignment look like
+An assignment looks like
 
    name=value
 
@@ -44,9 +44,9 @@ An unsigned integer is represented as a string of decimal digits.
 
 Signed integer.  Signed integers are 32 bits.  A signed integer is
 represented as a "+" or "-" character followed by a string of decimal
-digits.
+digits.  (Note: the "+" sign is not optional.)
 
-Enumeration.  Enumeration values are represented as single characters.
+Enumeration.  Enumeration values are represented as single lowercase characters.
 
 
 ### Variables
@@ -132,6 +132,7 @@ Laser pulse duration in CPU clock ticks.
 #### il &mdash; Illumination Level
 *unsigned integer*  
 The bed illumination level.  Legal values are 0, off, to 127, full brightness.
+il applies when an illumination animation is not in progress.
 
 
 #### ia &mdash; Illumination Animation
@@ -153,6 +154,12 @@ These values are legal.
 + **w** - warning
 + **a** - alert
 + **n** - none
+
+
+#### ri &mdash; Reporting Interval
+*unsigned integer*
+The interval between status report in milliseconds.
+Takes effect the next time status reporting is enabled.
 
 
 ## Enqueue Action
@@ -260,9 +267,13 @@ Implicit Parameters: *none*
 
 (Define some commands that request status of various sorts.
 They start with S.  They are immediate.)
-Maybe rename S - Stop to H - Halt or E - Emergency Stop??
 
 - queue status
+
+#### Sq &mdash; Status of Queue
+
+
+
 - reader status
 - power status
 - what else?
@@ -277,13 +288,17 @@ commands.
 
 #### H &mdash; Halt.
 
+**XXX** Rename this to S &mdash; Stop?
+
 Shut off lasers, stop motors, flush action queue.
 Variable values are not affected.
 
 
 #### W &mdash; Wait.
 
-Wait for enqueued actions to complete before executing another command.
+Wait for enqueued actions to complete before executing another
+command.  This is used both to synchronize immediate commands with
+enqueued actions and to quiesce the machine at the end of a job.
 
 
 #### El, Dl &mdash; Enable, Disable Low-Voltage Power
@@ -294,6 +309,34 @@ Wait for enqueued actions to complete before executing another command.
 #### Ey, Dy &mdash; Enable, Disable Y Motor
 #### Ez, Dz &mdash; Enable, Disable Z Motor
 
+Enable or disable the respective hardware device.  When disabled, the
+device is not powered.
+
+The El command, Enable Low-Voltage Power, waits until the low voltage
+power is ready.
+
+
+#### Er, Dr &mdash; Enable, Disable Status Reporting
+
+Enable reporting of status messages at fixed intervals.
+
+Implicit parameters
+
+  * **ri** - Reporting interval in milliseconds
+  * **rp** - Whether to report power status
+  * **rf** - Whether to report fault status
+  * **rq** - Whether to report queue status
+  * **re** - Whether to report E-Stop status
+  * **rs** - Whether to report serial status
+  * **rl** - Whether to report limit switch status
+  * **rm** - Whether to report motor status
+  * **rv** - Whether to report variables' values
+  * **rw** - Whether to report water temperature and flow
+  * **oc** - Whether to override the Lid Closed fault
+  * **oo** - Whether to override the Lid Opened fault
+
+***XXX*** I want to have a bunch more status messages to print all
+the variable state.
 
 #### I &mdash; Illuminate.
 

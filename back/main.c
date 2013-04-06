@@ -1,5 +1,9 @@
 #include <stdbool.h>
 
+#include "fault.h"
+#include "illum.h"
+#include "LEDs.h"
+#include "low-voltage.h"
 #include "parser.h"
 #include "serial.h"
 #include "timer.h"
@@ -11,84 +15,45 @@
 //      softint triggered from softint
 //      softint triggered from softint
 
-volatile bool toggler_enqueued = false;
-uint32_t inc = 2000;
-uint32_t next = 0;
-
 static void initialize_devices(void)
 {
     init_variables();
     init_timer();
     init_serial();
+    init_low_voltage_power();
+    init_LEDs();
+    init_illumination();
     // XXX more devices coming...
     sei();
 }
 
-static void toggle_LED(void)
+static void trigger_serial_faults(uint8_t e)
 {
-    // LED is pin D13, aka PB7.
-    DDRB |= _BV(DDB7);
-    if (bit_is_set(PORTB, PB7))
-        PORTB &= ~_BV(PB7);
-    else
-        PORTB |= _BV(PB7);
+    if (e & SE_FRAME_ERROR)
+        trigger_fault(F_SERIAL_FRAME);
+    if (e & SE_DATA_OVERRUN)
+        trigger_fault(F_SERIAL_OVERRUN);
+    if (e & SE_PARITY_ERROR)
+        trigger_fault(F_SERIAL_PARITY);
 }
 
-void toggler_done(void)
+static void do_background_task(void)
 {
-    toggle_LED();
-    toggler_enqueued = false;
-}
-
-void do_housekeeping(void)
-{
-#if 0
-    // If the status packet flag is set, generate status packet
-    // If we've received a full command packet, enqueue the step generator.
-#endif
-
-#if 0
-    // Test millisecond_time().
-
-    uint32_t next = millisecond_time() + 1000;
+    
+    serial_rx_start();
     while (true) {
-        uint32_t now = millisecond_time();
-        if ((int)now - (int)next >= 0) {
-            toggle_LED();
-            next += 1000;
-        }
-    }
-#else
-    // Test triggering soft interrupt from base level.
-
-    if (!toggler_enqueued) {
-        toggler_enqueued = true;
-        next += inc;
-        if ((inc >>= 1) < 1) {
-            inc = 2000;
-        }
-        for (int i = 0; i < 300; i++) {
-            while (!serial_tx_is_available())
-                continue;
-            serial_tx_put_char('/' + i % 11);
-        }
-       while (!serial_tx_is_available())
+        while (!serial_rx_has_lines())
             continue;
-        serial_tx_put_char('\r');
-        while (!serial_tx_is_available())
-            continue;
-        serial_tx_put_char('\n');
-        static timeout toggler;
-        toggler.to_func = toggler_done;
-        enqueue_timeout(&toggler, next);
+        uint8_t e = serial_rx_errors();
+        if (e)
+            trigger_serial_faults(e);
+        parse_line();
     }
-#endif
-    parse_line();
 }
 
 int main()
 {
     initialize_devices();
     while (true)
-        do_housekeeping();
+        do_background_task();
 }
