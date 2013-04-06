@@ -41,6 +41,23 @@ antonyms = {
 antonyms.update([(v, k) for (k, v) in antonyms.iteritems()])
 
 
+phrase_map = {
+    'ready ready': 'ready',
+    'enable enabled': 'enabled',
+    'enable disabled': 'disabled',
+}
+
+def anglicize(phrase):
+    phrase = phrase.lower()
+    print >>sys.stderr, 'Anglicizing "%s"' % phrase
+    for ungainly in phrase_map:
+        if ungainly in phrase:
+            print >>sys.stderr, ('changing "%s" to "%s" in "%s"' %
+                                 (ungainly, phrase_map[ungainly], phrase))
+            phrase = phrase.replace(ungainly, phrase_map[ungainly])
+    return phrase
+
+
 def get_mcu_pins(mcu):
 
     class McuPortTransformer(ast.NodeTransformer):
@@ -110,67 +127,82 @@ def make_identifier(desc):
     return i
 
 
-def def_pin(pin, desc, **kwargs):
-    reg, bit = parse_pin(pin)
-    ident = make_identifier(desc)
-    emit_def(ident + '_DDR_reg', 'DDR%s' % reg)
-    emit_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
-    emit_def(ident + '_PIN_reg', 'PIN%s' % reg)
-    emit_def(ident + '_PIN_bit', 'PIN%s%s' % (reg, bit))
-    emit_def(ident + '_PORT_reg', 'PORT%s' % reg)
-    emit_def(ident + '_PORT_bit', 'PORT%s%s' % (reg, bit))
-    print
-    if kwargs:
-        for (k, v) in kwargs.iteritems():
-            emit_def(ident + '_' + make_identifier(k), v)
-            if k in antonyms:
-                ant_id = make_identifier(ident + '_' + antonyms[k])
-                emit_def(ant_id, '(!%s)' % v)
-        print
+# def def_pin(pin, desc, **kwargs):
+#     reg, bit = parse_pin(pin)
+#     ident = make_identifier(desc)
+#     emit_def(ident + '_DDR_reg', 'DDR%s' % reg)
+#     emit_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
+#     emit_def(ident + '_PIN_reg', 'PIN%s' % reg)
+#     emit_def(ident + '_PIN_bit', 'PIN%s%s' % (reg, bit))
+#     emit_def(ident + '_PORT_reg', 'PORT%s' % reg)
+#     emit_def(ident + '_PORT_bit', 'PORT%s%s' % (reg, bit))
+#     print
+#     if kwargs:
+#         for (k, v) in kwargs.iteritems():
+#             emit_def(ident + '_' + make_identifier(k), v)
+#             if k in antonyms:
+#                 ant_id = make_identifier(ident + '_' + antonyms[k])
+#                 emit_def(ant_id, '(!%s)' % v)
+#         print
 
-def def_output_pin(pin, desc, **kwargs):
-    def_pin(pin, desc, **kwargs)
+# def def_output_pin(pin, desc, **kwargs):
+#     def_pin(pin, desc, **kwargs)
 
-def def_input_pin(pin, desc, pull_up=False, **kwargs):
-    kwargs['pull up'] = ['false', 'true'][pull_up]
-    def_pin(pin, desc, **kwargs)
+# def def_input_pin(pin, desc, pull_up=False, **kwargs):
+#     kwargs['pull up'] = ['false', 'true'][pull_up]
+#     def_pin(pin, desc, **kwargs)
 
 
 def get_pin_mappings(mcu_pins):
 
-    def emit_def(name, value):
-        defns.append((name, value))
+    def defined(ident):
+        print >>sys.stderr, 'Is "%s" defined? => %r' % (ident, any((d and d[0] == ident) for d in defns))
+        return any((d and d[0] == ident) for d in defns)
 
-    def emit_blank_line():
+    def add_def(ident, value):
+        defns.append((ident, value))
+
+    def add_blank_line():
         defns.append(None)
 
     def def_pin(pin, desc, **kwargs):
 
+        pos = len(defns)
         reg, bit = parse_pin(pin)
         ident = make_identifier(desc)
-        emit_def(ident, '')
-        emit_def(ident + '_DDR_reg', 'DDR%s' % reg)
-        emit_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
-        emit_def(ident + '_PIN_reg', 'PIN%s' % reg)
-        emit_def(ident + '_PIN_bit', 'PIN%s%s' % (reg, bit))
-        emit_def(ident + '_PORT_reg', 'PORT%s' % reg)
-        emit_def(ident + '_PORT_bit', 'PORT%s%s' % (reg, bit))
-        emit_blank_line()
+        add_def(ident + '_DDR_reg', 'DDR%s' % reg)
+        add_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
+        add_def(ident + '_PIN_reg', 'PIN%s' % reg)
+        add_def(ident + '_PIN_bit', 'PIN%s%s' % (reg, bit))
+        add_def(ident + '_PORT_reg', 'PORT%s' % reg)
+        add_def(ident + '_PORT_bit', 'PORT%s%s' % (reg, bit))
+        add_blank_line()
         if kwargs:
             for (k, v) in kwargs.iteritems():
-                emit_def(ident + '_' + make_identifier(k), v)
+                kw_name = desc + ' ' + k
+                kw_name = anglicize(kw_name)
+                kw_ident = make_identifier(kw_name)
+                add_def(kw_ident, v)
                 if k in antonyms:
-                    ant_id = make_identifier(ident + '_' + antonyms[k])
-                    emit_def(ant_id, '(!%s)' % v)
-            emit_blank_line()
+                    ant_name = desc + ' ' + antonyms[k]
+                    print >>sys.stderr, 'kw_name "%s" -> ant_name "%s"' % (kw_name, ant_name)
+                    ant_name = anglicize(ant_name)
+                    ant_ident = make_identifier(ant_name)
+                    add_def(ant_ident, '(!%s)' % kw_ident)
+            add_blank_line()
+        if not defined(ident):
+            defns.insert(pos, (ident, ''))
+        return pos
 
     def def_output_pin(pin, desc, **kwargs):
 
         def_pin(pin, desc, **kwargs)
 
     def def_input_pin(pin, desc, pull_up=False, **kwargs):
-        kwargs['pull up'] = ['false', 'true'][pull_up]
-        def_pin(pin, desc, **kwargs)
+
+        pos = def_pin(pin, desc, **kwargs)
+        ident = make_identifier(desc) + '_pullup'
+        defns.insert(pos, (ident, ['false', 'true'][pull_up]))
 
     defns = []
     g = {'low': 'LOW', 'high': 'HIGH'}

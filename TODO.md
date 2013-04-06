@@ -83,8 +83,8 @@ Is this a bug database?
 
 * The Makefiles need a lot of refactoring.
 
-* gen-pin-defs.py should compress \_READY\_READY or \_ENABLED\_DISABLED
-  to something more English-like.
+* <strike>gen-pin-defs.py should compress \_READY\_READY or \_ENABLED\_DISABLED
+  to something more English-like.</strike>  **Done.**
   
 * gen-pin-defs.py should emit a better autogen disclaimer.
 
