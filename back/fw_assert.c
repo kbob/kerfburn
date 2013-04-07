@@ -26,12 +26,28 @@
 #include "config/pin-defs.h"
 #include "pin-io.h"
 
+#define BAUD_RATE   9600
+
 static inline void init_serial(void)
 {
+#if 0
     // Keep mode, baud rate, parity settings.
     UCSR0B &= ~_BV(RXEN0);
     UCSR0B &= ~_BV(TXEN0);
     UCSR0B |=  _BV(TXEN0);;
+#else
+    const uint16_t baud_setting = F_CPU / 8 / BAUD_RATE - 1;
+
+    // Enable double speed operation.
+    UCSR0A = _BV(U2X0);
+
+    // Set baud rate.
+    UBRR0 = baud_setting;
+
+    // Enable RX, TX, Data Register Empty Interrupt, and RX Complete Interrupt.
+    UCSR0B = _BV(TXEN0);
+
+#endif
 }
 
 static inline void put_char(uint8_t c)
