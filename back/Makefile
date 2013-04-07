@@ -6,4 +6,4 @@
 	@$(MAKE) -C .. $@
 
 test: FORCE			# There is a directory named test.
-make.PHONY: FORCE
+.PHONY: FORCE
