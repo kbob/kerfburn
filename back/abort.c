@@ -8,16 +8,17 @@
 #define __DELAY_BACKWARD_COMPATIBLE__
 #include <util/delay.h>
 
+#include "config/pin-defs.h"
+#include "pin-io.h"
+
 static inline void light_LED(void)
 {
-    DDRB  |= _BV(DDB7);
-    PORTB |= _BV(PB7);
+    INIT_OUTPUT_PIN(LED, LED_ON);
 }
 
 static inline void extinguish_LED(void)
 {
-    DDRB  |= _BV(DDB7);
-    PORTB &= ~_BV(PB7);
+    INIT_OUTPUT_PIN(LED, LED_OFF);
 }
 
 static void throb(void)

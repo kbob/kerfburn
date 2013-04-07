@@ -4,38 +4,7 @@
 #include <stdbool.h>
 #include <avr/io.h>
 
-// SS   = PB0
-// SCK  = PB1
-// MOSI = PB2
-// MISO = PB3
-
-#define SPI_SS_DDR_reg  DDRB
-#define SPI_SS_DD_bit   DDB0
-#define SPI_SS_PIN_reg  PINB
-#define SPI_SS_PIN_bit  PINB0
-#define SPI_SS_PORT_reg PORTB
-#define SPI_SS_PORT_bit PORTB0
-
-#define SPI_SCK_DDR_reg  DDRB
-#define SPI_SCK_DD_bit   DDB1
-#define SPI_SCK_PIN_reg  PINB
-#define SPI_SCK_PIN_bit  PINB1
-#define SPI_SCK_PORT_reg PORTB
-#define SPI_SCK_PORT_bit PORTB1
-
-#define SPI_MOSI_DDR_reg  DDRB
-#define SPI_MOSI_DD_bit   DDB2
-#define SPI_MOSI_PIN_reg  PINB
-#define SPI_MOSI_PIN_bit  PINB2
-#define SPI_MOSI_PORT_reg PORTB
-#define SPI_MOSI_PORT_bit PORTB2
-
-#define SPI_MISO_DDR_reg  DDRB
-#define SPI_MISO_DD_bit   DDB3
-#define SPI_MISO_PIN_reg  PINB
-#define SPI_MISO_PIN_bit  PINB3
-#define SPI_MISO_PORT_reg PORTB
-#define SPI_MISO_PORT_bit PORTB3
+#include "config/pin-defs.h"
 
 #define SPI_DIVIDER 2
 

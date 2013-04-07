@@ -4,6 +4,7 @@
 #include "illum.h"
 #include "LEDs.h"
 #include "low-voltage.h"
+#include "motors.h"
 #include "parser.h"
 #include "serial.h"
 #include "timer.h"
@@ -21,6 +22,7 @@ static void initialize_devices(void)
     init_timer();
     init_serial();
     init_low_voltage_power();
+    init_motors();
     init_LEDs();
     init_illumination();
     // XXX more devices coming...

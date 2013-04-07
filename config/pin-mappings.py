@@ -12,14 +12,26 @@ def_output_pin(PH6, 'Air Pump Enable',     enabled=high)
 # X Axis Motor
 
 def_output_pin(PD7, 'X Motor Enable',      enabled=low)
-def_output_pin(PF1, 'X Direction',         positive=low)
-# def_timer_output(OCR3A, 
+def_output_pin(PF1, 'X Motor Direction',   positive=low)
+def_timer_pin(OC3A, 'X Motor Step')
+
+# Y Axis Motor
+
+def_output_pin(PK0, 'Y Motor Enable',      enabled=low)
+def_output_pin(PL1, 'Y Motor Direction',   positive=low)
+def_timer_pin(OC5A, 'Y Motor Step');
+
+# Limit Switches
 
 # Misc. switches
 
 def_input_pin (PC5, 'Lid',                 open=low, pull_up=True)
 
-# LEDs
+# LED (on Azteeg)
+
+def_output_pin(PB7, 'LED', on=high)
+
+# LEDs (on Gantry)
 
 def_output_pin(_SS, 'SPI SS')
 def_output_pin(SCK, 'SPI SCK')

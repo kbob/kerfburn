@@ -4,6 +4,11 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#include "config/pin-defs.h"
+
+#include "pin-io.h"
+
+#if 0
 // X Motor
 //   Step size:  0.08 in/tooth * 20 teeth/rev. / 200 step/rev. * 25.4 mm/in
 //   Microsteps: 16
@@ -77,82 +82,101 @@
 #define PORTy_step      PORTL
 #define PORTyn_step     PORTL3
 
+#endif
 
 static inline void init_motors(void)
 {
     // X Motor
-    PORTx_enable |=  _BV(PORTxn_enable); // disable
-    SET_BIT(PORTx_enable, PORTxn_enable, X_MOTOR_DISABLE)
-    PORTx_step   &= ~_BV(PORTxn_step);   // set step low
-    DDRx_enable  |=  _BV(DDxn_enable);
-    DDRx_dir     |=  _BV(DDxn_dir);
-    DDRx_step    |=  _BV(DDxn_step);
+    INIT_OUTPUT_PIN(X_MOTOR_ENABLE, X_MOTOR_DISABLED);
+    INIT_OUTPUT_PIN(X_MOTOR_DIRECTION, X_MOTOR_DIRECTION_POSITIVE);
+    INIT_OUTPUT_PIN(X_MOTOR_STEP, LOW);
+    // PORTx_enable |=  _BV(PORTxn_enable); // disable
+    // SET_BIT(PORTx_enable, PORTxn_enable, X_MOTOR_DISABLE)
+    // PORTx_step   &= ~_BV(PORTxn_step);   // set step low
+    // DDRx_enable  |=  _BV(DDxn_enable);
+    // DDRx_dir     |=  _BV(DDxn_dir);
+    // DDRx_step    |=  _BV(DDxn_step);
 
     // Y Motor
-    PORTy_enable |=  _BV(PORTyn_enable); // disable
-    PORTy_step   &= ~_BV(PORTyn_step);   // set step low
-    DDRy_enable  |=  _BV(DDyn_enable);
-    DDRy_dir     |=  _BV(DDyn_dir);
-    DDRy_step    |=  _BV(DDyn_step);
+    INIT_OUTPUT_PIN(Y_MOTOR_ENABLE, Y_MOTOR_DISABLED);
+    INIT_OUTPUT_PIN(Y_MOTOR_DIRECTION, Y_MOTOR_DIRECTION_POSITIVE);
+    INIT_OUTPUT_PIN(Y_MOTOR_STEP, LOW);
+    // PORTy_enable |=  _BV(PORTyn_enable); // disable
+    // PORTy_step   &= ~_BV(PORTyn_step);   // set step low
+    // DDRy_enable  |=  _BV(DDyn_enable);
+    // DDRy_dir     |=  _BV(DDyn_dir);
+    // DDRy_step    |=  _BV(DDyn_step);
 }
 
 static inline void enable_x_motor(void)
 {
-    PORTx_enable &= ~_BV(PORTxn_enable);
+    SET_REG_BIT(X_MOTOR_ENABLE_PORT, X_MOTOR_ENABLED);
+    // PORTx_enable &= ~_BV(PORTxn_enable);
 }
 
 static inline void disable_x_motor(void)
 {
-    PORTx_enable |= _BV(PORTxn_enable);
+    SET_REG_BIT(X_MOTOR_ENABLE_PORT, X_MOTOR_DISABLED);
+    // PORTx_enable |= _BV(PORTxn_enable);
 }
 
 static inline void set_x_direction_positive(void)
 {
-    PORTx_dir &= ~_BV(PORTxn_dir);
+    SET_REG_BIT(X_MOTOR_DIRECTION_PORT, X_MOTOR_DIRECTION_POSITIVE);
+    // PORTx_dir &= ~_BV(PORTxn_dir);
     _delay_us(1);
 }
 
 static inline void set_x_direction_negative(void)
 {
-    PORTx_dir |= _BV(PORTxn_dir);
+    SET_REG_BIT(X_MOTOR_DIRECTION_PORT, X_MOTOR_DIRECTION_POSITIVE);
+    // PORTx_dir |= _BV(PORTxn_dir);
     _delay_us(1);
 }
 
 static inline void step_x(void)
 {
-    PORTx_step |= _BV(PORTxn_step);
+    SET_REG_BIT(X_MOTOR_STEP_PORT, HIGH);
+    // PORTx_step |= _BV(PORTxn_step);
     _delay_us(1);
-    PORTx_step &= ~_BV(PORTxn_step);
+    SET_REG_BIT(X_MOTOR_STEP_PORT, LOW);
+    // PORTx_step &= ~_BV(PORTxn_step);
     _delay_us(1);
 }
 
 static inline void enable_y_motor(void)
 {
-    PORTy_enable &= ~_BV(PORTyn_enable);
+    SET_REG_BIT(Y_MOTOR_ENABLE_PORT, Y_MOTOR_ENABLED);
+    // PORTy_enable &= ~_BV(PORTyn_enable);
 }
 
 static inline void disable_y_motor(void)
 {
-    PORTy_enable |= _BV(PORTyn_enable);
+    SET_REG_BIT(Y_MOTOR_ENABLE_PORT, Y_MOTOR_DISABLED);
+    // PORTy_enable |= _BV(PORTyn_enable);
 }
 
 static inline void set_y_direction_positive(void)
 {
-    PORTy_dir |= _BV(PORTyn_dir);
+    SET_REG_BIT(Y_MOTOR_DIRECTION_PORT, Y_MOTOR_DIRECTION_POSITIVE);
+    // PORTy_dir |= _BV(PORTyn_dir);
     _delay_us(1);
 }
 
 static inline void set_y_direction_negative(void)
 {
-    PORTy_dir &= ~_BV(PORTyn_dir);
+    SET_REG_BIT(Y_MOTOR_DIRECTION_PORT, Y_MOTOR_DIRECTION_POSITIVE);
+    // PORTy_dir &= ~_BV(PORTyn_dir);
     _delay_us(1);
 }
 
 static inline void step_y(void)
 {
-    PORTy_step |= _BV(PORTyn_step);
+    SET_REG_BIT(Y_MOTOR_STEP_PORT, HIGH);
+    // PORTy_step |= _BV(PORTyn_step);
     _delay_us(1);
-    PORTy_step &= ~_BV(PORTyn_step);
+    SET_REG_BIT(Y_MOTOR_STEP_PORT, HIGH);
+    // PORTy_step &= ~_BV(PORTyn_step);
     _delay_us(1);
 }
 

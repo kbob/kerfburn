@@ -23,6 +23,9 @@
 #define __DELAY_BACKWARD_COMPATIBLE__
 #include <util/delay.h>
 
+#include "config/pin-defs.h"
+#include "pin-io.h"
+
 static inline void init_serial(void)
 {
     // Keep mode, baud rate, parity settings.
@@ -57,17 +60,17 @@ static inline void put_dec(unsigned int n)
 
 static inline void init_LED(void)
 {
-    DDRB  |= _BV(DDB7);
+    INIT_OUTPUT_PIN(LED, LED_OFF);
 }
 
 static inline void light_LED(void)
 {
-    PORTB |= _BV(PB7);
+    SET_REG_BIT(LED_PORT, LED_ON);
 }
 
 static inline void extinguish_LED(void)
 {
-    PORTB &= ~_BV(PB7);
+    SET_REG_BIT(LED_PORT, LED_OFF);
 }
 
 static void throb_once(void)

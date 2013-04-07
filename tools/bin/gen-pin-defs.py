@@ -35,6 +35,7 @@ def get_file(role):
 
 antonyms = {
     'enabled': 'disabled',
+    'on': 'off',
     'open': 'closed',
     'positive': 'negative',
 }
@@ -49,24 +50,24 @@ phrase_map = {
 
 def anglicize(phrase):
     phrase = phrase.lower()
-    print >>sys.stderr, 'Anglicizing "%s"' % phrase
     for ungainly in phrase_map:
         if ungainly in phrase:
-            print >>sys.stderr, ('changing "%s" to "%s" in "%s"' %
-                                 (ungainly, phrase_map[ungainly], phrase))
             phrase = phrase.replace(ungainly, phrase_map[ungainly])
     return phrase
 
 
 def get_mcu_pins(mcu):
 
-    class McuPortTransformer(ast.NodeTransformer):
+    class McuPatternTransformer(ast.NodeTransformer):
 
         def visit_Assign(self, node):
             assert all(isinstance(n, ast.Name) for n in node.targets)
             if self.is_port_pin_pattern_assignment(node):
-                # print ast.dump(node)
-                self.expand_pattern(node.value)
+                port_pins.update((d, d)
+                                 for d in self.expand_pattern(node.value))
+                return None
+            elif self.is_timer_pin_pattern_assignment(node):
+                timer_pins.update(self.expand_pattern(node.value))
                 return None
             return node
 
@@ -77,47 +78,75 @@ def get_mcu_pins(mcu):
             n = t[0]
             return isinstance(n, ast.Name) and n.id == 'port_pin_pattern'
 
+        def is_timer_pin_pattern_assignment(self, node):
+            t = node.targets
+            if len(t) != 1:
+                return False
+            n = t[0]
+            return isinstance(n, ast.Name) and n.id == 'timer_pin_pattern'
+
         def expand_pattern(self, rhs):
+
             class PatternSyntax(ast.NodeVisitor):
+
                 def visit_Name(self, node):
                     return node.id
+
                 def visit_Num(self, node):
                     return str(node.n)
+
                 def visit_Sub(self, node):
+
                     def str_range(l, r):
                         return [chr(i) for i in range(ord(l), ord(r) + 1)]
+
                     return str_range
+
                 def visit_BinOp(self, node):
                     op = self.visit(node.op)
                     l = self.visit(node.left)
                     r = self.visit(node.right)
                     return op(l, r)
+
                 def visit_Tuple(self, node):
+
                     def cross_cat(l):
                         if not l:
                             yield ''
                             return
-                        for first in l[0]:
+                        if isinstance(l[0], str):
                             for rest in cross_cat(l[1:]):
-                                yield first + rest
-                    return list(cross_cat([self.visit(e) for e in node.elts]))
-            pins.update((p, p) for p in PatternSyntax().visit(rhs))
+                                yield l[0] + rest
+                        else:
+                            for first in l[0]:
+                                for rest in cross_cat(l[1:]):
+                                    yield first + rest
+
+                    return cross_cat([self.visit(e) for e in node.elts])
+
+            return PatternSyntax().visit(rhs)
 
     with get_file('mcu') as f:
         mcu_file = f.name
         src = f.read()
         
     t = compile(src, mcu_file, 'exec', ast.PyCF_ONLY_AST)
-    pins = {}
-    t1 = McuPortTransformer().visit(t)
+    port_pins = {}
+    timer_pins = set()
+    t1 = McuPatternTransformer().visit(t)
     code = compile(t1, mcu_file, 'exec')
-    exec code in pins
-    del pins['__builtins__']
-    return pins
+    exec code in port_pins
+    del port_pins['__builtins__']
+    return port_pins, timer_pins
 
 
-def parse_pin(pin):
+def parse_port_pin(pin):
     m = re.match(r'P([A-Z])(\d+)', pin)
+    return m.groups()
+
+
+def parse_timer_pin(pin):
+    m = re.match(r'OC(\d+)([A-Z])', pin)
     return m.groups()
 
 
@@ -127,36 +156,9 @@ def make_identifier(desc):
     return i
 
 
-# def def_pin(pin, desc, **kwargs):
-#     reg, bit = parse_pin(pin)
-#     ident = make_identifier(desc)
-#     emit_def(ident + '_DDR_reg', 'DDR%s' % reg)
-#     emit_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
-#     emit_def(ident + '_PIN_reg', 'PIN%s' % reg)
-#     emit_def(ident + '_PIN_bit', 'PIN%s%s' % (reg, bit))
-#     emit_def(ident + '_PORT_reg', 'PORT%s' % reg)
-#     emit_def(ident + '_PORT_bit', 'PORT%s%s' % (reg, bit))
-#     print
-#     if kwargs:
-#         for (k, v) in kwargs.iteritems():
-#             emit_def(ident + '_' + make_identifier(k), v)
-#             if k in antonyms:
-#                 ant_id = make_identifier(ident + '_' + antonyms[k])
-#                 emit_def(ant_id, '(!%s)' % v)
-#         print
-
-# def def_output_pin(pin, desc, **kwargs):
-#     def_pin(pin, desc, **kwargs)
-
-# def def_input_pin(pin, desc, pull_up=False, **kwargs):
-#     kwargs['pull up'] = ['false', 'true'][pull_up]
-#     def_pin(pin, desc, **kwargs)
-
-
-def get_pin_mappings(mcu_pins):
+def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
 
     def defined(ident):
-        print >>sys.stderr, 'Is "%s" defined? => %r' % (ident, any((d and d[0] == ident) for d in defns))
         return any((d and d[0] == ident) for d in defns)
 
     def add_def(ident, value):
@@ -168,7 +170,7 @@ def get_pin_mappings(mcu_pins):
     def def_pin(pin, desc, **kwargs):
 
         pos = len(defns)
-        reg, bit = parse_pin(pin)
+        reg, bit = parse_port_pin(pin)
         ident = make_identifier(desc)
         add_def(ident + '_DDR_reg', 'DDR%s' % reg)
         add_def(ident + '_DD_bit', 'DD%s%s' % (reg, bit))
@@ -185,7 +187,6 @@ def get_pin_mappings(mcu_pins):
                 add_def(kw_ident, v)
                 if k in antonyms:
                     ant_name = desc + ' ' + antonyms[k]
-                    print >>sys.stderr, 'kw_name "%s" -> ant_name "%s"' % (kw_name, ant_name)
                     ant_name = anglicize(ant_name)
                     ant_ident = make_identifier(ant_name)
                     add_def(ant_ident, '(!%s)' % kw_ident)
@@ -196,19 +197,54 @@ def get_pin_mappings(mcu_pins):
 
     def def_output_pin(pin, desc, **kwargs):
 
-        def_pin(pin, desc, **kwargs)
+        return def_pin(pin, desc, **kwargs)
 
     def def_input_pin(pin, desc, pull_up=False, **kwargs):
 
         pos = def_pin(pin, desc, **kwargs)
         ident = make_identifier(desc) + '_pullup'
         defns.insert(pos, (ident, ['false', 'true'][pull_up]))
+        return pos
+
+    def def_timer_pin(pin, desc):
+
+        timer, comp = parse_timer_pin(pin)
+        ident = make_identifier(desc)
+        port_pin = mcu_port_pins[pin]
+        pos = def_output_pin(port_pin, desc)
+        print >>sys.stderr, \
+            'pin=%r desc=%r timer=%r comp=%r port_pin=%r pos=%r' % \
+            (pin, desc, timer, comp, port_pin, pos)
+        add_def(ident + '_TCCRA', 'TCCR%(timer)sA' % locals())
+        add_def(ident + '_COM0', 'COM%(timer)s%(comp)s0' % locals())
+        add_def(ident + '_COM1', 'COM%(timer)s%(comp)s1' % locals())
+        add_def(ident + '_WGM0', 'WGM%(timer)s0' % locals())
+        add_def(ident + '_WGM1', 'WGMR%(timer)s1' % locals())
+        add_blank_line()
+        add_def(ident + '_TCCRB', 'TCCR%(timer)sB' % locals())
+        add_def(ident + '_CS0', 'CS%(timer)s0' % locals())
+        add_def(ident + '_CS1', 'CS%(timer)s1' % locals())
+        add_def(ident + '_CS2', 'CS%(timer)s2' % locals())
+        add_def(ident + '_WGM2', 'WGM%(timer)s2' % locals())
+        add_def(ident + '_WGM3', 'WGM%(timer)s3' % locals())
+        add_def(ident + '_TCNT', 'TCNT%(timer)s' % locals())
+        add_blank_line()
+        add_def(ident + '_OCR', 'OCR%(timer)s%(comp)s' % locals())
+        add_blank_line()
+        add_def(ident + '_TIMSK', 'TIMSK%(timer)s' % locals())
+        add_def(ident + '_TOIE', 'TOIE%(timer)s' % locals())
+        add_def(ident + '_TIFR', 'TIFR%(timer)s' % locals())
+        add_def(ident + '_TOV', 'TOV%(timer)s' % locals())
+        add_def(ident + '_TIMER_OVF_vect', 'TIMER%(timer)s_OVF_vect' % locals())
+        add_blank_line()
 
     defns = []
     g = {'low': 'LOW', 'high': 'HIGH'}
-    g.update(mcu_pins)
+    g.update(mcu_port_pins)
+    g.update((d, d) for d in mcu_timer_pins)
     g['def_output_pin'] = def_output_pin
     g['def_input_pin'] = def_input_pin
+    g['def_timer_pin'] = def_timer_pin
     with get_file('mapping') as f:
         exec f in g
     del g['def_output_pin']
@@ -248,8 +284,10 @@ def emit_file(defns, output):
 def gen_pin_defs(mcu, output):
 
     g = {}
-    g.update(get_mcu_pins(mcu))
-    defns = get_pin_mappings(g);
+    mcu_port_pins, mcu_pattern_pins = get_mcu_pins(mcu)
+    
+    g.update(mcu_port_pins)
+    defns = make_pin_definitions(g, mcu_pattern_pins);
     emit_file(defns, output)
 
 

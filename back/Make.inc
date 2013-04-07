@@ -46,8 +46,8 @@ back/%.hex: back/%
 
 # C source dependency generation.
 back/%.d : back/%.c
-	rm -f "$@"
-	$(BACK_CC) -M -MG -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< \
+	@rm -f "$@"
+	@$(BACK_CC) -M -MG -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< \
             || rm -f "$@"
 
 .PHONY: all-back build-back load-back clean-back back-programs

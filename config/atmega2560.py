@@ -1,9 +1,10 @@
 # N.B., this file contains pseudo-Python.
 
 
-# Pattern generates port pin names
+# Patterns generate port pin names and timer pin names.
 
 port_pin_pattern = P, A-L, 0-7
+timer_pin_pattern = OC, 0-5, A-C
 
 # Special pin mappings for AVR ATmega 2560
 
