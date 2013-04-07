@@ -14,6 +14,9 @@ static int my_putc(char c, FILE *stream)
     while (!serial_tx_is_available())
         continue;
     serial_tx_put_char(c);
+    if (c == '\n')
+        while (!serial_tx_is_idle())
+            continue;
     return 0;
 }
 
