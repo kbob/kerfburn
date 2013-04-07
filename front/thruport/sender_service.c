@@ -75,13 +75,8 @@ int await_sender_socket(void)
     int sock;
     pthread_mutex_lock(&sslock);
     pthread_cleanup_push(unlock, &sslock); {
-        HELLO;
-        while (!sender_active) {
-            HELLO;
+        while (!sender_active)
             pthread_cond_wait(&sscond, &sslock);
-            HELLO;
-        }
-        HELLO;
         sock = sender_sock;
     } pthread_cleanup_pop(1);
     //pthread_mutex_unlock(&sslock);

@@ -68,7 +68,6 @@ static int send_to_receiver(receiver *r, const char *data, size_t count)
 
 void broadcast_to_receivers(const char *data, size_t count)
 {
-    fprintf(stderr, "BROADCAST: %s\n", str_repr(data, count, false));
     receiver *r = receivers;
     while (r < receivers + receiver_count) {
         if (send_to_receiver(r, data, count))
