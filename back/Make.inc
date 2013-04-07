@@ -4,14 +4,17 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c illum.c \
-                 parser.c serial.c softint.c timer.c variables.c
+   fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c \
+                 fw_stdio.c illum.c parser.c serial.c softint.c timer.c \
+                 variables.c
 
+     THRUPORT := front/thruport/thruport
 #    BACK_MCU := atmega2560
       BACK_CC := avr-gcc
       BACK_AR := avr-ar
       BACK_LD := avr-gcc
  BACK_OBJCOPY := avr-objcopy
+ BACK_SUSPEND := $(THRUPORT) suspend
  BACK_AVRDUDE := avrdude
 
 BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback -I.
@@ -26,8 +29,8 @@ BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback -I.
 all-back:   build-back test-back
 build-back: back-programs back-tests
 test-back:  build-back $(subdirs:%=test-back/%)
-load-back:  back/fw.hex
-	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
+load-back:  back/fw.hex $(THRUPORT)
+	$(BACK_SUSPEND) $(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
 clean-back: $(subdirs:%=clean-back/%)
 	cd back && rm -f fw a.out core *~ *.o *.d TAGS $(JUNK)
