@@ -30,7 +30,6 @@ static f_func PROGMEM *const fault_functions[FAULT_COUNT] = {
     NULL,                       // F_SW_MISSED_INTR
 };
 
-
 void clear_all_faults(void)
 {
     fault_states = 0;
