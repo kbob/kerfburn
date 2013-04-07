@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "fault.h"
+#include "fw_stdio.h"
 #include "illum.h"
 #include "LEDs.h"
 #include "low-voltage.h"
@@ -18,15 +19,17 @@
 
 static void initialize_devices(void)
 {
-    init_variables();
     init_timer();
     init_serial();
+    init_stdio();
     init_low_voltage_power();
     init_motors();
     init_LEDs();
     init_illumination();
     // XXX more devices coming...
     sei();
+
+    init_variables();
 }
 
 static void trigger_serial_faults(uint8_t e)
