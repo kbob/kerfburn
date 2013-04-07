@@ -14,7 +14,7 @@
 #define ENUM     "\005"
 
 #define DEFINE_DESC(name, type, ...) \
-    static const char name##_desc[] PROGMEM = #name "=" #type __VA_ARGS__
+    static const char name##_desc[] PROGMEM = #name "=" type __VA_ARGS__
 
 DEFINE_DESC(dt, UNSIGNED);      // dwell time
 DEFINE_DESC(ia, ENUM, "ncswa"); // illumination animation
@@ -83,7 +83,7 @@ void init_variables(void)
     v_name name, prev_name;
     size_t max_len = 0;
     for (uint8_t i = 0; i < VARIABLE_COUNT; i++) {
-        get_variable_name(i, name);
+        get_variable_name(i, &name);
         if (i)
             fw_assert(cmp2(prev_name, name) < 0);
         strcpy(prev_name, name);
@@ -102,7 +102,7 @@ void reset_all_variables(void)
     for (uint8_t i = 0; i < VARIABLE_COUNT; i++) {
         v_desc desc;
         v_value value;
-        get_variable_desc(i, desc);
+        get_variable_desc(i, &desc);
         switch (desc[DESC_TYPE_OFFSET]) {
 
         case VT_UNSIGNED:
@@ -131,7 +131,7 @@ uint8_t lookup_variable(const char *name)
     while (lo < hi) {
         uint8_t mid = (lo + hi) / 2;
         v_name mid_name;
-        get_variable_name(mid, mid_name);
+        get_variable_name(mid, &mid_name);
         int8_t c = cmp2(name, mid_name);
         if (c == 0)
             return mid;
@@ -143,16 +143,16 @@ uint8_t lookup_variable(const char *name)
     return VAR_NOT_FOUND;
 }
 
-void get_variable_desc(uint8_t index, v_desc out)
+void get_variable_desc(uint8_t index, v_desc *out)
 {
-    strncpy_P(out, desc_addr(index), sizeof out);
-    out[sizeof out - 1] = '\0';
+    strncpy_P(*out, desc_addr(index), sizeof *out);
+    (*out)[sizeof *out - 1] = '\0';
 }
 
-void get_variable_name(uint8_t index, v_name out)
+void get_variable_name(uint8_t index, v_name *out)
 {
-    strncpy_P(out, desc_addr(index) + DESC_NAME_OFFSET, sizeof out);
-    out[sizeof out - 1] = '\0';
+    strncpy_P(*out, desc_addr(index) + DESC_NAME_OFFSET, sizeof *out);
+    (*out)[sizeof *out - 1] = '\0';
 }
 
 v_type get_variable_type(uint8_t index)
@@ -163,7 +163,7 @@ v_type get_variable_type(uint8_t index)
 bool variable_enum_is_OK(uint8_t index, char e)
 {
     v_desc desc;
-    get_variable_desc(index, desc);
+    get_variable_desc(index, &desc);
     char *p = desc + DESC_ENUM_OFFSET;
     while (*p)
         if (e == *p++)

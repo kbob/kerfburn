@@ -94,12 +94,12 @@ static const c_desc command_descriptors[] PROGMEM = {
 static const uint8_t COMMAND_COUNT =
     sizeof command_descriptors / sizeof command_descriptors[0];
 
-static void get_cmd_name(uint8_t i, c_name out)
+static void get_cmd_name(uint8_t i, c_name *out)
 {
     fw_assert(i < COMMAND_COUNT);
     PGM_P ptr = (PGM_P)pgm_read_word(&command_descriptors[i].cd_name);
-    strncpy_P(out, ptr, sizeof out);
-    out[sizeof out - 1] = '\0';
+    strncpy_P(*out, ptr, sizeof *out);
+    (*out)[sizeof *out - 1] = '\0';
 }
 
 static c_func *get_cmd_func(uint8_t i)
@@ -110,12 +110,11 @@ static c_func *get_cmd_func(uint8_t i)
 
 #ifndef FW_NDEBUG
 
-__attribute__((constructor))
 static void verify_commands(void)
 {
     c_name prev_name, curr_name;
     for (uint8_t i = 0; i < COMMAND_COUNT; i++) {
-        get_cmd_name(i, curr_name);
+        get_cmd_name(i, &curr_name);
         if (i)
             fw_assert(strcmp(prev_name, curr_name) < 0);
         strncpy(prev_name, curr_name, sizeof prev_name);
@@ -130,7 +129,7 @@ static uint8_t lookup_command(c_name name)
     while (lo < hi) {
         uint8_t mid = (lo + hi) / 2;
         c_name mid_name;
-        get_cmd_name(mid, mid_name);
+        get_cmd_name(mid, &mid_name);
         int c = strcmp(name, mid_name);
         if (c == 0)
             return mid;
@@ -259,6 +258,13 @@ static inline void parse_assignment(uint8_t c0)
 
 void parse_line(void)
 {
+#ifndef FW_NDEBUG
+    static bool been_here = false;
+    if (!been_here) {
+        verify_commands();
+        been_here = true;
+    }
+#endif    
     uint8_t c0 = serial_rx_peek_char(0);
     if (is_eol(c0)) {
         serial_rx_consume(1);

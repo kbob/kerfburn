@@ -56,8 +56,8 @@ extern        void     reset_all_variables   (void);
 
 // Reflection interface
 extern        uint8_t  lookup_variable       (const char *name);
-extern        void     get_variable_desc     (uint8_t index, v_desc out);
-extern        void     get_variable_name     (uint8_t index, v_name out);
+extern        void     get_variable_desc     (uint8_t index, v_desc *out);
+extern        void     get_variable_name     (uint8_t index, v_name *out);
 extern        v_type   get_variable_type     (uint8_t index);
 extern        bool     variable_enum_is_OK   (uint8_t index, char e);
 
