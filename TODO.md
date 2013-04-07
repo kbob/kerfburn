@@ -83,14 +83,15 @@ Is this a bug database?
 
 * The Makefiles need a lot of refactoring.
 
-* <strike>gen-pin-defs.py should compress \_READY\_READY or \_ENABLED\_DISABLED
-  to something more English-like.</strike>  **Done.**
+* <strike>`gen-pin-defs.py` should compress `\_READY\_READY` or
+  `\_ENABLED\_DISABLED` to something more English-like.</strike>
+  **Done.**
   
-* gen-pin-defs.py should emit a better autogen disclaimer.
+* `gen-pin-defs.py` should emit a better autogen disclaimer.
 
-* I think gen-pin-defs.py needs to #define the raw pin name.
+* <strike>I think `gen-pin-defs.py` needs to `#define` the raw pin name.</strike>  **Done.**
 
-* "make clean" should clean up tools/bin and config subdirectories.
+* `make clean` should clean up `tools/bin` and `config` subdirectories.
 
 
 ### Back End
@@ -107,6 +108,8 @@ Is this a bug database?
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
   line 1122 (in the Linux kernel source tree).  Also see
   http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
+
+* Change serial driver so most functions are in-line.
 
 
 ### Thruport
