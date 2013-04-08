@@ -1,10 +1,10 @@
-<strike>
-
-
 # Overview
 
-Specificode is the protocol used between the front and back ends.  It
-runs over a serial line.
+Specificode is the protocol used between the front and back ends.
+The communication link is serial-over-USB.  Each Specificode message
+is a human-readable text string in 7 bit ASCII terminated by a
+newline character (ASCII 012, aka Linefeed), with one exception.
+(See Out Of Band Message, below.)
 
 The name, *Specificode*, refers to the idea that the protocol is
 machine-specific.  If the machine configuration changes, the protocol
@@ -18,24 +18,25 @@ builds large parts of the protocol definitions from it.  I am not
 writing that at present, just hand-coding the values for the machine's
 present configuration.
 
-Specificode has layers not unlike the
-[OSI Model](http://en.wikipedia.org/wiki/OSI_model).  They are
-explained below.
-</strike>
+The front end sends two types of messages to the back end: variable
+assignments and commands.  Commands may be categorized as immediate or
+enqueued.  The front end may also send an out of band message to
+effect an Emergency Stop.
 
-
-# Bother.
-
-Just define some ASCII commands.  One per line.
+When the back end firmware starts, it sends a version string followed
+by the word, "Ready".  After that, it outputs status reports.  If the
+firmware crashes, it will send an assertion failure message roughly
+every 1800 milliseconds until it is shut down, reflashed, or reset.
 
 
 ## Variable assignment
 
 An assignment looks like
 
-   name=value
+    name=value
 
-Variable names are exactly two lowercase letters long.
+Variable names are exactly two characters long.  The first character
+is a lowercase letter, and the second is alphanumeric.
 
 Each variable has a type.  There are three types.
 
@@ -46,7 +47,8 @@ Signed integer.  Signed integers are 32 bits.  A signed integer is
 represented as a "+" or "-" character followed by a string of decimal
 digits.  (Note: the "+" sign is not optional.)
 
-Enumeration.  Enumeration values are represented as single lowercase characters.
+Enumeration.  Enumeration values are represented as single lowercase
+characters.
 
 
 ### Variables
@@ -59,7 +61,6 @@ The CPU clock ticks at 16 MHz.
 
 #### xd, yd, zd &mdash; X, Y, Z Distance
 *signed integer*  
-
 Change of x, y, or z motor position in microsteps.
 An X or Y microstep is 0.0127 millimeters (0.0005 inch).
 A Z microstep is ~0.000165 millimeters (0.0000065 inch).
@@ -67,7 +68,6 @@ A Z microstep is ~0.000165 millimeters (0.0000065 inch).
 
 #### x0, y0, z0 &mdash;  Initial X, Y, Z Param
 *unsigned integer*  
-
 Reciprocal of initial x, y, or z motor velocity.
 Expressed in ticks per microstep
 
@@ -97,16 +97,17 @@ Set the current laser's firing mode.  These values are legal.
 * **d** - distance pulse
 + **o** - off
 
-In continuous mode, the laser fires continuously.
-In timed pulse mode, the laser pulses every **pi** CPU ticks.
-In distance pulse mode, the laser pulses each time the motors have
-moved the cutting point by **pd** microsteps along the major axis.
+In continuous mode, the laser fires continuously during a Cut
+operation.  In timed pulse mode, the laser pulses every **pi** CPU
+ticks.  In distance pulse mode, the laser pulses each time the motors
+have moved the cutting point by **pd** microsteps along the major
+axis.
 
 
 #### lp &mdash; Laser Power
 *unsigned integer*  
 Set the main laser's power level.
-Legal values range from 0, off, to 1023, full power.
+Legal values range from 0, off, to 4095, full power.
 
 The visible laser's power level can not be changed.
 It always fires at full power.
@@ -164,20 +165,32 @@ Takes effect the next time status reporting is enabled.
 
 ## Enqueue Action
 
-An action is enqueued to be performed when the previous action completes.
-Most actions require implicit parameters.  Those will be taken from the
-values of the variables at the time the action is enqueued.
-An action is represented by the letter 'Q' and one other letter.
+These actions must be enqueued for execution.  When an enqueued
+action is executed, its timing is precisely controlled.
+
+If the queue is empty when an action is enqueued, it begins executing
+immediately.  The queue can not be paused and resumed -- it executes
+until it is empty.
+
+Enqueued actions are executed in order, with no pauses between.  The
+front end is expected to decompose complex motions into several S-code
+actions.  The back end will execute them continuously..
+
+Most enqueued actions require implicit parameters.  Those will be
+taken from the values of the variables at the time the action is
+enqueued.  An action is represented by the letter 'Q' and one other
+letter.
 
 
 ### Actions
 
 #### Qd &mdash; Dwell
 
-Stop movement for a specified time.
-If a laser is selected and the laser mode is continuous,
-continue to fire at the current power level.
-If the mode is timed pulse, pulse at the current rate.
+Stop movement for a specified time.  If a laser is selected and the
+laser mode is continuous, continue to fire at the current power level.
+If the mode is timed pulse, pulse at the current rate.  If the mode is
+distance pulse, the laser will not fire more than once at the dwell
+location.
 
 Implicit Parameters
 
@@ -251,7 +264,7 @@ Implicit Parameters
 
 #### Qe &mdash; Engrave
 
-TBD
+TBD.
 
 
 #### Qh &mdash; Home
@@ -263,22 +276,6 @@ The laser does not fire.
 Implicit Parameters: *none*
 
 
-## Status Commands
-
-(Define some commands that request status of various sorts.
-They start with S.  They are immediate.)
-
-- queue status
-
-#### Sq &mdash; Status of Queue
-
-
-
-- reader status
-- power status
-- what else?
-
-
 ## Immediate Actions
 
 These commands are executed immediately.  In most cases,
@@ -286,9 +283,7 @@ you want to execute a Wait command before other immediate
 commands.
 
 
-#### H &mdash; Halt.
-
-**XXX** Rename this to S &mdash; Stop?
+#### S &mdash; Stop.
 
 Shut off lasers, stop motors, flush action queue.
 Variable values are not affected.
@@ -299,6 +294,25 @@ Variable values are not affected.
 Wait for enqueued actions to complete before executing another
 command.  This is used both to synchronize immediate commands with
 enqueued actions and to quiesce the machine at the end of a job.
+
+
+#### R &mdash; Report.
+
+Report the currently selected status messages.
+
+Implicit Parameters
+
+  * **rp** - Whether to report power status
+  * **rf** - Whether to report fault status
+  * **rq** - Whether to report queue status
+  * **re** - Whether to report E-Stop status
+  * **rs** - Whether to report serial status
+  * **rl** - Whether to report limit switch status
+  * **rm** - Whether to report motor status
+  * **rv** - Whether to report variables' values
+  * **rw** - Whether to report water temperature and flow
+  * **oc** - Whether to override the Lid Closed fault
+  * **oo** - Whether to override the Lid Opened fault
 
 
 #### El, Dl &mdash; Enable, Disable Low-Voltage Power
@@ -320,7 +334,7 @@ power is ready.
 
 Enable reporting of status messages at fixed intervals.
 
-Implicit parameters
+Implicit Parameters
 
   * **ri** - Reporting interval in milliseconds
   * **rp** - Whether to report power status
@@ -335,8 +349,6 @@ Implicit parameters
   * **oc** - Whether to override the Lid Closed fault
   * **oo** - Whether to override the Lid Opened fault
 
-***XXX*** I want to have a bunch more status messages to print all
-the variable state.
 
 #### I &mdash; Illuminate.
 
@@ -348,3 +360,11 @@ Implicit Parameters
 
  * **ia** - illumination animation
  * **il** - illumination level
+
+
+## Out Of Band Message
+
+The front end may send an out-of-band message to the back end.
+The message is a single byte with value CAN ('\003', ^C).
+The back end responds to that message immediately (from the serial
+interrupt handler) and executes an Emergency Stop of the laser cutter.
