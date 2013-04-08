@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "fault.h"
 #include "fw_stdio.h"
@@ -46,12 +47,15 @@ static void do_background_task(void)
 {
     
     serial_rx_start();
+    printf("Ready\n");
     while (true) {
         while (!serial_rx_has_lines())
             continue;
         uint8_t e = serial_rx_errors();
-        if (e)
+        if (e) {
             trigger_serial_faults(e);
+            continue;
+        }
         parse_line();
     }
 }
