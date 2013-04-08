@@ -1,7 +1,5 @@
-#ifndef LOW_VOLTAGE_INCLUDED
-#define LOW_VOLTAGE_INCLUDED
-
-#include <stdbool.h>
+#ifndef LOW_VOLTAGE_included
+#define LOW_VOLTAGE_included
 
 #include "config/pin-defs.h"
 #include "pin-io.h"
@@ -32,4 +30,4 @@ static inline void disable_low_voltage(void)
     SET_REG_BIT(LOW_VOLTAGE_ENABLE_PORT, LOW_VOLTAGE_DISABLED);
 }
 
-#endif /* !LOW_VOLTAGE_INCLUDED */
+#endif /* !LOW_VOLTAGE_included */
