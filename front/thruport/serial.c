@@ -112,20 +112,15 @@ int serial_transmit(const char *buf, size_t size)
         if (ntw > size)
             ntw = size;
         tx_sent += ntw;
-        DBG("tx_space %zu -> %zu", tx_space, tx_space - ntw);
         tx_space -= ntw;
         while (ntw) {
             pthread_mutex_unlock(&serial_lock);
-            DBG("write %s", str_repr(buf, ntw, false));
             ssize_t nw = write(ttyfd, buf, ntw);
-            DBG("nw = %zd, ntw = %zu, tx_space = %zu", nw, ntw, tx_space);
             pthread_mutex_lock(&serial_lock);
             if (nw < 0) {
                 tx_sent -= ntw;
-                DBG("tx_space %zu -> %zu", tx_space, tx_space + ntw);
                 tx_space += ntw;
                 pthread_mutex_unlock(&serial_lock);
-                DBG("wwr error %m");
                 return 1;
             }
             ntw -= nw;
@@ -148,10 +143,8 @@ static inline bool eat_flow_char(char c)
         if (nlo < olo)
             nhi += 0x100;
         tx_received = nhi | nlo;
-        DBG("tx_space %zu -> %zu", tx_space, tx_received + 0xFF - tx_sent);
         tx_space = tx_received + 0xFF - tx_sent;
         if (tx_space) {
-            DBG("signal");
             pthread_cond_signal(&serial_cond);
         }
         pthread_mutex_unlock(&serial_lock);
@@ -184,8 +177,6 @@ ssize_t serial_receive(char *buf, size_t max)
         if (nread > 0) {
             size_t ncanon = cook_chars(buf, tty_rawbuf, nread);
             static size_t raw_tot = 0, can_tot = 0;
-            // DBG("read %zu + %zd raw, %zu + %zu canon",
-            //     raw_tot, nread, can_tot, ncanon);
             raw_tot += nread; can_tot += ncanon;
             if (ncanon > 0)
                 return ncanon;
