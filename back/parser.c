@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "actions.h"
@@ -12,12 +13,12 @@
 // dt ia il lm lp ls pd pi pl x0 xa xd y0 ya yd
 //
 // Commands
-// Da Dh Dl Dw Dx Dy Dz
-// Ea Eh El Ew Ex Ey Ez
-// H
+// Da Dh Dl Dr Dw Dx Dy Dz
+// Ea Eh El Er Ew Ex Ey Ez
 // I
 // Qc Qd Qe Qh Qm
-// Sb Sf Sz
+// R
+// S
 // W
 
 #define CMD_NOT_FOUND 0xFF      // returned by lookup_command()
@@ -39,6 +40,7 @@ typedef struct command_descriptor {
 DEFINE_COMMAND_NAME(Da);
 DEFINE_COMMAND_NAME(Dh);
 DEFINE_COMMAND_NAME(Dl);
+DEFINE_COMMAND_NAME(Dr);
 DEFINE_COMMAND_NAME(Dw);
 DEFINE_COMMAND_NAME(Dx);
 DEFINE_COMMAND_NAME(Dy);
@@ -46,6 +48,7 @@ DEFINE_COMMAND_NAME(Dz);
 DEFINE_COMMAND_NAME(Ea);
 DEFINE_COMMAND_NAME(Eh);
 DEFINE_COMMAND_NAME(El);
+DEFINE_COMMAND_NAME(Er);
 DEFINE_COMMAND_NAME(Ew);
 DEFINE_COMMAND_NAME(Ex);
 DEFINE_COMMAND_NAME(Ey);
@@ -57,16 +60,15 @@ DEFINE_COMMAND_NAME(Qd);
 DEFINE_COMMAND_NAME(Qe);
 DEFINE_COMMAND_NAME(Qh);
 DEFINE_COMMAND_NAME(Qm);
-DEFINE_COMMAND_NAME(Sb);
-DEFINE_COMMAND_NAME(Sf);
-DEFINE_COMMAND_NAME(Sz);
+DEFINE_COMMAND_NAME(R);
+DEFINE_COMMAND_NAME(S);
 DEFINE_COMMAND_NAME(W);
-
 
 static const c_desc command_descriptors[] PROGMEM = {
     { Da_name, action_disable_air_pump     },
     { Dh_name, action_disable_high_voltage },
     { Dl_name, action_disable_low_voltage  },
+    { Dr_name, action_disable_reporting    },
     { Dw_name, action_disable_water_pump   },
     { Dx_name, action_disable_X_motor      },
     { Dy_name, action_disable_Y_motor      },
@@ -74,20 +76,19 @@ static const c_desc command_descriptors[] PROGMEM = {
     { Ea_name, action_enable_air_pump      },
     { Eh_name, action_enable_high_voltage  },
     { El_name, action_enable_low_voltage   },
+    { Er_name, action_enable_reporting     },
     { Ew_name, action_enable_water_pump    },
     { Ex_name, action_enable_X_motor       },
     { Ey_name, action_enable_Y_motor       },
     { Ez_name, action_enable_Z_motor       },
-    { H_name,  action_emergency_stop       },
     { I_name,  action_illuminate           },
     { Qc_name, action_enqueue_cut          },
     { Qd_name, action_enqueue_dwell        },
     { Qe_name, action_enqueue_engrave      },
     { Qh_name, action_enqueue_home         },
     { Qm_name, action_enqueue_move         },
-    { Sb_name, action_send_bar_status      },
-    { Sf_name, action_send_foo_status      },
-    { Sz_name, action_send_baz_status      },
+    { R_name,  action_report_status        },
+    { S_name,  action_stop                 },
     { W_name,  action_wait                 },
 };
 
@@ -141,12 +142,6 @@ static uint8_t lookup_command(c_name name)
     return CMD_NOT_FOUND;
 }
 
-static void error(void)
-{
-    fw_assert(false);
-    // XXX Send message, consume current line and continue.
-}
-
 static inline bool is_eol(uint8_t c)
 {
     return c == '\r' || c == '\n';
@@ -155,6 +150,25 @@ static inline bool is_eol(uint8_t c)
 static inline bool is_digit(uint8_t c)
 {
     return c >= '0' && c <= '9';
+}
+
+static void error(void)
+{
+    // Send uninformative message, consume current line and continue.
+    printf("Parse error at \"");
+    while (1) {
+        while (!serial_rx_has_chars())
+            continue;
+        uint8_t e = serial_rx_errors();
+        if (e)
+            fw_assert(0 && "XXX Write me !");
+        uint8_t c = serial_rx_peek_char(0);
+        serial_rx_consume(1);
+        if (is_eol(c))
+            break;
+        putchar(c);
+    }            
+    printf("\"\n");
 }
 
 static bool consume_line(uint8_t pos)
@@ -228,8 +242,10 @@ static inline void parse_assignment(uint8_t c0)
         {
             uint32_t n = 0;
             uint8_t c;
-            while (is_digit((c = serial_rx_peek_char(pos++))))
+            while (is_digit((c = serial_rx_peek_char(pos)))) {
                 n = 10 * n + (c - '0');
+                pos++;
+            }
             if (is_negative)
                 value.vv_signed = -(int32_t)n;
             else
@@ -252,8 +268,10 @@ static inline void parse_assignment(uint8_t c0)
     default:
         fw_assert(false);
     }
-    if (consume_line(pos))
+    if (consume_line(pos)) {
+        printf("set %s = %"PRId32"\n", name, value.vv_signed);
         set_variable(index, value);
+    }
 }
 
 void parse_line(void)
