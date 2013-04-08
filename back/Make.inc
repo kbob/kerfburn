@@ -39,7 +39,13 @@ back-programs: back/fw $(test_programs:%=back/%)
 back-tests: $(subdirs:%:back/%-tests)
 
 back/fw: $(fw_ofiles)
-	$(BACK_LD) $(BACK_LDFLAGS) $^ $(fw_ldlibs) -o $@
+	@( \
+	echo '#include "version.h"'; \
+	echo 'const char version[] PROGMEM =' \
+	     "\"Kerfburn Back End, built $$(date -u +%Y-%m-%dT%H:%M:%SZ)\";" \
+        ) > back/version.c
+	$(BACK_LD) $(BACK_LDFLAGS) $^ back/version.c $(fw_ldlibs) -o $@
+	@rm -f back/version.c
 
 back/%.o: back/%.c
 	$(BACK_CC) $(BACK_CFLAGS) $(BACK_CPPFLAGS) -c $< -o $@

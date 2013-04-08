@@ -11,6 +11,7 @@
 #include "serial.h"
 #include "timer.h"
 #include "variables.h"
+#include "version.h"
 
 // Test these.
 // DONE millisecond time updates.
@@ -47,7 +48,8 @@ static void do_background_task(void)
 {
     
     serial_rx_start();
-    printf("Ready\n");
+    printf_P(version);
+    printf("\nReady\n");
     while (true) {
         while (!serial_rx_has_lines())
             continue;
