@@ -1,5 +1,5 @@
-#ifndef SERIAL_INCLUDED
-#define SERIAL_INCLUDED
+#ifndef SERIAL_included
+#define SERIAL_included
 
 #include <stdbool.h>
 
@@ -30,4 +30,4 @@ extern bool     serial_tx_is_idle      (void);
 extern uint8_t  serial_tx_is_available (void);
 extern bool     serial_tx_put_char     (uint8_t c);
 
-#endif /* !SERIAL_INCLUDED */
+#endif /* !SERIAL_included */
