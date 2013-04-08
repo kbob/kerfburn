@@ -6,8 +6,8 @@ def_input_pin  (PA0, 'Low Voltage Ready',  ready=high)
 # Power Relays
 
 def_output_pin(PH5, 'High Voltage Enable', enabled=high)
-def_output_pin(PB4, 'Water Pump Enable',   enabled=high)
 def_output_pin(PH6, 'Air Pump Enable',     enabled=high)
+def_output_pin(PB4, 'Water Pump Enable',   enabled=high)
 
 # X Axis Motor
 
