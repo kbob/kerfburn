@@ -12,12 +12,12 @@ static inline void init_low_voltage_power(void)
 
 static inline bool low_voltage_is_enabled(void)
 {
-    return REG_BIT_IS(LOW_VOLTAGE_ENABLE_PORT, LOW_VOLTAGE_ENABLED);
+    return REG_BIT_IS(LOW_VOLTAGE_ENABLE_PIN, LOW_VOLTAGE_ENABLED);
 }
 
 static inline bool low_voltage_is_ready(void)
 {
-    return REG_BIT_IS(LOW_VOLTAGE_READY_PORT, LOW_VOLTAGE_READY);
+    return REG_BIT_IS(LOW_VOLTAGE_READY_PIN, LOW_VOLTAGE_READY);
 }
 
 static inline void enable_low_voltage(void)
