@@ -82,15 +82,27 @@ uint8_t serial_tx_is_available(void)
     return h != (t + 1) % TX_BUF_SIZE;
 }
 
+uint8_t serial_tx_char_count(void)
+{
+    uint8_t h, t;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        h = tx_head;
+        t = tx_tail;
+    }
+    return (h - t + 1) % TX_BUF_SIZE;
+}
+
 bool serial_tx_put_char(uint8_t c)
 {
     bool ok = true;
+    uint8_t new_tail;
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         if (bit_is_set(UCSR0A, UDRE0))
             UDR0 = c;
-        else if ((tx_tail + 1) % TX_BUF_SIZE != tx_head) {
+        else if ((new_tail = (tx_tail + 1) % TX_BUF_SIZE) != tx_head) {
             tx_buf[tx_tail] = c;
-            tx_tail = (tx_tail + 1) % TX_BUF_SIZE;
+            tx_tail = new_tail;
         } else {
             tx_errs |= SE_DATA_OVERRUN;
             ok = false;
