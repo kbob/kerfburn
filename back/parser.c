@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "actions.h"
+#include "fault.h"
 #include "fw_assert.h"
 #include "serial.h"
 #include "variables.h"
@@ -271,6 +272,8 @@ static inline void parse_assignment(uint8_t c0)
     if (consume_line(pos)) {
         printf("set %s = %"PRId32"\n", name, value.vv_signed);
         set_variable(index, value);
+        if (name[0] == 'o')
+            update_overrides();
     }
 }
 

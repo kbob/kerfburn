@@ -4,26 +4,33 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define FAULT_NAME_SIZE 3
+
 enum fault_index {
-    F_ESTOP          =  0,
-    F_LID_OPEN       =  1,
-    F_LID_CLOSED     =  2,
-    F_WATER_FLOW     =  3,
-    F_WATER_TEMP     =  4,
-    F_SERIAL_FRAME   =  5,
-    F_SERIAL_OVERRUN =  6,
-    F_SERIAL_PARITY  =  7,
-    F_SW_LEXICAL     =  8,
-    F_SW_SYNTAX      =  9,
-    F_SW_UNDERFLOW   = 10,
-    F_SW_MISSED_INTR = 11,
+    F_ES =  0,                  // Emergency Stop
+    F_LO =  1,                  // Lid Open
+    F_LC =  2,                  // Lid Closed
+    F_WF =  3,                  // Water Flow
+    F_WT =  4,                  // Water Temperature
+    F_SF =  5,                  // Serial Frame Error
+    F_SO =  6,                  // Serial Overrun
+    F_SP =  7,                  // Serial Parity Error
+    F_SL =  8,                  // Software Lexical Error
+    F_SS =  9,                  // Software Syntax Error
+    F_SU = 10,                  // Software Underflow
+    F_SI = 11,                  // Software Missed Interrupt
     FAULT_COUNT
 } fault_index, f_index;
 
-// XXX inline all except trigger_fault().
+typedef char fault_name[FAULT_NAME_SIZE];
+typedef fault_name f_name;
+
+// XXX inline all except trigger_fault() and update_overrides().
 extern void clear_all_faults     (void);
+extern void update_overrides     (void);
 extern bool fault_is_set         (uint8_t findex);
 extern bool fault_is_overridden  (uint8_t findex);
+extern void get_fault_name       (uint8_t findex, f_name *name_out);
 
 // set_fault simply sets the flag.  trigger_fault sets the flag and
 // also does associated actions.  (Stop motors, change illumination,

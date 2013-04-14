@@ -5,6 +5,7 @@
 #include "low-voltage.h"
 #include "motors.h"
 #include "relays.h"
+#include "report.h"
 
 #define ANNOUNCE_ACTION (printf("ACTION: %s\n", __func__ + 7))
 
@@ -38,7 +39,7 @@ DEFINE_ACTION(enable_reporting);
 // DEFINE_ACTION(disable_Y_motor);
 DEFINE_ACTION(disable_Z_motor);
 DEFINE_ACTION(disable_reporting);
-DEFINE_ACTION(report_status);
+//DEFINE_ACTION(report_status);
 
 void action_enable_low_voltage(void)
 {
@@ -111,4 +112,10 @@ void action_disable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
     disable_y_motor();
+}
+
+void action_report_status(void)
+{
+    ANNOUNCE_ACTION;
+    report_all();
 }

@@ -5,8 +5,8 @@
      programs := fw
 
    fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c \
-                 fw_stdio.c illum.c parser.c serial.c softint.c timer.c \
-                 variables.c
+                 fw_stdio.c illum.c parser.c serial.c softint.c report.c \
+                 timer.c variables.c
 
      THRUPORT := front/thruport/thruport
 #    BACK_MCU := atmega2560
@@ -42,7 +42,7 @@ back/fw: $(fw_ofiles)
 	@( \
 	echo '#include "version.h"'; \
 	echo 'const char version[] PROGMEM =' \
-	     "\"Kerfburn Back End, built $$(date -u +%Y-%m-%dT%H:%M:%SZ)\";" \
+	     "\"Kerfburn Back End, built $$(date +%Y-%m-%dT%H:%M:%S%z)\";" \
         ) > back/version.c
 	$(BACK_LD) $(BACK_LDFLAGS) $^ back/version.c $(fw_ldlibs) -o $@
 	@rm -f back/version.c
