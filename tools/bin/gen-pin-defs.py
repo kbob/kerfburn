@@ -38,6 +38,7 @@ antonyms = {
     'on': 'off',
     'open': 'closed',
     'positive': 'negative',
+    'reached': 'unreached',
 }
 antonyms.update([(v, k) for (k, v) in antonyms.iteritems()])
 
@@ -212,9 +213,9 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         ident = make_identifier(desc)
         port_pin = mcu_port_pins[pin]
         pos = def_output_pin(port_pin, desc)
-        print >>sys.stderr, \
-            'pin=%r desc=%r timer=%r comp=%r port_pin=%r pos=%r' % \
-            (pin, desc, timer, comp, port_pin, pos)
+        # print >>sys.stderr, \
+        #     'pin=%r desc=%r timer=%r comp=%r port_pin=%r pos=%r' % \
+        #     (pin, desc, timer, comp, port_pin, pos)
         add_def(ident + '_TCCRA', 'TCCR%(timer)sA' % locals())
         add_def(ident + '_COM0', 'COM%(timer)s%(comp)s0' % locals())
         add_def(ident + '_COM1', 'COM%(timer)s%(comp)s1' % locals())
