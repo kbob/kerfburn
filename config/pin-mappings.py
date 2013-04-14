@@ -9,22 +9,53 @@ def_output_pin(PH5, 'High Voltage Enable', enabled=high)
 def_output_pin(PH6, 'Air Pump Enable',     enabled=high)
 def_output_pin(PB4, 'Water Pump Enable',   enabled=high)
 
+# Main Laser
+
+def_output_pin(PE3, 'Main Laser Fire', on=high);
+def_timer_pin(OC3A, 'Main Laser Pulse');
+
+# Visible Laser
+
+def_output_pin(PH4, 'Visible Laser Fire', on=high);
+def_timer_pin(OC4B, 'Visible Laser Pulse');
+
 # X Axis Motor
 
 def_output_pin(PD7, 'X Motor Enable',      enabled=low)
 def_output_pin(PF1, 'X Motor Direction',   positive=low)
 def_timer_pin(OC3A, 'X Motor Step')
+# step_size  =   0.08 * 20 / 200 * 25.4, # mm
+# microsteps =  16,
+# length     = 530        # mm
 
 # Y Axis Motor
 
 def_output_pin(PK0, 'Y Motor Enable',      enabled=low)
 def_output_pin(PL1, 'Y Motor Direction',   positive=low)
 def_timer_pin(OC5A, 'Y Motor Step');
+# step_size  =   0.08 * 20 / 200 * 25.4, # mm
+# microsteps =  16,
+# length     = 280        # mm
+
+# Z Axis Motor
+
+# def_output_pin(P??, 'Z Motor Enable',      enabled=low)
+# def_output_pin(P??, 'Z Motor Direction',   positive=low)
+# def_timer_pin(OC??, 'Z Motor Step');
+# step_size  =   0.08 * 20 / 200 * 25.4, # mm
+# microsteps =  16,
+# length     = 280        # mm
 
 # Limit Switches
 
+def_input_pin(PE5, 'X Min Switch',         reached=high)
+def_input_pin(PJ1, 'Y Min Switch',         reached=high)
+def_input_pin(PD3, 'Z Min Switch',         reached=high)
+def_input_pin(PD2, 'Z Max Switch',         reached=high)
+
 # Misc. switches
 
+def_input_pin (PA3, 'Emergency Stop',      stopped=low, pull_up=True)
 def_input_pin (PC5, 'Lid',                 open=low, pull_up=True)
 
 # LED (on Azteeg)
@@ -37,64 +68,3 @@ def_output_pin(_SS, 'SPI SS')
 def_output_pin(SCK, 'SPI SCK')
 def_output_pin(MISO, 'SPI MISO')
 def_output_pin(MOSI, 'SPI MOSI')
-
-# low_voltage = (
-#    enable  = output(pin=B6, enable=low),
-#    ready   = pullup(pin=Z0, ready=low))
-                  
-# high_voltage = (
-#     output(pin=H5, enable=high),
-#     output(pin=B4, enable=high),
-#     output(pin=H6, enable=high))
-
-# X = axis (
-#   motor = (
-#     enable     =  D7,
-#     direction  =  F1,
-#     step       =  E4,
-#     pulse      = OCR3B,
-#     step_size  =   0.08 * 20 / 200 * 25.4, # mm
-#     microsteps =  16,
-#     length     = 530        # mm
-#   ),
-#   min = pullup (
-#     pin        =  D3,
-#     reached    = low
-#   ),
-#   home         = min
-# )
-
-# Y = axis (
-#   motor = (
-#     enable     =  K0,
-#     direction  =  L1,
-#     step       =  L3,
-#     pulse      =  OCR0A,
-#     step_size  =   0.08 * 20 / 200 * 25.4, # mm
-#     microsteps =  16,
-#     length     = 280        # mm
-#   ),
-#   max = pullup (
-#     pin        =  E5,
-#     reached    = low
-#   ),
-#   home         = min
-# )
-
-# lid = pullup(pin=D32, open=high)
-
-
-# main_laser = laser (
-#     pulse
-#     pulse_pin = Z0,
-#     level     = Z0,
-#     pulse     = OCR
-
-# def visible_laser():
-#   pulse_pin    = H4,
-#   pulse_register = OCR4B
-
-# LEDs = SPI (
-#   clock        = SCK,
-#   data         = MOSI
-# )
