@@ -3,6 +3,14 @@
 Is this a bug database?
 
 
+## Next!
+
+- Implement the status reporting variables.
+- Implement the R (report) command.
+- Implement periodic status reporting.
+- Document the status reporting variables.
+
+
 ## Design
 
 
