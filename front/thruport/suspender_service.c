@@ -62,6 +62,7 @@ void *susp_thread_main(void *closure)
         }
         if (close(sp->s_sock))
             syslog(LOG_ERR, "suspender close failed: %m");
+        syslog(LOG_INFO, "EOF on suspender");
         free(sp);
     }
 

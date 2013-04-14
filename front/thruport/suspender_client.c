@@ -1,5 +1,6 @@
 #include "suspender_client.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,7 @@
 #include <sys/wait.h>
 
 #include "client.h"
+#include "lock.h"
 
 static int spawn(const char **argv)
 {
@@ -43,9 +45,17 @@ int be_suspender(const char **argv)
 {
     // Connect to the daemon.
     int sock = connect_to_daemon(CT_SUSPENDER);
-    if (sock < 0)
+    if (sock < 0) {
+        if (errno == ENOENT || errno == ECONNREFUSED) {
+            // Daemon is not running.  Go ahead and download.
+            lock_serial_port();
+            int status = spawn(argv);
+            unlock_serial_port();
+            return status;
+        }
+        perror("can't connect to daemon");
         return EXIT_FAILURE;
-
+    }
     // Await daemon response.
     char response[100];
     ssize_t nr = read(sock, response, sizeof response);

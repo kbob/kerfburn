@@ -9,7 +9,7 @@
 int be_receiver(void)
 {
     // Connect to the daemon.
-    int sock = connect_to_daemon(CT_RECEIVER);
+    int sock = connect_or_start_daemon(CT_RECEIVER);
     if (sock < 0)
         return EXIT_FAILURE;
 

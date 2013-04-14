@@ -309,7 +309,7 @@ static int create_daemon_threads(void)
     }    
 
 #ifdef PROVE_THIS_HELPS
-    // Done with the rail-time attributes.
+    // Done with the real-time attributes.
     r = pthread_attr_destroy(&rattr);
     if (r) {
         syslog(LOG_ERR, "can't destroy thread attributes: %s", strerror(r));
@@ -397,10 +397,21 @@ int start_daemon(bool debug)
 {
     debug_daemon = debug;
     int r = daemonize();
-    main_thread = pthread_self();
     if (r < 0)
         return r;
     if (r > 0)
         return 0;               // nonzero PID => success
+    main_thread = pthread_self();
+    run_daemon();
+}
+
+int spawn_daemon(void)
+{
+    int r = daemonize();
+    if (r < 0)
+        return r;
+    if (r > 0)
+        return 0;
+    main_thread = pthread_self();
     run_daemon();
 }

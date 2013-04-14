@@ -44,7 +44,7 @@ static void *error_thread_main(void *arg)
 
 int be_sender(const char **files)
 {
-    int sock = connect_to_daemon(CT_SENDER);
+    int sock = connect_or_start_daemon(CT_SENDER);
     if (sock < 0)
         return EXIT_FAILURE;
     int sock2 = dup(sock);
