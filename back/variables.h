@@ -13,24 +13,36 @@
 #define VAR_DESC_SIZE   10      // descriptor size, including NUL byte
 
 typedef enum variable_index {
-    V_DT =  0,                  // dwell time
-    V_IA =  1,                  // illumination animation
-    V_IL =  2,                  // illumination level
-    V_LM =  3,                  // laser mode
-    V_LP =  4,                  // laser power
-    V_LS =  5,                  // laser select
-    V_PD =  6,                  // pulse distance
-    V_PI =  7,                  // pulse interval
-    V_PL =  8,                  // pulse length (duration)
-    V_X0 =  9,                  // X initial
-    V_XA = 10,                  // X acceleration
-    V_XD = 11,                  // X distance
-    V_Y0 = 12,                  // Y initial
-    V_YA = 13,                  // Y acceleration
-    V_YD = 14,                  // Y distance
-    V_Z0 = 15,                  // Z initial
-    V_ZA = 16,                  // Z acceleration
-    V_ZD = 17,                  // Z distance
+    V_DT,                       // dwell time
+    V_IA,                       // illumination animation
+    V_IL,                       // illumination level
+    V_LM,                       // laser mode
+    V_LP,                       // laser power
+    V_LS,                       // laser select
+    V_OC,                       // override lid closed
+    V_OO,                       // override lid open
+    V_PD,                       // pulse distance
+    V_PI,                       // pulse interval
+    V_PL,                       // pulse length (duration)
+    V_RE,                       // report E-Stop status
+    V_RF,                       // report fault status
+    V_RI,                       // reporting interval (milliseconds)
+    V_RL,                       // report limit switch status
+    V_RM,                       // report motor status
+    V_RP,                       // report power status
+    V_RQ,                       // report queue status
+    V_RS,                       // report serial status
+    V_RV,                       // report variables
+    V_RW,                       // report water status
+    V_X0,                       // X initial
+    V_XA,                       // X acceleration
+    V_XD,                       // X distance
+    V_Y0,                       // Y initial
+    V_YA,                       // Y acceleration
+    V_YD,                       // Y distance
+    V_Z0,                       // Z initial
+    V_ZA,                       // Z acceleration
+    V_ZD,                       // Z distance
     VARIABLE_COUNT
 } variable_index, v_index;
 

@@ -22,9 +22,21 @@ DEFINE_DESC(il, UNSIGNED);      // illumination level
 DEFINE_DESC(lm, ENUM, "octd");  // laser mode
 DEFINE_DESC(lp, UNSIGNED);      // laser power
 DEFINE_DESC(ls, ENUM, "mnv");   // laser select
+DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
+DEFINE_DESC(oo, ENUM, "ny");    // override lid open
 DEFINE_DESC(pd, UNSIGNED);      // pulse distance
 DEFINE_DESC(pi, UNSIGNED);      // pulse interval
 DEFINE_DESC(pl, UNSIGNED);      // pulse length
+DEFINE_DESC(re, ENUM, "yn");    // report E-Stop status
+DEFINE_DESC(rf, ENUM, "yn");    // report fault status
+DEFINE_DESC(ri, UNSIGNED);      // reporting interval
+DEFINE_DESC(rl, ENUM, "ny");    // report limit switch status
+DEFINE_DESC(rm, ENUM, "ny");    // report motor status
+DEFINE_DESC(rp, ENUM, "ny");    // report power status
+DEFINE_DESC(rq, ENUM, "ny");    // report queue status
+DEFINE_DESC(rs, ENUM, "ny");    // report serial status
+DEFINE_DESC(rv, ENUM, "ny");    // report variables
+DEFINE_DESC(rw, ENUM, "ny");    // report water status
 DEFINE_DESC(x0, UNSIGNED);      // X initial
 DEFINE_DESC(xa, SIGNED);        // X acceleration
 DEFINE_DESC(xd, SIGNED);        // X distance
@@ -42,9 +54,21 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     lm_desc,
     lp_desc,
     ls_desc,
+    oc_desc,
+    oo_desc,
     pd_desc,
     pi_desc,
     pl_desc,
+    re_desc,
+    rf_desc,
+    ri_desc,
+    rl_desc,
+    rm_desc,
+    rp_desc,
+    rq_desc,
+    rs_desc,
+    rv_desc,
+    rw_desc,
     x0_desc,
     xa_desc,
     xd_desc,
