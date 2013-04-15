@@ -30,7 +30,7 @@ DEFINE_ACTION(enqueue_home);
 // DEFINE_ACTION(enable_X_motor);
 // DEFINE_ACTION(enable_Y_motor);
 DEFINE_ACTION(enable_Z_motor);
-DEFINE_ACTION(enable_reporting);
+//DEFINE_ACTION(enable_reporting);
 // DEFINE_ACTION(disable_low_voltage);
 // DEFINE_ACTION(disable_high_voltage);
 // DEFINE_ACTION(disable_air_pump);
@@ -38,7 +38,7 @@ DEFINE_ACTION(enable_reporting);
 // DEFINE_ACTION(disable_X_motor);
 // DEFINE_ACTION(disable_Y_motor);
 DEFINE_ACTION(disable_Z_motor);
-DEFINE_ACTION(disable_reporting);
+//DEFINE_ACTION(disable_reporting);
 //DEFINE_ACTION(report_status);
 
 void action_enable_low_voltage(void)
@@ -46,6 +46,8 @@ void action_enable_low_voltage(void)
     ANNOUNCE_ACTION;
     enable_low_voltage();
     // XXX wait until low_voltage_ready().
+    // XXX While waiting, repeatedly zap the LEDs.
+    // XXX Then zap them one more time to make sure.
 }
 
 void action_enable_high_voltage(void)
@@ -76,6 +78,12 @@ void action_enable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
     enable_y_motor();
+}
+
+void action_enable_reporting(void)
+{
+    ANNOUNCE_ACTION;
+    enable_reporting();
 }
 
 void action_disable_low_voltage(void)
@@ -112,6 +120,12 @@ void action_disable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
     disable_y_motor();
+}
+
+void action_disable_reporting(void)
+{
+    ANNOUNCE_ACTION;
+    disable_reporting();
 }
 
 void action_report_status(void)

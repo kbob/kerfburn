@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "fw_assert.h"
 #include "softint.h"
 
 struct timer_private timer_private;
@@ -33,18 +34,28 @@ void init_timer(void)
     TIMSK0 = _BV(TOIE0);
 }
 
-void enqueue_timeout(timeout *newt, uint32_t expiration)
+static bool dequeue_timeout_NONATOMIC(timeout *newt)
 {
     timeout *p, **pp;
 
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        // Remove if already enqueued.
-        for (pp = &timeout_queue; (p = *pp); pp = &p->to_next) {
-            if (p == newt) {
-                *pp = p->to_next;
-                break;
-            }
+    // Remove if already enqueued.
+    for (pp = &timeout_queue; (p = *pp); pp = &p->to_next) {
+        if (p == newt) {
+            *pp = p->to_next;
+            return true;
         }
+    }
+    return false;
+}
+
+void enqueue_timeout(timeout *newt, uint32_t expiration)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+
+        timeout *p, **pp;
+
+        // Dequeue if already enqueued.
+        dequeue_timeout_NONATOMIC(newt);
 
         // Find spot and insert.
         for (pp = &timeout_queue; (p = *pp); pp = &p->to_next)
@@ -53,6 +64,14 @@ void enqueue_timeout(timeout *newt, uint32_t expiration)
         newt->to_expiration = expiration;
         newt->to_next = p;
         *pp = newt;
+    }
+}
+
+void dequeue_timeout(timeout *newt)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        bool ok = dequeue_timeout_NONATOMIC(newt);
+        fw_assert(ok);
     }
 }
 
@@ -70,6 +89,10 @@ void timer_softint(void)
         }
         if (!head)
             break;
+        if (head->to_interval) {
+            head->to_expiration += head->to_interval;
+            enqueue_timeout(head, head->to_expiration);
+        }
         (*head->to_func)();
     }        
 }

@@ -8,6 +8,8 @@
 
 #include "fw_assert.h"
 
+// Interface
+
 #define VAR_NOT_FOUND 0xFF      // returned by lookup_variable()
 #define VAR_NAME_SIZE    3      // name size, including NUL byte
 #define VAR_DESC_SIZE   10      // descriptor size, including NUL byte
@@ -82,6 +84,8 @@ static inline void     set_variable          (uint8_t, v_value);
 static inline void     set_unsigned_variable (uint8_t index, uint32_t);
 static inline void     set_signed_variable   (uint8_t index, int32_t);
 static inline void     set_enum_variable     (uint8_t index, uint8_t);
+
+// Implementation
 
 extern struct variables_private {
     v_value vp_values[VARIABLE_COUNT];

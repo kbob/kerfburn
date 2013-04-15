@@ -10,6 +10,7 @@
 #include "low-voltage.h"
 #include "relays.h"
 #include "serial.h"
+#include "timer.h"
 #include "variables.h"
 
 typedef void report_func(void);
@@ -18,6 +19,9 @@ typedef struct report_descriptor {
     uint8_t      rd_var;
     report_func *rd_func;
 } report_descriptor, r_desc;
+
+static          timeout report_timeout;
+static volatile bool    reporting_is_active;
 
 static void report_e_stop(void)
 {
@@ -172,11 +176,27 @@ void init_reporting(void)
 
 void report_all(void)
 {
+    if (reporting_is_active)
+        return;
+    reporting_is_active = true;
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
         if (get_enum_variable(rdp->rd_var) == 'y')
             (*rdp->rd_func)();
     }
+    reporting_is_active = false;
 }
 
+extern void enable_reporting(void)
+{
+    uint32_t interval = get_unsigned_variable(V_RI);
+    fw_assert(interval > 10);
+    report_timeout.to_interval = interval;
+    report_timeout.to_func = report_all;
+    enqueue_timeout(&report_timeout, millisecond_time() + interval);
+}
 
+extern void disable_reporting(void)
+{
+    dequeue_timeout(&report_timeout);
+}

@@ -6,12 +6,18 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
+// Interface
+
 typedef void (*timeout_func)(void);
 
 typedef struct timeout {
+    // Client maintains these.
+    uint16_t        to_interval;
+    timeout_func    to_func;
+
+    // timer.c maintains these.
     struct timeout *to_next;
     uint32_t        to_expiration;
-    timeout_func    to_func;
 } timeout;
 
 extern        void     init_timer                 (void);
@@ -19,7 +25,10 @@ static inline uint32_t millisecond_time_NONATOMIC (void);
 static inline uint32_t millisecond_time           (void);
 extern        void     enqueue_timeout            (timeout *,
                                                    uint32_t expiration);
+extern        void     dequeue_timeout            (timeout *);
 extern        void     timer_softint              (void);
+
+// Implementation
 
 extern struct timer_private {
     uint32_t ticks;
