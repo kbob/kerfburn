@@ -34,6 +34,10 @@ DEFINE_FAULT_NAME(SS);
 DEFINE_FAULT_NAME(SU);
 DEFINE_FAULT_NAME(SI);
 
+// XXX Need to add a fault for malfunctioning limit switch.
+//     One fault for all limit switches would be fine -- user
+//     can easily figure out which switch doesn't work.
+
 static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
     { fn_ES, emergency_stop }, // Emergency Stop
     { fn_LO, NULL           }, // Lid Open
