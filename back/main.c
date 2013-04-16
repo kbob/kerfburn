@@ -10,6 +10,7 @@
 #include "low-voltage.h"
 #include "motors.h"
 #include "parser.h"
+#include "queues.h"
 #include "relays.h"
 #include "report.h"
 #include "serial.h"
@@ -34,6 +35,7 @@ static void initialize_devices(void)
 
     init_variables();
     init_reporting();
+    init_queues();
 }
 
 static void trigger_serial_faults(uint8_t e)

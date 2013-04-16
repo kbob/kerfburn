@@ -5,8 +5,8 @@
      programs := fw
 
    fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c \
-                 fw_stdio.c illum.c parser.c serial.c softint.c report.c \
-                 timer.c variables.c
+                 fw_stdio.c illum.c parser.c queues.c serial.c softint.c \
+                 report.c timer.c variables.c
 
      THRUPORT := front/thruport/thruport
 #    BACK_MCU := atmega2560
