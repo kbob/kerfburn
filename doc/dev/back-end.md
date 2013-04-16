@@ -87,6 +87,7 @@ These hardware interrupts will be active, possibly not all at once.
 * Z motor step timer
 * Main laser timer
 * Visible laser timer
+* i2c transmit
 * SPI transmit
 * E-Stop
 
@@ -95,17 +96,17 @@ higher priority than a background task but lower priority than a HW
 interrupt.  HW interrupts are normally enabled during soft interrupt
 processing, but SW interrupts are blocked.
 
-* Step generation (see below)
 * Millisecond timer queue
-  - generate status packets
+  - generate status reports
+  - poll for fault conditions (sensors and switches)
   - trigger LED transitions
 
 These tasks will run in the background.  The background tasks's
 main loop will poll for work to do 
 
 * Accept and verify serial input
-* Enqueue commands for motors and lasers
-* Monitor sensors and switches
+* Translate commands for motors and lasers into atom ops.
+* Enqueue atom ops for motors and lasers
 
 
 ## Memory
@@ -124,10 +125,10 @@ major consumers.
  <td>256</td>  <td>Command buffer shared by main and visible laser pulse</td>
 </tr>
 <tr>
- <td>512</td>  <td>Serial input buffer</td>
+ <td>256</td>  <td>Serial input buffer</td>
 </tr>
 <tr>
- <td>64</td>  <td>Serial output buffer</td>
+ <td>256</td>  <td>Serial output buffer</td>
 </tr>
 </table>
 
@@ -173,7 +174,7 @@ to be incremented and stored.
 There are not enough timer/counters to go around.  The Atmega 2560 has
 four 16-bit T/Cs and two 8-bit T/Cs.
 
-This event needs an 8-bit T/C.
+This event needs either an 8-bit or a 16-bit T/C.
 
  * Millisecond timer
 
@@ -183,7 +184,6 @@ These events need 16-bit T/Cs.
  * Y motor step
  * Z motor step
  * Main laser pulse
- * Main laser PWM
  * Visible laser pulse
 
 They do not all need to be active simultaneously.  The Z motor,
