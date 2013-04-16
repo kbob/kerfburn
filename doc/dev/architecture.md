@@ -51,7 +51,8 @@ in the water line.
 There is a visible laser.  This is a 5 mW red laser diode like the
 ones in laser pointers.  It is on an arm that drops down into the path
 of the main laser when the cover is opened.  The visible laser will be
-used to align cutter to the work piece.
+aused to align cutter to the work piece.  It has three pins: +5,
+Ground, and enable.  The laser fires when the enable pin is high (+5V).
 
 There is an air pump that operates the air assist.  The air assist is
 a jet of air directed at the point where the laser cuts.  It blows
@@ -99,9 +100,11 @@ The Azteeg X3 has lots of connections.
   * The LED strip is connected to the SPI bus.
   * The Emergency Stop switch will be connected to a digital input.
   * The three power relays will be connected to the high current outputs.
-  * The main laser power supply's analog and on/off inputs will be
-    connected to a PWM output and a digital output.
-  * The visible laser's power will be connected to a digital output.
+  * The main laser power supply's on/off input will be connected to a
+    PWM output.
+  * The main laser power supply's analog input will be connected
+    to an MCP4725 DAC driven by the Azteeg's i2c interface.
+  * The visible laser's enable input will be connected to a digital output.
   * The water temperature sensor will be connected somehow.
   * The water flow sensor will be connected somehow.
   * The low voltage power supply's Power Good output will be connected
@@ -207,4 +210,4 @@ identified for retransmission.  Each data packet sent from the front
 to the back holds one or more commands to the back.  Each packet sent
 the other way indicates status of the hardware and back firmware.
 
-There is more detail in specificode.txt.
+There is more detail in specificode.md.
