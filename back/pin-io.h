@@ -19,11 +19,7 @@
 
 #define INIT_INPUT_PIN(pin)                                     \
     (pin##_DDR_reg &= ~_BV(pin##_DD_bit),                       \
-     SET_REG_BIT(pin##_PORT, LOW))
-
-#define INIT_PULLUP_PIN(pin)                                    \
-    (pin##_DDR_reg &= ~_BV(pin##_DD_bit),                       \
-     SET_REG_BIT(pin##_PORT, HIGH))
+     SET_REG_BIT(pin##_PORT, pin##_pullup))
 
 #define REG_BIT_IS(reg_bit, value)                              \
     ((value) ?                                                  \

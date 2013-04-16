@@ -10,24 +10,24 @@
 static inline void init_limit_switches(void)
 {
 #ifdef X_MIN_SWITCH
-    INIT_PULLUP_PIN(X_MIN_SWITCH);
+    INIT_INPUT_PIN(X_MIN_SWITCH);
 #endif
 #ifdef X_MAX_SWITCH
-    INIT_PULLUP_PIN(X_MAX_SWITCH);
+    INIT_INPUT_PIN(X_MAX_SWITCH);
 #endif
 
 #ifdef Y_MIN_SWITCH
-    INIT_PULLUP_PIN(Y_MIN_SWITCH);
+    INIT_INPUT_PIN(Y_MIN_SWITCH);
 #endif
 #ifdef Y_MAX_SWITCH
-    INIT_PULLUP_PIN(Y_MAX_SWITCH);
+    INIT_INPUT_PIN(Y_MAX_SWITCH);
 #endif
 
 #ifdef Z_MIN_SWITCH
-    INIT_PULLUP_PIN(Z_MIN_SWITCH);
+    INIT_INPUT_PIN(Z_MIN_SWITCH);
 #endif
 #ifdef Z_MAX_SWITCH
-    INIT_PULLUP_PIN(Z_MAX_SWITCH);
+    INIT_INPUT_PIN(Z_MAX_SWITCH);
 #endif
 }
 
