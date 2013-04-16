@@ -9,6 +9,7 @@
 #include <util/delay.h>
 
 #include "config/pin-defs.h"
+
 #include "pin-io.h"
 
 static inline void light_LED(void)

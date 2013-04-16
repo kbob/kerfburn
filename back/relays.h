@@ -2,6 +2,7 @@
 #define RELAYS_included
 
 #include "config/pin-defs.h"
+
 #include "pin-io.h"
 
 // Interface

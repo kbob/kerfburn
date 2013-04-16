@@ -2,6 +2,7 @@
 #define LOW_VOLTAGE_included
 
 #include "config/pin-defs.h"
+
 #include "pin-io.h"
 
 static inline void init_low_voltage_power(void)

@@ -24,6 +24,7 @@
 #include <util/delay.h>
 
 #include "config/pin-defs.h"
+
 #include "pin-io.h"
 
 #define BAUD_RATE   9600
