@@ -186,12 +186,8 @@ These events need 16-bit T/Cs.
  * Main laser pulse
  * Visible laser pulse
 
-They do not all need to be active simultaneously.  The Z motor,
-the visible laser, and the main laser can all be mutually exclusive.
-So the X, Y, main laser pulse, and main laser PWM outputs need to
-be assigned to the four 16-bit timers, and the visible laser pulse
-and Z motor step can be assigned to either of the two that the
-main laser pulse and PWM use.
+They do not all need to be active simultaneously.  The main and visible
+lasers can be mutually exclusive.  
 
 Only some of the ATmega's PWM pins are accessible on the Azteeg.
 
@@ -246,31 +242,33 @@ Only some of the ATmega's PWM pins are accessible on the Azteeg.
 </table>
 
 
-T/Cs 1 and 5 have a single available comparator output, so they should be mapped to X and Y.  T/Cs 3 and 4 have two available.  The main laser should get one output on T/C 3 and one on T/C 4.  The visible laser and the Z motor can use the other outputs on T/C 3 and T/C 4.
+OC5A happens to come out at the Z step pin.  Since that's the only OC
+output from timer 5, we should use that one to control the Z motor
+step.  The two laser pulses are not used at the same time, so they can
+share a timer.  OC4A and OC4B share a timer, so use those for the
+laser pulses.
 
 Here is the mapping.
 
 <table>
  <tr>
-  <th>Comparator</th>  <th>Location/Pin</th>  <th>Function</th>
+  <th>Comparator</th>  <th>Port/Pin</th>  <th>Location/Pin</th>  <th>Function</th>
+ </tr>
+
+ <tr>
+  <td>OC1A</td>  <td>PB5</td>  <td>Low Power Switch/D11</td>  <td>Y motor step</td>
  </tr>
  <tr>
-  <td>OC1A</td>  <td>Low Power Switch/D11</td>  <td>X motor</td>
+  <td>OC3B</td>  <td>PE4</td>  <td>X Max Limit Switch</td>    <td>X motor step</td>
  </tr>
  <tr>
-  <td>OC3A</td>  <td>Low Power Switch/D5</td>   <td>Main laser PWM</td>
+  <td>OC4A</td>  <td>PH3</td>  <td>Low Power Switch/D6</td>   <td>Main laser pulse</td>
  </tr>
  <tr>
-  <td>OC3B</td>  <td>X Max Limit Switch</td>    <td>Z motor step</td>
+  <td>OC4B</td>  <td>PH4</td>  <td>EXP3/D7</td>               <td>Visible laser pulse</td>
  </tr>
  <tr>
-  <td>OC4A</td>  <td>Low Power Switch/D6</td>   <td>Main laser pulse</td>
- </tr>
- <tr>
-  <td>OC4B</td>  <td>EXP3/D7</td>               <td>Visible laser pulse</td>
- </tr>
- <tr>
-  <td>OC5A</td>  <td>Z-STEP</td>                <td>Y motor step</td>
+  <td>OC5A</td>  <td>PL3</td>  <td>Z motor step</td>          <td>Z motor step</td>
  </tr>
 </table>
 
