@@ -207,18 +207,13 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         defns.insert(pos, (ident, ['false', 'true'][pull_up]))
         return pos
 
-    def def_timer_pin(pin, desc):
+    def def_timer(timer, desc, emit_ident=True):
 
-        timer, comp = parse_timer_pin(pin)
+        pos = len(defns)
         ident = make_identifier(desc)
-        port_pin = mcu_port_pins[pin]
-        pos = def_output_pin(port_pin, desc)
-        # print >>sys.stderr, \
-        #     'pin=%r desc=%r timer=%r comp=%r port_pin=%r pos=%r' % \
-        #     (pin, desc, timer, comp, port_pin, pos)
+        if emit_ident:
+            add_def(ident, '')
         add_def(ident + '_TCCRA', 'TCCR%(timer)sA' % locals())
-        add_def(ident + '_COM0', 'COM%(timer)s%(comp)s0' % locals())
-        add_def(ident + '_COM1', 'COM%(timer)s%(comp)s1' % locals())
         add_def(ident + '_WGM0', 'WGM%(timer)s0' % locals())
         add_def(ident + '_WGM1', 'WGMR%(timer)s1' % locals())
         add_blank_line()
@@ -230,14 +225,27 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         add_def(ident + '_WGM3', 'WGM%(timer)s3' % locals())
         add_def(ident + '_TCNT', 'TCNT%(timer)s' % locals())
         add_blank_line()
-        add_def(ident + '_OCR', 'OCR%(timer)s%(comp)s' % locals())
-        add_blank_line()
         add_def(ident + '_TIMSK', 'TIMSK%(timer)s' % locals())
         add_def(ident + '_TOIE', 'TOIE%(timer)s' % locals())
         add_def(ident + '_TIFR', 'TIFR%(timer)s' % locals())
         add_def(ident + '_TOV', 'TOV%(timer)s' % locals())
-        add_def(ident + '_TIMER_OVF_vect', 'TIMER%(timer)s_OVF_vect' % locals())
         add_blank_line()
+        add_def(ident + '_TIMER_OVF_vect',
+                'TIMER%(timer)s_OVF_vect' % locals())
+        add_blank_line()
+
+    def def_timer_pin(pin, desc, **kwargs):
+
+        port_pin = mcu_port_pins[pin]
+        pos = def_output_pin(port_pin, desc, **kwargs)
+        timer, comp = parse_timer_pin(pin)
+        def_timer(timer, desc, emit_ident=False);
+        ident = make_identifier(desc)
+        add_def(ident + '_OCR', 'OCR%(timer)s%(comp)s' % locals())
+        add_def(ident + '_COM0', 'COM%(timer)s%(comp)s0' % locals())
+        add_def(ident + '_COM1', 'COM%(timer)s%(comp)s1' % locals())
+        add_blank_line()
+        return pos
 
     defns = []
     g = {'low': 'LOW', 'high': 'HIGH'}
@@ -245,6 +253,7 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
     g.update((d, d) for d in mcu_timer_pins)
     g['def_output_pin'] = def_output_pin
     g['def_input_pin'] = def_input_pin
+    g['def_timer'] = def_timer
     g['def_timer_pin'] = def_timer_pin
     with get_file('mapping') as f:
         exec f in g
@@ -266,7 +275,8 @@ def emit_defns(defns, fw, outf):
     for d in defns:
         if d:
             (n, v) = d
-            print >>outf,'#define %-*s %s' % (fw - prefix_len(v), n, v)
+            line = '#define %-*s %s' % (fw - prefix_len(v), n, v)
+            print >>outf, line.strip()
         else:
             print >>outf
 
@@ -302,7 +312,8 @@ def main(argv):
     p = argparse.ArgumentParser(description='Generate pin definitions')
     p.add_argument('--mcu', required=True, help='AVR MCU model')
     p.add_argument('-o', '--output', required=True, help='output file')
-    p.add_argument('-M', action='store_true', help='Generate make dependencies')
+    p.add_argument('-M', action='store_true',
+                   help='Generate make dependencies')
     args = p.parse_args(argv[1:])
     resolve_files(args.mcu, args.output)              
     if args.M:
