@@ -8,6 +8,7 @@
 .DS_Store
 a.out
 core
+config/pin-defs.h
 front/thruport/thruport
 back/fw
 back/test/cat/cat
