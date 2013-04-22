@@ -6,6 +6,7 @@
 
 #include "e-stop.h"
 #include "fault.h"
+#include "fw_stdio.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
 #include "relays.h"
@@ -25,7 +26,7 @@ static volatile bool    reporting_is_active;
 
 static void report_e_stop(void)
 {
-    printf("E e=%c\n", is_emergency_stopped() ? 'y' : 'n');
+    printf_P(PSL("E e=%c\n"), is_emergency_stopped() ? 'y' : 'n');
 }
 
 static void report_faults(void)
@@ -38,7 +39,7 @@ static void report_faults(void)
                 putchar('!');
             f_name name;
             get_fault_name(i, &name);
-            printf("%s", name);
+            printf_P(PSL("%s"), name);
         }
     }
     putchar('\n');
@@ -82,13 +83,13 @@ static void report_limit_switches(void)
     const char zmax = '_';
 #endif
 
-    printf("L x=%c%c y=%c%c z=%c%c\n",
+    printf_P(PSL("L x=%c%c y=%c%c z=%c%c\n"),
            xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
 static void report_motors(void)
 {
-    printf("M not implemented\n");
+    printf_P(PSL("M not implemented\n"));
 }
 
 static void report_power(void)
@@ -98,13 +99,13 @@ static void report_power(void)
     char high_voltage        = high_voltage_is_enabled() ? 'y' : 'n';
     char air                 = air_pump_is_enabled()     ? 'y' : 'n';
     char water               = water_pump_is_enabled()   ? 'y' : 'n';
-    printf("P le=%c lr=%c he=%c ae=%c we=%c\n",
+    printf_P(PSL("P le=%c lr=%c he=%c ae=%c we=%c\n"),
            low_voltage_enabled, low_voltage_ready, high_voltage, air, water);
 }
 
 static void report_queue(void)
 {
-    printf("Q not implemented\n");
+    printf_P(PSL("Q not implemented\n"));
 }
 
 static void report_serial(void)
@@ -114,9 +115,9 @@ static void report_serial(void)
     uint8_t re = serial_rx_peek_errors();
     uint8_t tc = serial_tx_char_count();
     uint8_t te = serial_tx_peek_errors();
-    printf("S rx c=%"PRId8" r=%"PRId8" e=%#"PRIx8", "
-           "tx c=%"PRId8" e=%#"PRIx8"\n",
-           rc, rl, re, tc, te);
+    printf_P(PSL("S rx c=%"PRId8" r=%"PRId8" e=%#"PRIx8", "
+                 "tx c=%"PRId8" e=%#"PRIx8"\n"),
+             rc, rl, re, tc, te);
 }
 
 static void report_variables(void)
@@ -128,18 +129,18 @@ static void report_variables(void)
         v_type type = get_variable_type(i);
         v_value value = get_variable(i);
 
-        printf(" %s=", name);
+        printf_P(PSL(" %s="), name);
         switch (type) {
         case VT_UNSIGNED:
-            printf("%"PRIu32, value.vv_unsigned);
+            printf_P(PSL("%"PRIu32), value.vv_unsigned);
             break;
 
         case VT_SIGNED:
-            printf("%+"PRId32, value.vv_signed);
+            printf_P(PSL("%+"PRId32), value.vv_signed);
 
             break;
         case VT_ENUM:
-            printf("%c", (int)value.vv_enum);
+            printf_P(PSL("%c"), (int)value.vv_enum);
             break;
 
         default:
@@ -151,7 +152,7 @@ static void report_variables(void)
 
 static void report_water(void)
 {
-    printf("W not implemented\n");
+    printf_P(PSL("W not implemented\n"));
 }
 
 static const report_descriptor report_descriptors[] PROGMEM = {
