@@ -1,6 +1,8 @@
 #ifndef ATOMS_included
 #define ATOMS_included
 
+#include <stdint.h>
+
 // Each timer's queue has 128 entries.  Each entry is 16 bits.  I'm
 // calling those 16 bit entries _atoms_.  An atom that is 32 or more
 // is a value to be loaded into the comparator register.  An atom that
@@ -35,6 +37,9 @@ typedef enum atom {
 
 } atom;
 
+#define ATOM_MAX 32
+
 extern void init_atoms(void);
+extern void print_atom(const char *label, uint16_t a);
 
 #endif /* !ATOMS_included */
