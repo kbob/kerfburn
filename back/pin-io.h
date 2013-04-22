@@ -26,4 +26,4 @@
      bit_is_set(reg_bit##_reg, reg_bit##_bit) :                 \
      bit_is_clear(reg_bit##_reg, reg_bit##_bit))
 
-#endif /* !PIN_IO_includaed */
+#endif /* !PIN_IO_included */
