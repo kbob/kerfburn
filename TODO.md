@@ -11,6 +11,9 @@ Is this a bug database?
   like ticken (tick token) or tickstart?  **Atom**.  Not terribly
   descriptive (except that it's tiny and indivisible) but I like it.
 
+  How about calling the timer-based stuff the **Engine** and each
+  interrupt is a **Spark**?  Too corny?
+
 - What is the frequency response of the A2D + laser?  Do I need
   to schedule changes ahead of time?
 
