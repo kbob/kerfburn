@@ -7,17 +7,34 @@
 // is less than 32 is one of these enumerated constants.
 
 typedef enum atom {
+
     A_STOP = 0,
+
+    // Atoms for motors
     A_DIR_POSITIVE,
     A_DIR_NEGATIVE,
     A_LOOP_UNTIL_MIN,
     A_LOOP_WHILE_MIN,
     A_LOOP_UNTIL_MAX,
     A_LOOP_WHILE_MAX,
-    A_ENABLE_PIN,               // motor step or main laser pulse
-    A_DISABLE_PIN,
-    A_ENABLE_ALT_PIN,           // visible laser pulse
-    A_DISABLE_ALT_PIN,
+    A_ENABLE_STEP,
+    A_DISABLE_STEP,
+
+    // Atoms for lasers
+    A_SET_MAIN_MODE_OFF,
+    A_SET_MAIN_MODE_PULSED,
+    A_SET_MAIN_MODE_CONTINUOUS,
+    A_SET_VISIBLE_MODE_OFF,
+    A_SET_VISIBLE_MODE_PULSED,
+    A_SET_VISIBLE_MODE_CONTINUOUS,
+
+    A_SET_PULSE_DURATION,       // has arg
+    A_SET_MAIN_POWER_LEVEL,     // has arg
+
+    ATOM_COUNT
+
 } atom;
+
+extern void init_atoms(void);
 
 #endif /* !ATOMS_included */
