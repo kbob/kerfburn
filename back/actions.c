@@ -8,6 +8,7 @@
 #include "queues.h"
 #include "relays.h"
 #include "report.h"
+#include "scheduler.h"
 
 #define ANNOUNCE_ACTION (printf_P(PSL("ACTION: %s\n"), __func__ + 7))
 
@@ -20,7 +21,7 @@
 // DEFINE_ACTION(wait);
 // DEFINE_ACTION(stop);
 DEFINE_ACTION(illuminate);
-DEFINE_ACTION(enqueue_dwell);
+// DEFINE_ACTION(enqueue_dwell);
 DEFINE_ACTION(enqueue_move);
 DEFINE_ACTION(enqueue_cut);
 DEFINE_ACTION(enqueue_engrave);
@@ -53,6 +54,12 @@ void action_stop(void)
 {
     ANNOUNCE_ACTION;
     stop_queues_immediately();
+}
+
+void action_enqueue_dwell(void)
+{
+    ANNOUNCE_ACTION;
+    enqueue_dwell();
 }
 
 void action_enable_low_voltage(void)
