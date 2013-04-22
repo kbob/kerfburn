@@ -11,6 +11,9 @@ Is this a bug database?
   like ticken (tick token) or tickstart?  **Atom**.  Not terribly
   descriptive (except that it's tiny and indivisible) but I like it.
 
+- What is the frequency response of the A2D + laser?  Do I need
+  to schedule changes ahead of time?
+
 
 ## Design
 
@@ -91,6 +94,9 @@ Is this a bug database?
   http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
 
 * Change serial driver so most functions are in-line.
+
+* Define pin mapping function for PCINTn pins.  Define e-stop and lid
+  as PCINT pins.  Write driver/interrupt handler for them.
 
 
 ### Thruport
