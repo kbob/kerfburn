@@ -4,9 +4,10 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c e-stop.c fault.c fw_assert.c \
-                 fw_stdio.c illum.c parser.c queues.c serial.c softint.c \
-                 report.c timer.c variables.c
+   fw_sources := main.c abort.c actions.c atoms.c e-stop.c fault.c \
+                 fw_assert.c fw_stdio.c illum.c lasers.c motors.c parser.c \
+                 queues.c scheduler.c serial.c softint.c report.c timer.c \
+                 variables.c
 
      THRUPORT := front/thruport/thruport
 #    BACK_MCU := atmega2560
@@ -17,7 +18,7 @@
  BACK_SUSPEND := $(THRUPORT) suspend
  BACK_AVRDUDE := avrdude
 
-BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -Iback -I.
+BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -I. -Iback
   BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
          JUNK += *.hex
