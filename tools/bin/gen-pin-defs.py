@@ -215,7 +215,7 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
             add_def(ident, '')
         add_def(ident + '_TCCRA', 'TCCR%(timer)sA' % locals())
         add_def(ident + '_WGM0', 'WGM%(timer)s0' % locals())
-        add_def(ident + '_WGM1', 'WGMR%(timer)s1' % locals())
+        add_def(ident + '_WGM1', 'WGM%(timer)s1' % locals())
         add_blank_line()
         add_def(ident + '_TCCRB', 'TCCR%(timer)sB' % locals())
         add_def(ident + '_CS0', 'CS%(timer)s0' % locals())
