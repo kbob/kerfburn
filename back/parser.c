@@ -7,12 +7,10 @@
 #include "actions.h"
 #include "fault.h"
 #include "fw_assert.h"
+#include "fw_stdio.h"
 #include "serial.h"
 #include "variables.h"
 
-// Variables
-// dt ia il lm lp ls pd pi pl x0 xa xd y0 ya yd
-//
 // Commands
 // Da Dh Dl Dr Dw Dx Dy Dz
 // Ea Eh El Er Ew Ex Ey Ez
@@ -156,7 +154,7 @@ static inline bool is_digit(uint8_t c)
 static void error(void)
 {
     // Send uninformative message, consume current line and continue.
-    printf("Parse error at \"");
+    printf_P(PSL("Parse error at \""));
     while (1) {
         while (!serial_rx_has_chars())
             continue;
@@ -169,7 +167,7 @@ static void error(void)
             break;
         putchar(c);
     }            
-    printf("\"\n");
+    printf_P(PSL("\"\n"));
 }
 
 static bool consume_line(uint8_t pos)
@@ -270,7 +268,7 @@ static inline void parse_assignment(uint8_t c0)
         fw_assert(false);
     }
     if (consume_line(pos)) {
-        printf("set %s = %"PRId32"\n", name, value.vv_signed);
+        printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);
         set_variable(index, value);
         if (name[0] == 'o')
             update_overrides();
