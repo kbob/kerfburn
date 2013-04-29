@@ -124,7 +124,7 @@ int lock_serial_port(void)
             (void)unlink(lck_file);
         }
         
-        syslog(LOG_INFO, "Failed to lock %s. Retrying.", device);
+        // syslog(LOG_INFO, "Failed to lock %s. Retrying.", device);
     }
 
     return 0;
