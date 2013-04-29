@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 extern const uint8_t _etext;
+extern const uint8_t __data_start;
 extern const uint8_t _edata;
 extern       uint8_t _end;
 extern const uint8_t __stack;
@@ -48,7 +49,7 @@ void get_memory_use(segment_sizes *ssp)
 {
     size_t free = measure_free();
     ssp->ss_text  = (size_t)&_etext;
-    ssp->ss_data  = (size_t)&_edata - (size_t)&_etext;
+    ssp->ss_data  = (size_t)&_edata - (size_t)&__data_start;;
     ssp->ss_bss   = (size_t)&_end - (size_t)&_edata;
     ssp->ss_free  = free;
     ssp->ss_stack = (size_t)&__stack + 1 - (size_t)&_end - free;
