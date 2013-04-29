@@ -49,7 +49,7 @@ static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
     { fn_SP, NULL           }, // Serial Parity Error
     { fn_SL, NULL           }, // Software Lexical Error
     { fn_SS, NULL           }, // Software Syntax Error
-    { fn_SU, NULL           }, // Software Underflow
+    { fn_SU, emergency_stop }, // Software Underflow
     { fn_SI, NULL           }, // Software Missed Interrupt
 };
 
@@ -112,6 +112,7 @@ void clear_fault(uint8_t findex)
 
 void trigger_fault(uint8_t findex)
 {
+    fw_assert(false);
     if (fault_is_set(findex))
         return;
     if (fault_is_overridden(findex)) {
