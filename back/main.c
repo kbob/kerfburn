@@ -9,6 +9,7 @@
 #include "LEDs.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
+#include "memory.h"
 #include "motors.h"
 #include "parser.h"
 #include "queues.h"
@@ -72,6 +73,7 @@ static void do_background_task(void)
 
 int main()
 {
+    init_memory_monitor();      // Do this first.
     initialize_devices();
     while (true)
         do_background_task();
