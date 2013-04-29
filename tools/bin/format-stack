@@ -1,0 +1,38 @@
+#!/usr/bin/python
+
+import subprocess
+import sys
+
+def get_symbols():
+    syms = []
+    pipe = subprocess.Popen(['nm', '-n', 'fw'], stdout=subprocess.PIPE).stdout
+    for line in pipe:
+        fields = line.split()
+        if len(fields) != 3:
+            continue
+        if fields[1] in ('T', 't'):
+            syms.append([int(fields[0], 0x10), fields[2]])
+    return syms
+
+syms = get_symbols()
+
+def lookup(addr):
+    lo, hi = 0, len(syms)
+    while lo < hi:
+        mid = (lo + hi) / 2
+        d = cmp(syms[mid][0], addr)
+        if d < 0:
+            lo = mid + 1
+        else:
+            hi = mid
+    if lo and syms[lo][0] > addr:
+        lo -= 1
+    s = syms[lo]
+    return '%s + %d' % (s[1], addr - s[0])
+        
+
+
+for line in sys.stdin:
+    addr = int(line.strip(), 0x10)
+    z = lookup(addr)
+    print '%6s %s' % (line.rstrip(), z)
