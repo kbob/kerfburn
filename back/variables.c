@@ -1,5 +1,6 @@
 #include "variables.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #include <avr/pgmspace.h>
