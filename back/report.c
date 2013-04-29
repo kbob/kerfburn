@@ -1,5 +1,6 @@
 #include "report.h"
 
+#include <stddef.h>
 #include <stdio.h>
 
 #include <avr/pgmspace.h>
@@ -9,6 +10,7 @@
 #include "fw_stdio.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
+#include "memory.h"
 #include "relays.h"
 #include "serial.h"
 #include "timer.h"
@@ -85,6 +87,14 @@ static void report_limit_switches(void)
 
     printf_P(PSL("L x=%c%c y=%c%c z=%c%c\n"),
            xmin, xmax, ymin, ymax, zmin, zmax);
+}
+
+static void report_memory(void)
+{
+    segment_sizes ss;
+    get_memory_use(&ss);
+    printf_P(PSL("M text=%u data=%u bss=%u free=%u stack=%u\n"),
+                 ss.ss_text, ss.ss_data, ss.ss_bss, ss.ss_free, ss.ss_stack);
 }
 
 static void report_motors(void)
@@ -180,6 +190,7 @@ void report_all(void)
     if (reporting_is_active)
         return;
     reporting_is_active = true;
+    report_memory();
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
         if (get_enum_variable(rdp->rd_var) == 'y')
