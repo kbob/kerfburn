@@ -225,6 +225,7 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         add_def(ident + '_WGM3', 'WGM%(timer)s3' % locals())
         add_def(ident + '_TCNT', 'TCNT%(timer)s' % locals())
         add_blank_line()
+        add_def(ident + '_ICR', 'ICR%(timer)s' % locals())
         add_def(ident + '_TIMSK', 'TIMSK%(timer)s' % locals())
         add_def(ident + '_TOIE', 'TOIE%(timer)s' % locals())
         add_def(ident + '_TIFR', 'TIFR%(timer)s' % locals())
