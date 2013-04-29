@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
-#include <unistd.h>
 #include <sys/fcntl.h>
 #include <sys/select.h>
 #include <sys/stat.h>
