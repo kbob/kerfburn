@@ -91,8 +91,8 @@ static const c_desc command_descriptors[] PROGMEM = {
     { W_name,  action_wait                 },
 };
 
-static const uint8_t COMMAND_COUNT =
-    sizeof command_descriptors / sizeof command_descriptors[0];
+#define COMMAND_COUNT \
+    (sizeof command_descriptors / sizeof command_descriptors[0])
 
 static void get_cmd_name(uint8_t i, c_name *out)
 {
