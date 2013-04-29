@@ -1,6 +1,7 @@
 #ifndef ATOMS_included
 #define ATOMS_included
 
+#include <stdbool.h>
 #include <stdint.h>
 
 // Each timer's queue has 128 entries.  Each entry is 16 bits.  I'm
@@ -30,8 +31,9 @@ typedef enum atom {
     A_SET_VISIBLE_MODE_PULSED,
     A_SET_VISIBLE_MODE_CONTINUOUS,
 
-    A_SET_PULSE_DURATION,       // has arg
-    A_SET_MAIN_POWER_LEVEL,     // has arg
+    A_SET_MAIN_PULSE_DURATION,    // has arg
+    A_SET_VISIBLE_PULSE_DURATION, // has arg
+    A_SET_MAIN_POWER_LEVEL,       // has arg
 
     ATOM_COUNT
 
@@ -41,5 +43,10 @@ typedef enum atom {
 
 extern void init_atoms(void);
 extern void print_atom(const char *label, uint16_t a);
+
+static inline bool is_atom(uint16_t a)
+{
+    return a < ATOM_MAX;
+}
 
 #endif /* !ATOMS_included */
