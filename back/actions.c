@@ -10,7 +10,11 @@
 #include "report.h"
 #include "scheduler.h"
 
+#if 1
 #define ANNOUNCE_ACTION (printf_P(PSL("ACTION: %s\n"), __func__ + 7))
+#else
+#define ANNOUNCE_ACTION ((void)0)
+#endif
 
 #define DEFINE_ACTION(name)                                     \
     void action_##name(void)                                    \
@@ -47,18 +51,18 @@ DEFINE_ACTION(enqueue_home);
 void action_wait(void)
 {
     ANNOUNCE_ACTION;
-    await_queues_empty();
+    await_completion();
 }
 
 void action_stop(void)
 {
     ANNOUNCE_ACTION;
-    stop_queues_immediately();
+    stop_immediately();
 }
 
 void action_enqueue_dwell(void)
 {
-    ANNOUNCE_ACTION;
+    // ANNOUNCE_ACTION;
     enqueue_dwell();
 }
 

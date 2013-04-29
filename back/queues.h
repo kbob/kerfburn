@@ -18,35 +18,34 @@ typedef struct queue_private queue;
 // Queues for X, Y, Z motors and laser pulses.
 extern queue Xq, Yq, Zq, Pq;
 
-static inline void     init_queues              (void);
+static inline void     init_queues                (void);
 
-static inline bool     queue_is_running         (const queue *);
-static inline bool     queue_is_empty           (const queue *);
-static inline bool     queue_is_full            (const queue *);
+static inline bool     queue_is_empty             (const queue *);
+static inline bool     queue_is_full              (const queue *);
+static inline bool     any_queue_is_full          (void);
 
-extern        void     start_queues             (void);
-extern        void     await_queues_empty       (void);
-extern        void     stop_queues_immediately  (void);
+static inline void     enqueue_atom_X             (uint16_t);
+static inline uint16_t dequeue_atom_X_NONATOMIC   (void);
+static inline void     undequeue_atom_X_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_X           (uint16_t);
-static inline uint16_t dequeue_atom_X_NONATOMIC (void);
+static inline void     enqueue_atom_Y             (uint16_t);
+static inline uint16_t dequeue_atom_Y_NONATOMIC   (void);
+static inline void     undequeue_atom_Y_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_Y           (uint16_t);
-static inline uint16_t dequeue_atom_Y_NONATOMIC (void);
+static inline void     enqueue_atom_Z             (uint16_t);
+static inline uint16_t dequeue_atom_Z_NONATOMIC   (void);
+static inline void     undequeue_atom_Z_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_Z           (uint16_t);
-static inline uint16_t dequeue_atom_Z_NONATOMIC (void);
-
-static inline void     enqueue_atom_P           (uint16_t);
-static inline uint16_t dequeue_atom_P_NONATOMIC (void);
+static inline void     enqueue_atom_P             (uint16_t);
+static inline uint16_t dequeue_atom_P_NONATOMIC   (void);
+static inline void     undequeue_atom_P_NONATOMIC (uint16_t);
 
 
 // Implementation
 
 struct queue_private {
     volatile uint8_t q_head;    // volatile so baselevel can read without lock
-    uint8_t          q_tail;
-    bool             q_is_running;
+    volatile uint8_t q_tail;
 };
 
 typedef uint16_t queue_buf[256 / 2] __attribute__((aligned(256)));
@@ -56,11 +55,6 @@ extern queue_buf Xq_buf, Yq_buf, Zq_buf, Pq_buf;
 static inline void init_queues(void)
 {
     // Already zeroed.
-}
-
-static inline bool queue_is_running(const queue *q)
-{
-    return q->q_is_running;
 }
 
 static inline bool queue_is_empty(const queue *q)
@@ -73,6 +67,22 @@ static inline bool queue_is_full(const queue *q)
     return q->q_head == (uint8_t)(q->q_tail + 2);
 }
 
+static inline bool any_queue_is_full(void)
+{
+    return (queue_is_full(&Xq) ||
+            queue_is_full(&Yq) ||
+            queue_is_full(&Zq) ||
+            queue_is_full(&Pq));
+}
+
+static inline bool all_queues_are_empty(void)
+{
+    return (queue_is_empty(&Xq) &&
+            queue_is_empty(&Yq) &&
+            queue_is_empty(&Zq) &&
+            queue_is_empty(&Pq));
+}
+
 #define DEFINE_ENQUEUE_DEQUEUE(Q)                                       \
                                                                         \
     static inline void enqueue_atom_##Q(uint16_t a)                     \
@@ -82,7 +92,6 @@ static inline bool queue_is_full(const queue *q)
             uint16_t *p;                                                \
         } u;                                                            \
                                                                         \
-        print_atom("enqueue " #Q, a);                                   \
         u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
         while (queue_is_full(&Q##q))                                    \
             continue;                                                   \
@@ -100,12 +109,12 @@ static inline bool queue_is_full(const queue *q)
             uint16_t *p;                                                \
         } u;                                                            \
                                                                         \
-        fw_assert(!queue_is_empty(&Q##q));                              \
+        if (queue_is_empty(&Q##q))                                      \
+            return A_STOP;                                              \
         u.b[0] = Q##q.q_head;                                           \
         u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
         uint16_t a = *u.p++;                                            \
         Q##q.q_head = u.b[0];                                           \
-        print_atom("dequeue " #Q, a);                                   \
         return a;                                                       \
     }                                                                   \
                                                                         \
@@ -117,7 +126,6 @@ static inline bool queue_is_full(const queue *q)
         } u;                                                            \
                                                                         \
         fw_assert(!queue_is_full(&Q##q));                               \
-        print_atom("undequeue " #Q, a);                                 \
         u.b[0] = Q##q.q_head - 2;                                       \
         u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
         *u.p = a;                                                       \

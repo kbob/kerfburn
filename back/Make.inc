@@ -4,10 +4,10 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c atoms.c e-stop.c fault.c \
-                 fw_assert.c fw_stdio.c illum.c lasers.c motors.c parser.c \
-                 queues.c scheduler.c serial.c softint.c report.c timer.c \
-                 variables.c
+   fw_sources := main.c abort.c actions.c atoms.c e-stop.c engine.c fault.c \
+                 fw_assert.c fw_stdio.c illum.c lasers.c memory.c motors.c \
+                 parser.c queues.c report.c scheduler.c serial.c softint.c \
+                 timer.c trace.c variables.c
 
      THRUPORT := front/thruport/thruport
 #    BACK_MCU := atmega2560

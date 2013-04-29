@@ -2,9 +2,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
+#include "engine.h"
+#include "lasers.h"
+#include "memory.h"
+#include "motors.h"
 #include "queues.h"
+#include "trace.h"
 #include "variables.h"
 
 // minimum and maximum interrupt intervals.
@@ -18,48 +24,55 @@ typedef enum pulse_mode {
     PM_CONTINUOUS
 } pulse_mode;
 
-static struct engine_state {
+static struct output_states {
+
     bool     x_motor_step_enabled;
     bool     y_motor_step_enabled;
     bool     z_motor_step_enabled;
     uint8_t  main_pulse_mode;
     uint8_t  visible_pulse_mode;
-    uint16_t main_power_level;
     uint16_t main_pulse_duration;
-} engine_state;
+    uint16_t visible_pulse_duration;
+    uint16_t main_power_level;
+
+} output_states;
+
+// volatile uint8_t engine_running;
 
 void init_scheduler(void)
 {
-    memset(&engine_state, 0xFF, sizeof engine_state);
+    // Set all states to invalid values, forcing them to be
+    // initialized when the engine starts.
+    memset(&output_states, 0xFF, sizeof output_states);
 }
 
 static inline void set_x_motor_step(bool enabled)
 {
-    if (engine_state.x_motor_step_enabled != enabled) {
+    if (output_states.x_motor_step_enabled != enabled) {
         enqueue_atom_X(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        engine_state.x_motor_step_enabled = enabled;
+        output_states.x_motor_step_enabled = enabled;
     }
 }
 
 static inline void set_y_motor_step(bool enabled)
 {
-    if (engine_state.y_motor_step_enabled != enabled) {
+    if (output_states.y_motor_step_enabled != enabled) {
         enqueue_atom_Y(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        engine_state.y_motor_step_enabled = enabled;
+        output_states.y_motor_step_enabled = enabled;
     }
 }
 
 static inline void set_z_motor_step(bool enabled)
 {
-    if (engine_state.z_motor_step_enabled != enabled) {
+    if (output_states.z_motor_step_enabled != enabled) {
         enqueue_atom_Z(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        engine_state.z_motor_step_enabled = enabled;
+        output_states.z_motor_step_enabled = enabled;
     }
 }
 
 static inline void set_main_pulse_mode(uint8_t mode)
 {
-    if (engine_state.main_pulse_mode != mode) {
+    if (output_states.main_pulse_mode != mode) {
         uint8_t a;
         if (mode == PM_PULSED)
             a = A_SET_MAIN_MODE_PULSED;
@@ -70,13 +83,13 @@ static inline void set_main_pulse_mode(uint8_t mode)
             a = A_SET_MAIN_MODE_OFF;
         }
         enqueue_atom_P(a);
-        engine_state.main_pulse_mode = mode;
+        output_states.main_pulse_mode = mode;
     }
 }
 
 static inline void set_visible_pulse_mode(uint8_t mode)
 {
-    if (engine_state.visible_pulse_mode != mode) {
+    if (output_states.visible_pulse_mode != mode) {
         uint8_t a;
         if (mode == PM_PULSED)
             a = A_SET_VISIBLE_MODE_PULSED;
@@ -87,28 +100,36 @@ static inline void set_visible_pulse_mode(uint8_t mode)
             a = A_SET_VISIBLE_MODE_OFF;
         }
         enqueue_atom_P(a);
-        engine_state.visible_pulse_mode = mode;
+        output_states.visible_pulse_mode = mode;
+    }
+}
+
+static inline void set_main_pulse_duration(uint16_t dur)
+{
+    if (output_states.main_pulse_duration != dur) {
+        enqueue_atom_P(A_SET_MAIN_PULSE_DURATION);
+        enqueue_atom_P(dur);
+        output_states.main_pulse_duration = dur;
+    }
+}
+
+static inline void set_visible_pulse_duration(uint16_t dur)
+{
+    if (output_states.visible_pulse_duration != dur) {
+        enqueue_atom_P(A_SET_VISIBLE_PULSE_DURATION);
+        enqueue_atom_P(dur);
+        output_states.visible_pulse_duration = dur;
     }
 }
 
 static inline void set_main_power_level(uint16_t level)
 {
-    if (engine_state.main_power_level != level) {
+    if (output_states.main_power_level != level) {
         enqueue_atom_P(A_SET_MAIN_POWER_LEVEL);
         enqueue_atom_P(level);
-        engine_state.main_power_level = level;
+        output_states.main_power_level = level;
     }
 }
-
-static inline void set_pulse_duration(uint16_t dur)
-{
-    if (engine_state.main_pulse_duration != dur) {
-        enqueue_atom_P(A_SET_PULSE_DURATION);
-        enqueue_atom_P(dur);
-        engine_state.main_pulse_duration = dur;
-    }
-}
-
 
 static inline uint16_t next_ivl(uint32_t now, uint32_t end)
 {
@@ -124,6 +145,7 @@ static inline uint16_t next_ivl(uint32_t now, uint32_t end)
 
 void enqueue_dwell(void)
 {
+    TRACE('Q');
     // set x motor mode disabled
     // set y motor mode disabled
     // set z motor mode disabled
@@ -151,16 +173,19 @@ void enqueue_dwell(void)
     uint8_t ls = get_enum_variable(V_LS);
     if (ls == 'm') {
         set_main_pulse_mode(mode);
-        if (mode != PM_OFF)
+        if (mode != PM_OFF) {
             set_main_power_level(get_unsigned_variable(V_LP));
+            if (mode == PM_PULSED)
+                set_visible_pulse_duration(get_unsigned_variable(V_PD));
+        }
     } else
         set_main_pulse_mode(PM_OFF);
     if (ls == 'v') {
         set_visible_pulse_mode(mode);
+        if (mode == PM_PULSED)
+            set_visible_pulse_duration(get_unsigned_variable(V_PD));
     } else
         set_visible_pulse_mode(PM_OFF);
-    if (mode == PM_PULSED)
-        set_pulse_duration(get_unsigned_variable(V_PD));
 
     // always have the laser be the major axis.
     // if (ls != n && lm == t) {
@@ -199,10 +224,10 @@ void enqueue_dwell(void)
             enqueue_atom_Y(ivl);
             enqueue_atom_Z(ivl);
             enqueue_atom_P(ivl);
-            if (!queue_is_running(&Xq))
-                start_queues();
+            maybe_start_engine();
         }
     }
+    start_engine();
 }
 
 void enqueue_move(void)
@@ -211,12 +236,30 @@ void enqueue_move(void)
 
 void enqueue_cut(void)
 {
+    fw_assert(false && "XXX Write me!");
 }
 
 void enqueue_engrave(void)
 {
+    fw_assert(false && "XXX Write me!");
 }
 
 void enqueue_home(void)
 {
+    fw_assert(false && "XXX Write me!");
+}
+
+void stop_immediately(void)
+{
+    stop_engine_immediately();
+    init_scheduler();
+}
+
+void await_completion(void)
+{
+    // print_trace();
+    // print_backtrace();
+    await_engine_stopped();
+    print_trace();
+    reset_trace();
 }
