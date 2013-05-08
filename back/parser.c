@@ -155,7 +155,7 @@ static void error(void)
 {
     // Send uninformative message, consume current line and continue.
     printf_P(PSL("Parse error at \""));
-    while (1) {
+    while (true) {
         while (!serial_rx_has_chars())
             continue;
         uint8_t e = serial_rx_errors();
@@ -269,7 +269,7 @@ static inline void parse_assignment(uint8_t c0)
         return;
     }
     if (consume_line(pos)) {
-        printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);
+        // printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);
         set_variable(index, value);
         if (name[0] == 'o')
             update_overrides();

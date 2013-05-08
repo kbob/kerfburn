@@ -10,7 +10,7 @@
 #include "report.h"
 #include "scheduler.h"
 
-#if 1
+#if 0
 #define ANNOUNCE_ACTION (printf_P(PSL("ACTION: %s\n"), __func__ + 7))
 #else
 #define ANNOUNCE_ACTION ((void)0)
@@ -70,9 +70,15 @@ void action_enable_low_voltage(void)
 {
     ANNOUNCE_ACTION;
     enable_low_voltage();
-    // XXX wait until low_voltage_ready().
-    // XXX While waiting, repeatedly zap the LEDs.
-    // XXX Then zap them one more time to make sure.
+    // // XXX wait until low_voltage_ready().
+    // // XXX While waiting, repeatedly zap the LEDs.
+    // // XXX Then zap them one more time to make sure.
+    // while (true) {
+    //     bool lv_ready = low_voltage_is_ready();
+    //     zap_LEDs();
+    //     if (lv_ready)
+    //         break;
+    // }
 }
 
 void action_enable_high_voltage(void)
@@ -102,7 +108,9 @@ void action_enable_X_motor(void)
 void action_enable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
+#ifndef NO_Y
     enable_y_motor();
+#endif
 }
 
 void action_enable_Z_motor(void)
@@ -150,7 +158,9 @@ void action_disable_X_motor(void)
 void action_disable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
+#ifndef NO_Y
     disable_y_motor();
+#endif
 }
 
 void action_disable_Z_motor(void)
