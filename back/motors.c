@@ -30,13 +30,25 @@ void init_motors(void)
     X_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     X_MOTOR_STEP_TIMSK = _BV(X_MOTOR_STEP_TOIE);
     X_MOTOR_STEP_TIFR |= _BV(X_MOTOR_STEP_TOV);
+    // Set the X watchdog
+    X_WATCHDOG_OCR     = 0xFFFF;
+    X_WATCHDOG_TIMSK  |= _BV(X_WATCHDOG_OCIE);
+    X_WATCHDOG_TIFR   |= _BV(X_WATCHDOG_OCF);
+    OCR3C = 0xFFFF;
 
+#ifndef NO_Y
     // Y Motor Timer
     Y_MOTOR_STEP_TCCRA = _BV(Y_MOTOR_STEP_WGM1);
     Y_MOTOR_STEP_TCCRB = _BV(Y_MOTOR_STEP_WGM3) | _BV(Y_MOTOR_STEP_WGM2);
     Y_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     Y_MOTOR_STEP_TIMSK = _BV(Y_MOTOR_STEP_TOIE);
     Y_MOTOR_STEP_TIFR |= _BV(Y_MOTOR_STEP_TOV);
+    // Set the Y watchdog
+    Y_WATCHDOG_OCR     = 0xFFFF;
+    Y_WATCHDOG_TIMSK  |= _BV(Y_WATCHDOG_OCIE);
+    Y_WATCHDOG_TIFR   |= _BV(Y_WATCHDOG_OCF);
+    OCR1C = 0xFFFF;
+#endif
 
     // Z Motor Timer
     Z_MOTOR_STEP_TCCRA = _BV(Z_MOTOR_STEP_WGM1);
@@ -44,4 +56,26 @@ void init_motors(void)
     Z_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     Z_MOTOR_STEP_TIMSK = _BV(Z_MOTOR_STEP_TOIE);
     Z_MOTOR_STEP_TIFR |= _BV(Z_MOTOR_STEP_TOV);
+    // Set the Z watchdog
+    Z_WATCHDOG_OCR     = 0xFFFF;
+    Z_WATCHDOG_TIMSK  |= _BV(Z_WATCHDOG_OCIE);
+    Z_WATCHDOG_TIFR   |= _BV(Z_WATCHDOG_OCF);
+    OCR5C = 0xFFFF;
+}
+
+ISR(X_WATCHDOG_TIMER_COMP_vect)
+{
+    fw_assert(false);
+}
+
+#ifndef NO_Y
+ISR(Y_WATCHDOG_TIMER_COMP_vect)
+{
+    fw_assert(false);
+}
+#endif
+
+ISR(Z_WATCHDOG_TIMER_COMP_vect)
+{
+    fw_assert(false);
 }
