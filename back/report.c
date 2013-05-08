@@ -193,8 +193,11 @@ void report_all(void)
     report_memory();
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
-        if (get_enum_variable(rdp->rd_var) == 'y')
-            (*rdp->rd_func)();
+        const uint8_t var = pgm_read_byte(&rdp->rd_var);
+        if (get_enum_variable(var) == 'y') {
+            report_func *func = (report_func *)pgm_read_word(&rdp->rd_func);
+            (*func)();
+        }
     }
     reporting_is_active = false;
 }

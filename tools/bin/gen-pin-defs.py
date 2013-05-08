@@ -245,6 +245,11 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         add_def(ident + '_OCR', 'OCR%(timer)s%(comp)s' % locals())
         add_def(ident + '_COM0', 'COM%(timer)s%(comp)s0' % locals())
         add_def(ident + '_COM1', 'COM%(timer)s%(comp)s1' % locals())
+        add_def(ident + '_OCIE', 'OCIE%(timer)s%(comp)s' % locals())
+        add_def(ident + '_OCF', 'OCF%(timer)s%(comp)s' % locals())
+        add_blank_line()
+        add_def(ident + '_TIMER_COMP_vect',
+                'TIMER%(timer)s_COMP%(comp)s_vect' % locals())
         add_blank_line()
         return pos
 

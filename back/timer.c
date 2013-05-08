@@ -19,10 +19,10 @@ static inline int8_t compare_times(uint32_t t0, uint32_t t1)
 void init_timer(void)
 {
     // Timer/Counter 0 waveform generation mode = fast PWM, TOP = OCR0A.
-    TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(WGM02);
+    TCCR0A = _BV(WGM01) | _BV(WGM00);
 
     // Timer/Counter 0 clock select = prescale by 64.
-    TCCR0B = _BV(CS00) | _BV(CS01);
+    TCCR0B = _BV(WGM02) | _BV(CS00) | _BV(CS01);
 
     // Output Compare Register 0A = 250 (1 millisecond);
     #if F_CPU % (64 * 1000) || F_CPU / 64 / 5000 >= 256
@@ -71,6 +71,7 @@ void dequeue_timeout(timeout *newt)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         bool ok = dequeue_timeout_NONATOMIC(newt);
+        ok = ok;
         fw_assert(ok);
     }
 }

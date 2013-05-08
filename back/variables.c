@@ -144,7 +144,7 @@ void reset_all_variables(void)
 
         default:
             fw_assert(false);
-
+            continue;
         }
         variables_private.vp_values[i] = value;
     }

@@ -7,6 +7,7 @@
 #include <util/atomic.h>
 
 #include "atoms.h"
+#include "trace.h"
 
 #include "fw_assert.h"
 
@@ -22,6 +23,8 @@ static inline void     init_queues                (void);
 
 static inline bool     queue_is_empty             (const queue *);
 static inline bool     queue_is_full              (const queue *);
+static inline bool     queue_is_empty_NONATOMIC   (const queue *);
+static inline bool     queue_is_full_NONATOMIC    (const queue *);
 static inline bool     any_queue_is_full          (void);
 
 static inline void     enqueue_atom_X             (uint16_t);
@@ -44,8 +47,8 @@ static inline void     undequeue_atom_P_NONATOMIC (uint16_t);
 // Implementation
 
 struct queue_private {
-    volatile uint8_t q_head;    // volatile so baselevel can read without lock
-    volatile uint8_t q_tail;
+    uint8_t q_head;
+    uint8_t q_tail;
 };
 
 typedef uint16_t queue_buf[256 / 2] __attribute__((aligned(256)));
@@ -57,24 +60,47 @@ static inline void init_queues(void)
     // Already zeroed.
 }
 
-static inline bool queue_is_empty(const queue *q)
+static inline bool queue_is_empty_NONATOMIC(const queue *q)
 {
     return q->q_head == q->q_tail;
 }
 
-static inline bool queue_is_full(const queue *q)
+static inline bool queue_is_empty(const queue *q)
+{
+    bool empty;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        empty = queue_is_empty_NONATOMIC(q);
+    }
+    return empty;
+}
+
+static inline bool queue_is_full_NONATOMIC(const queue *q)
 {
     return q->q_head == (uint8_t)(q->q_tail + 2);
 }
 
-static inline bool any_queue_is_full(void)
+static inline bool queue_is_full(const queue *q)
 {
-    return (queue_is_full(&Xq) ||
-            queue_is_full(&Yq) ||
-            queue_is_full(&Zq) ||
-            queue_is_full(&Pq));
+    bool full;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        full = queue_is_full_NONATOMIC(q);
+    }
+    return full;
 }
 
+static inline bool any_queue_is_full(void)
+{
+    bool any;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        any =(queue_is_full_NONATOMIC(&Xq) ||
+              queue_is_full_NONATOMIC(&Yq) ||
+              queue_is_full_NONATOMIC(&Zq) ||
+              queue_is_full_NONATOMIC(&Pq));
+    }
+    return any;
+}
+
+#if 0
 static inline bool all_queues_are_empty(void)
 {
     return (queue_is_empty(&Xq) &&
@@ -82,6 +108,7 @@ static inline bool all_queues_are_empty(void)
             queue_is_empty(&Zq) &&
             queue_is_empty(&Pq));
 }
+#endif
 
 #define DEFINE_ENQUEUE_DEQUEUE(Q)                                       \
                                                                         \
@@ -109,7 +136,9 @@ static inline bool all_queues_are_empty(void)
             uint16_t *p;                                                \
         } u;                                                            \
                                                                         \
-        if (queue_is_empty(&Q##q))                                      \
+        TRACE(Q##q.q_head);                                             \
+        TRACE(Q##q.q_tail);                                             \
+        if (queue_is_empty_NONATOMIC(&Q##q))                            \
             return A_STOP;                                              \
         u.b[0] = Q##q.q_head;                                           \
         u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
@@ -125,7 +154,7 @@ static inline bool all_queues_are_empty(void)
             uint16_t *p;                                                \
         } u;                                                            \
                                                                         \
-        fw_assert(!queue_is_full(&Q##q));                               \
+        fw_assert(!queue_is_full_NONATOMIC(&Q##q));                     \
         u.b[0] = Q##q.q_head - 2;                                       \
         u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
         *u.p = a;                                                       \

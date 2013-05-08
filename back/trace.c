@@ -1,13 +1,15 @@
 #include "trace.h"
 
+#ifndef FW_NDEBUG
+
 #include <stdio.h>
 
 struct trace_private trace_private;
 
 void print_trace(void)
 {
-    printf("\nTRACE\n");
     size_t count = trace_private.tp_pos;
+    printf("\nTRACE\n");
     for (size_t i = 0; i < count; i++) {
         const trace_entry *ep = &trace_private.tp_buffer[i];
         printf("%s:%d: ", ep->te_func, ep->te_line);
@@ -20,3 +22,5 @@ void print_trace(void)
     }        
     putchar('\n');
 }
+
+#endif /* !FW_NDEBUG */
