@@ -21,6 +21,13 @@ int connect_to_daemon(client_type ct)
         return -1;
     }
 
+#ifdef SO_NOSIGPIPE
+    // Suppress SIGPIPE.
+    int set = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof set))
+        return -1;
+#endif
+
     // Connect.
     struct sockaddr_un sun;
     memset(&sun, 0, sizeof sun);
@@ -33,7 +40,11 @@ int connect_to_daemon(client_type ct)
     char msg0[20];
     int nb = snprintf(msg0, sizeof msg0, "Client Type %c\n", ct);
     assert(nb > 0);
-    ssize_t nw = send(sock, msg0, nb, MSG_NOSIGNAL);
+    int flags = 0;
+#ifdef MSG_NOSIGNAL
+    flags += MSG_NOSIGNAL;
+#endif
+    ssize_t nw = send(sock, msg0, nb, flags);
     if (nw < 0) {
         perror("first message to daemon failed");
         (void)close(sock);
