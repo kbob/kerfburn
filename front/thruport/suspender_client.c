@@ -64,7 +64,7 @@ int be_suspender(const char **argv)
         return EXIT_FAILURE;
     }
     if (strncmp(response, "OK\n", 3) != 0) {
-        fprintf(stderr, response);
+        fputs(response, stderr);
         return EXIT_FAILURE;
     }
 
