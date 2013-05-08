@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "e-stop.h"
+#include "engine.h"
 #include "fault.h"
 #include "fw_stdio.h"
 #include "illum.h"
@@ -41,6 +42,7 @@ static void initialize_devices(void)
     init_reporting();
     init_atoms();
     init_queues();
+    init_engine();
     init_scheduler();
 }
 
