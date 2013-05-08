@@ -21,8 +21,10 @@ typedef struct timeout {
 } timeout;
 
 extern        void     init_timer                 (void);
+
 static inline uint32_t millisecond_time_NONATOMIC (void);
 static inline uint32_t millisecond_time           (void);
+
 extern        void     enqueue_timeout            (timeout *,
                                                    uint32_t expiration);
 extern        void     dequeue_timeout            (timeout *);
