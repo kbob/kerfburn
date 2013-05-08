@@ -17,4 +17,14 @@ void init_lasers(void)
     VISIBLE_LASER_PULSE_OCR = 1;
     LASER_PULSE_TIMSK       = _BV(LASER_PULSE_TOIE);
     LASER_PULSE_TIFR       |= _BV(LASER_PULSE_TOV);
+    // Set the laser watchdog
+    LASER_WATCHDOG_OCR      = 0xFFFF;
+    LASER_WATCHDOG_TIMSK   |= _BV(LASER_WATCHDOG_OCIE);
+    LASER_WATCHDOG_TIFR    |= _BV(LASER_WATCHDOG_OCF);
+    OCR4C = 0xFFFF;
+}
+
+ISR(LASER_WATCHDOG_TIMER_COMP_vect)
+{
+    fw_assert(false);
 }
