@@ -15,6 +15,15 @@ static struct path_cache {
     char *pc_lck_path;
 } pc;
 
+static const char *basename(const char *path)
+{
+    const char *p, *bn = path;
+    for (p = path; *p; p++)
+        if (*p == '/' && p[1] != '/')
+            bn = p + 1;
+    return bn;
+}
+
 void set_port(const char *port)
 {
     free(pc.pc_port);
@@ -54,7 +63,7 @@ const char *get_device(void)
         pc.pc_dev_path = strdup(path);
         return pc.pc_dev_path;
     }
-    fprintf(stderr, "USB serial device not found\n");
+    fprintf(stderr, "No USB serial device found\n");
     return NULL;
 }
 
