@@ -16,5 +16,5 @@ void init_lasers(void)
     MAIN_LASER_PULSE_OCR    = 1;
     VISIBLE_LASER_PULSE_OCR = 1;
     LASER_PULSE_TIMSK       = _BV(LASER_PULSE_TOIE);
-    LASER_PULSE_TIFR        = _BV(LASER_PULSE_TOV);
+    LASER_PULSE_TIFR       |= _BV(LASER_PULSE_TOV);
 }
