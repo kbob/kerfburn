@@ -57,7 +57,7 @@ static int send_to_receiver(receiver *r, const char *data, size_t count)
     while (count) {
         int flags = MSG_DONTWAIT;
 #ifdef MSG_NOSIGNAL
-        flags |= MSG_NOSIGNAL
+        flags |= MSG_NOSIGNAL;
 #endif
         ssize_t nw = send(r->r_fd, data, count, flags);
         if (nw < 0) {

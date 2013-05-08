@@ -15,7 +15,7 @@ static struct path_cache {
     char *pc_lck_path;
 } pc;
 
-static const char *basename(const char *path)
+static const char *kb_basename(const char *path)
 {
     const char *p, *bn = path;
     for (p = path; *p; p++)
@@ -72,7 +72,7 @@ const char *get_socket_dir(void)
     if (pc.pc_port) {
         if (!pc.pc_sock_dir)
             asprintf(&pc.pc_sock_dir, "/tmp/thruport-%s",
-                     basename(pc.pc_port));
+                     kb_basename(pc.pc_port));
         return pc.pc_sock_dir;
     }
     return "/tmp/thruport";
@@ -96,7 +96,8 @@ const char *get_lock_path(void)
         const char *dev = get_device();
         if (!dev)
             return NULL;
-        asprintf(&pc.pc_lck_path, "%s/LCK..%s", get_lock_dir(), basename(dev));
+        asprintf(&pc.pc_lck_path, "%s/LCK..%s",
+                 get_lock_dir(), kb_basename(dev));
     }
     return pc.pc_lck_path;
 }
