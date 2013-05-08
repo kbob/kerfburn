@@ -266,6 +266,7 @@ static inline void parse_assignment(uint8_t c0)
 
     default:
         fw_assert(false);
+        return;
     }
     if (consume_line(pos)) {
         printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);

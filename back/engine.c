@@ -387,6 +387,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
             case A_SET_MAIN_POWER_LEVEL:
                 {
                     uint16_t power = dequeue_atom_P_NONATOMIC();
+                    power = power;
                     fw_assert(false && power);
                 }
                 break;

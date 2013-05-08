@@ -9,15 +9,26 @@
 
 // Interface
 
-#define TRACE(x) (trace(__func__, __LINE__, (x)))
+#ifdef FW_NDEBUG
 
-static inline void reset_trace (void);
-extern        void print_trace (void);
+    #define TRACE(x) ((void)x)
+    static inline void reset_trace (void) {}
+    static inline void print_trace (void) {}
+
+#else
+
+    #define TRACE(x) (trace(__func__, __LINE__, (x)))
+    static inline void reset_trace (void);
+    extern        void print_trace (void);
+
+#endif
 
 
 // Implementation
 
-#define TRACE_SIZE 50
+#ifndef FW_NDEBUG
+
+#define TRACE_SIZE 120
 
 typedef struct trace_entry {
     const char *te_func;
@@ -47,13 +58,6 @@ static inline void reset_trace(void)
     trace_private.tp_pos = 0;
 }
 
-#if 0
-static inline void trace(uint8_t x)
-{
-    if (trace_private.tp_pos < TRACE_SIZE)
-        trace_private.tp_buffer[trace_private.tp_pos++] = x;
-}
-#endif
-
+#endif /* !FW_NDEBUG */
 
 #endif /* !TRACE_included */

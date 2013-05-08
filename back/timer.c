@@ -71,6 +71,7 @@ void dequeue_timeout(timeout *newt)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         bool ok = dequeue_timeout_NONATOMIC(newt);
+        ok = ok;
         fw_assert(ok);
     }
 }
