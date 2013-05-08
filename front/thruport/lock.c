@@ -80,6 +80,10 @@ int lock_serial_port(void)
 
     const char *lck_dir = get_lock_dir();
     const char *lck_file = get_lock_path();
+    if (!lck_file) {
+        syslog(LOG_ERR, "No USB serial device found");
+        return -1;
+    }
     const char *device = get_device();
     struct stat temp_stat, lck_stat;
     for (int i = 0; ; i++) {
