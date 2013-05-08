@@ -5,18 +5,23 @@ Is this a bug database?
 
 ## Next!
 
-
-- Design the verbs in the queue.  Is "verb" the right word?  I've
-  already used action and command.  Token?  Item?  Some neologism
-  like ticken (tick token) or tickstart?  **Atom**.  Not terribly
-  descriptive (except that it's tiny and indivisible) but I like it.
-
-  How about calling the timer-based stuff the **Engine** and each
-  interrupt is a **Spark**?  Too corny?
-
-- What is the frequency response of the A2D + laser?  Do I need
-  to schedule changes ahead of time?
-
+* Debug the missing interrupts.
+  - Try with low voltage power on DONE
+  - Switch to -Os DONE
+  - Switch to -O0 DONE
+  - Inspect generated assembler at -O3 DONE
+  - Remove Y motor activity DONE
+  - Print queue buffers DONE
+  - Fix WGM bug in timer.c DONE
+  - Add missing #define in lasers.h. DONE
+  - Use SBI on TIFRn. DONE
+  - Verify generated assembler on TIFRn. DONE
+  - Try setting unused OCRs to 0xFFFF. DONE
+  - Try to reproduce bug with new timers.c.
+  - Make queue_is_{full,empty} atomic. DONE
+  - Upgrade power circuit 
+  - Put o'scope on Vcc rail.
+  - Put o'scope on trigger outputs
 
 ## Design
 
@@ -33,6 +38,9 @@ Is this a bug database?
   you're still on the switch, the switch must be disconnected.
 
   Also need to think about how faults are stored and reported.
+
+* What is the frequency response of the A2D + laser?  Do I need
+  to schedule changes ahead of time?
 
 
 ## Testing
