@@ -10,7 +10,6 @@
                  timer.c trace.c variables.c
 
      THRUPORT := front/thruport/thruport
-#    BACK_MCU := atmega2560
       BACK_CC := avr-gcc
       BACK_AR := avr-ar
       BACK_LD := avr-gcc
