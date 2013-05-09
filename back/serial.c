@@ -174,22 +174,22 @@ bool serial_rx_has_lines(void)
     return ready;
 }
 
-uint16_t serial_rx_char_count(void)
+uint8_t serial_rx_char_count(void)
 {
-    uint16_t h, t;
+    uint8_t h, t;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         h = rx_head;
         t = rx_tail;
     }    
-    return (RX_BUF_SIZE + t - h) % RX_BUF_SIZE;
+    return t - h;
 }
 
-uint16_t serial_rx_line_count(void)
+uint8_t serial_rx_line_count(void)
 {
     return rx_line_count;
 }
 
-uint8_t serial_rx_peek_char(uint16_t pos)
+uint8_t serial_rx_peek_char(uint8_t pos)
 {
     uint8_t c;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -199,15 +199,15 @@ uint8_t serial_rx_peek_char(uint16_t pos)
     return c;
 }
 
-void serial_rx_consume(uint16_t count)
+void serial_rx_consume(uint8_t count)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         fw_assert(count <= serial_rx_char_count());
-        for (uint16_t i = 0; i < count; i++) {
+        for (uint8_t i = 0; i < count; i++) {
             uint8_t c = rx_buf[rx_head];
             if (is_eol_char(c))
                 --rx_line_count;
-            rx_head = (rx_head + 1) % RX_BUF_SIZE;
+            rx_head++;
             if (!(rx_head & ~-(1 << RX_FLOW_SHIFT))) {
                 uint8_t ack = rx_head >> RX_FLOW_SHIFT | -(1 << RX_FLOW_SHIFT);
                 tx_send_oob_NONATOMIC(ack);
@@ -224,7 +224,7 @@ ISR(USART0_RX_vect)
         if (c == ASCII_CAN)
             emergency_stop_NONATOMIC();
         else {
-            uint16_t new_tail = (rx_tail + 1) % RX_BUF_SIZE;
+            uint8_t new_tail = rx_tail + 1;
             if (new_tail == rx_head)
                 rx_errs |= SE_DATA_OVERRUN;
             else {
