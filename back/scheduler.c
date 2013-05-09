@@ -146,16 +146,6 @@ static inline uint16_t next_ivl(uint32_t now, uint32_t end)
 void enqueue_dwell(void)
 {
     TRACE('Q');
-    // set x motor mode disabled
-    // set y motor mode disabled
-    // set z motor mode disabled
-    // set main laser mode (ls == m && lm == c) -> on,
-    //                     (ls == m && lm == t) -> pulsed,
-    //                     else                 -> disabled
-    // set visible laser mode (ls == v && lm == c) -> on,
-    //                        (ls == m && lm == t) -> pulsed,
-    //                        else                 -> disabled
-    // set main laser power
 
     set_x_motor_step(false);
     set_y_motor_step(false);
@@ -186,29 +176,6 @@ void enqueue_dwell(void)
             set_visible_pulse_duration(get_unsigned_variable(V_PD));
     } else
         set_visible_pulse_mode(PM_OFF);
-
-    // always have the laser be the major axis.
-    // if (ls != n && lm == t) {
-    //     // set pulse duration = pd
-    //     ivl = p_remainder;
-    //     for (i = 0; i < dt; i += ivl) {
-    //         if (time to wake motors) {
-    //             enqueue_atom(big number, Xq);
-    //             enqueue_atom(big number, Yq);
-    //             enqueue_atom(big number, Zq);
-    //         }
-    //         enqueue_atom(ivl, Pq);
-    //     }
-    //     else {
-    //         for (i = 0; i < dt; i += big number) {
-    //             enqueue_atom(big number, Xq);
-    //             enqueue_atom(big number, Yq);
-    //             enqueue_atom(big number, Zq);
-    //             enqueue_atom(big number, Pq);
-    //         }
-    //     }
-
-    // Given a big number, divide into smaller pieces.
 
     uint32_t dt = get_unsigned_variable(V_DT);
     if (mode == PM_PULSED) {
@@ -257,9 +224,5 @@ void stop_immediately(void)
 
 void await_completion(void)
 {
-    // print_trace();
-    // print_backtrace();
     await_engine_stopped();
-    print_trace();
-    reset_trace();
 }
