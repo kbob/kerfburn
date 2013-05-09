@@ -48,6 +48,7 @@ Is this a bug database?
 
 * `make clean` should clean up `tools/bin` and `config` subdirectories.
 
+* Write a curses-based status report tool.
 
 ### Back End
 
@@ -63,6 +64,13 @@ Is this a bug database?
 
 * Define pin mapping function for PCINTn pins.  Define e-stop and lid
   as PCINT pins.  Write driver/interrupt handler for them.
+
+* Define some terminology.  An "atom" is a 16 bit item that the motor
+  ISRs consume.  An "interval" is an atom that describe how long to
+  wait.  A "verb" is an atom that says to do something other than wait
+  for an interval.
+  
+  Use this terminology in the code.
 
 
 ### Thruport
