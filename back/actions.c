@@ -108,9 +108,7 @@ void action_enable_X_motor(void)
 void action_enable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
-#ifndef NO_Y
     enable_y_motor();
-#endif
 }
 
 void action_enable_Z_motor(void)
@@ -158,9 +156,7 @@ void action_disable_X_motor(void)
 void action_disable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
-#ifndef NO_Y
     disable_y_motor();
-#endif
 }
 
 void action_disable_Z_motor(void)
