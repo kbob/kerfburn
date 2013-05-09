@@ -24,6 +24,7 @@
 
 static void initialize_devices(void)
 {
+    // Initialize hardware modules.
     init_timer();
     init_serial();
     init_stdio();
@@ -36,8 +37,11 @@ static void initialize_devices(void)
     init_lasers();
     init_LEDs();
     init_illumination();
+
+    // Hardware ready -- enable interrupts.
     sei();
 
+    // Initialize software modules.
     init_variables();
     init_reporting();
     init_atoms();
