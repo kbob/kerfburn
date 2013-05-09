@@ -52,10 +52,6 @@ Is this a bug database?
 
 ### Back End
 
-* Change serial RX driver to use 256 byte buffer.
-
-    **Current status:** Buffer size changed, but there are still some `uint16\_t` variables that should be changed to `uint8\_t`.
-
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
   line 1122 (in the Linux kernel source tree).  Also see
   http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
@@ -107,6 +103,7 @@ Is this a bug database?
 
 * In `receiver_service.c`, the receiver array needs locking.  There is
   a race condition and probable crash waiting to happen there.
+
 
 ## Cleanup
 
