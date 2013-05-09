@@ -40,8 +40,8 @@ void init_serial(void)
     // Set baud rate.
     UBRR0 = baud_setting;
 
-    // Enable RX, TX, Data Register Empty Interrupt, and RX Complete Interrupt.
-    UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(UDRIE0) | _BV(RXCIE0);
+    // Enable RX, TX, and RX Complete Interrupt.
+    UCSR0B = _BV(RXCIE0) | _BV(RXEN0) | _BV(TXEN0);
 }
 
 static inline bool is_eol_char(uint8_t c)
@@ -103,6 +103,7 @@ bool serial_tx_put_char(uint8_t c)
         else if ((new_tail = (tx_tail + 1) % TX_BUF_SIZE) != tx_head) {
             tx_buf[tx_tail] = c;
             tx_tail = new_tail;
+            UCSR0B |= _BV(UDRIE0);
         } else {
             tx_errs |= SE_DATA_OVERRUN;
             ok = false;
@@ -117,6 +118,7 @@ static inline void tx_send_oob_NONATOMIC(uint8_t c)
         UDR0 = c;
     } else {
         tx_oob_char = c;
+        UCSR0B |= _BV(UDRIE0);
     }
 }
 
@@ -128,7 +130,8 @@ ISR(USART0_UDRE_vect)
     } else if (tx_head != tx_tail) {
         UDR0 = tx_buf[tx_head];
         tx_head = (tx_head + 1) % TX_BUF_SIZE;
-    }
+    } else
+        UCSR0B &= ~_BV(UDRIE0);
 }
 
 // //  // //   // //  // //    // //  // //   // //  // //     // //  // //
