@@ -25,6 +25,7 @@ static inline bool     queue_is_full              (const queue *);
 static inline bool     queue_is_empty_NONATOMIC   (const queue *);
 static inline bool     queue_is_full_NONATOMIC    (const queue *);
 static inline bool     any_queue_is_full          (void);
+static inline uint8_t  queue_length               (const queue *);
 
 static inline void     enqueue_atom_X             (uint16_t);
 static inline uint16_t dequeue_atom_X_NONATOMIC   (void);
@@ -91,23 +92,23 @@ static inline bool any_queue_is_full(void)
 {
     bool any;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        any =(queue_is_full_NONATOMIC(&Xq) ||
-              queue_is_full_NONATOMIC(&Yq) ||
-              queue_is_full_NONATOMIC(&Zq) ||
-              queue_is_full_NONATOMIC(&Pq));
+        any = (queue_is_full_NONATOMIC(&Xq) ||
+               queue_is_full_NONATOMIC(&Yq) ||
+               queue_is_full_NONATOMIC(&Zq) ||
+               queue_is_full_NONATOMIC(&Pq));
     }
     return any;
 }
 
-#if 0
-static inline bool all_queues_are_empty(void)
+static inline uint8_t queue_length(const queue *q)
 {
-    return (queue_is_empty(&Xq) &&
-            queue_is_empty(&Yq) &&
-            queue_is_empty(&Zq) &&
-            queue_is_empty(&Pq));
+    uint8_t h, t;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        h = q->q_head;
+        t = q->q_tail;
+    }
+    return t - h;
 }
-#endif
 
 #define DEFINE_ENQUEUE_DEQUEUE(Q)                                       \
                                                                         \
