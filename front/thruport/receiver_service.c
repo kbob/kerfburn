@@ -74,9 +74,10 @@ void broadcast_to_receivers(const char *data, size_t count)
 {
     receiver *r = receivers;
     while (r < receivers + receiver_count) {
-        if (send_to_receiver(r, data, count))
+        if (send_to_receiver(r, data, count)) {
+            (void)close(r->r_fd);
             free_receiver(r);
-        else
+        } else
             r++;
     }
 }
