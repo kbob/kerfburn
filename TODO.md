@@ -5,33 +5,11 @@ Is this a bug database?
 
 ## Next!
 
-* Debug the missing interrupts.
-  - Try with low voltage power on DONE
-  - Switch to -Os DONE
-  - Switch to -O0 DONE
-  - Inspect generated assembler at -O3 DONE
-  - Remove Y motor activity DONE
-  - Print queue buffers DONE
-  - Fix WGM bug in timer.c DONE
-  - Add missing #define in lasers.h. DONE
-  - Use SBI on TIFRn. DONE
-  - Verify generated assembler on TIFRn. DONE
-  - Try setting unused OCRs to 0xFFFF. DONE
-  - Try to reproduce bug with new timers.c.
-  - Make queue_is_{full,empty} atomic. DONE
-  - Upgrade power circuit 
-  - Put o'scope on Vcc rail.
-  - Put o'scope on trigger outputs
-
 ## Design
 
 
 * What are x0 and y0?  Do we really have all the right parameters to
   start a movement or cut?
-
-
-* <strike>Add the Z axis variables.</strike> **Done.**
-
 
 * Need a list of fault  states.  In particular, need fault states when
   we  fail to move  off the  limit switches.   If you  move 1  cm, and
@@ -39,7 +17,7 @@ Is this a bug database?
 
   Also need to think about how faults are stored and reported.
 
-* What is the frequency response of the A2D + laser?  Do I need
+* What is the frequency response of the D2A + laser?  Do I need
   to schedule changes ahead of time?
 
 
@@ -49,22 +27,12 @@ Is this a bug database?
 
 * Test all kinds of soft interrupt delivery.
 
-+ <strike>Write a cat test.  Test serial reliability and flow control.
-
-  - variant where front end sends data sporadically.
-  - variant where data streams through full speed.
-  - variant where it delays on one particular character.
-
-    </strike>  **Done.  (Not automated; must hand-test.)**
-
 
 ## Documentation
 
 * Document the build system?
 
 * Coding style document?
-
-* <strike>Document the Z axis variables.</strike>  **Done.**
 
 * Pull the hardware section out of the architecture section and make
   it a standalone document.
@@ -74,31 +42,18 @@ Is this a bug database?
 
 ## Coding
 
-* <strike>Write front end serial manager.</strike> **Mostly done.**
-
 * The Makefiles need a lot of refactoring.
 
-* <strike>`gen-pin-defs.py` should compress `\_READY\_READY` or
-  `\_ENABLED\_DISABLED` to something more English-like.</strike>
-  **Done.**
-  
 * `gen-pin-defs.py` should emit a better autogen disclaimer.
-
-* <strike>I think `gen-pin-defs.py` needs to `#define` the raw pin name.</strike>  **Done.**
 
 * `make clean` should clean up `tools/bin` and `config` subdirectories.
 
 
 ### Back End
 
-* <strike>Add flow controller to serial RX driver.</strike> **Done.**
-
 * Change serial RX driver to use 256 byte buffer.
 
     **Current status:** Buffer size changed, but there are still some `uint16\_t` variables that should be changed to `uint8\_t`.
-
-* <strike>Have serial RX driver count newlines and trigger the parser
-  when it sees one.</strike> **Done.**
 
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
   line 1122 (in the Linux kernel source tree).  Also see
@@ -155,11 +110,15 @@ Is this a bug database?
 
 ## Hardware
 
-* <strike>Replace nylon bushings in Y V-wheels with aluminum.</strike>
-    **Done.**
+* Make a temporary top panel.  Install E-Stop switch in it.
 
-* <strike>Replace nylon bushings in X, Y and Z idler pulleys with
-  aluminum.</strike>
+* Wire up E-Stop switch.
+
+* Wire up lid switch.
+
+* Make a temporary back panel.  Install power plug+switch in it.
+
+* Order relays.  Wire up relays to Azteeg.
 
 * Replace wrong-size screws on limit switches and cable carrier with
   right-size.
