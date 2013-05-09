@@ -11,6 +11,7 @@
 #include "limit-switches.h"
 #include "low-voltage.h"
 #include "memory.h"
+#include "queues.h"
 #include "relays.h"
 #include "serial.h"
 #include "timer.h"
@@ -107,7 +108,9 @@ static void report_power(void)
 
 static void report_queue(void)
 {
-    printf_P(PSL("Q not implemented\n"));
+    printf_P(PSL("Q x=%u y=%u z=%u p=%u\n"),
+             queue_length(&Xq), queue_length(&Yq),
+             queue_length(&Zq), queue_length(&Pq));
 }
 
 static void report_RAM(void)
