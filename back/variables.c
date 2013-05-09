@@ -35,6 +35,7 @@ DEFINE_DESC(rl, ENUM, "ny");    // report limit switch status
 DEFINE_DESC(rm, ENUM, "ny");    // report motor status
 DEFINE_DESC(rp, ENUM, "ny");    // report power status
 DEFINE_DESC(rq, ENUM, "ny");    // report queue status
+DEFINE_DESC(rr, ENUM, "ny");    // report RAM status
 DEFINE_DESC(rs, ENUM, "ny");    // report serial status
 DEFINE_DESC(rv, ENUM, "ny");    // report variables
 DEFINE_DESC(rw, ENUM, "ny");    // report water status
@@ -67,6 +68,7 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     rm_desc,
     rp_desc,
     rq_desc,
+    rr_desc,
     rs_desc,
     rv_desc,
     rw_desc,

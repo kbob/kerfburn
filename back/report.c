@@ -89,14 +89,6 @@ static void report_limit_switches(void)
            xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-static void report_memory(void)
-{
-    segment_sizes ss;
-    get_memory_use(&ss);
-    printf_P(PSL("M text=%u data=%u bss=%u free=%u stack=%u\n"),
-                 ss.ss_text, ss.ss_data, ss.ss_bss, ss.ss_free, ss.ss_stack);
-}
-
 static void report_motors(void)
 {
     printf_P(PSL("M not implemented\n"));
@@ -116,6 +108,15 @@ static void report_power(void)
 static void report_queue(void)
 {
     printf_P(PSL("Q not implemented\n"));
+}
+
+static void report_RAM(void)
+{
+    // Technically, text is in program memory, not RAM.
+    segment_sizes ss;
+    get_memory_use(&ss);
+    printf_P(PSL("R t=%u d=%u b=%u f=%u s=%u\n"),
+             ss.ss_text, ss.ss_data, ss.ss_bss, ss.ss_free, ss.ss_stack);
 }
 
 static void report_serial(void)
@@ -172,6 +173,7 @@ static const report_descriptor report_descriptors[] PROGMEM = {
     { V_RM, report_motors         },
     { V_RP, report_power          },
     { V_RQ, report_queue          },
+    { V_RR, report_RAM            },
     { V_RS, report_serial         },
     { V_RV, report_variables      },
     { V_RW, report_water          },
@@ -190,7 +192,6 @@ void report_all(void)
     if (reporting_is_active)
         return;
     reporting_is_active = true;
-    report_memory();
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
         const uint8_t var = pgm_read_byte(&rdp->rd_var);

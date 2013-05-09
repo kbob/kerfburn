@@ -33,6 +33,7 @@ typedef enum variable_index {
     V_RM,                       // report motor status
     V_RP,                       // report power status
     V_RQ,                       // report queue status
+    V_RR,                       // report RAM status
     V_RS,                       // report serial status
     V_RV,                       // report variables
     V_RW,                       // report water status
