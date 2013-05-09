@@ -10,7 +10,6 @@
 #include "memory.h"
 #include "motors.h"
 #include "queues.h"
-#include "trace.h"
 #include "variables.h"
 
 // minimum and maximum interrupt intervals.
@@ -145,8 +144,6 @@ static inline uint16_t next_ivl(uint32_t now, uint32_t end)
 
 void enqueue_dwell(void)
 {
-    TRACE('Q');
-
     set_x_motor_step(false);
     set_y_motor_step(false);
     set_z_motor_step(false);

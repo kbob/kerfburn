@@ -10,101 +10,6 @@
 #include "limit-switches.h"
 #include "motors.h"
 #include "queues.h"
-#include "trace.h"
-
-typedef struct timer_regs {
-    uint8_t  tccra;
-    uint8_t  tccrb;
-    uint16_t tcnt_1;
-    uint16_t tcnt_2;
-    uint16_t tcnt_3;
-    uint16_t ocr;
-    uint16_t icr;
-    uint8_t  timsk;
-    uint8_t  tifr;
-} timer_regs;
-typedef timer_regs regs[4];
-
-regs before, after;
-
-void save_regs(regs *p)
-{
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        (*p)[0].tccra = X_MOTOR_STEP_TCCRA;
-        (*p)[0].tccrb = X_MOTOR_STEP_TCCRB;
-        (*p)[0].tcnt_1 = X_MOTOR_STEP_TCNT;
-        (*p)[0].tcnt_2 = X_MOTOR_STEP_TCNT;
-        (*p)[0].tcnt_3 = X_MOTOR_STEP_TCNT;
-        (*p)[0].ocr   = X_MOTOR_STEP_OCR;
-        (*p)[0].icr   = X_MOTOR_STEP_ICR;
-        (*p)[0].timsk = X_MOTOR_STEP_TIMSK;
-        (*p)[0].tifr  = X_MOTOR_STEP_TIFR;
-
-        (*p)[1].tccra = Y_MOTOR_STEP_TCCRA;
-        (*p)[1].tccrb = Y_MOTOR_STEP_TCCRB;
-        (*p)[1].tcnt_1  = Y_MOTOR_STEP_TCNT;
-        (*p)[1].tcnt_2  = Y_MOTOR_STEP_TCNT;
-        (*p)[1].tcnt_3  = Y_MOTOR_STEP_TCNT;
-        (*p)[1].ocr   = Y_MOTOR_STEP_OCR;
-        (*p)[1].icr   = Y_MOTOR_STEP_ICR;
-        (*p)[1].timsk = Y_MOTOR_STEP_TIMSK;
-        (*p)[1].tifr  = Y_MOTOR_STEP_TIFR;
-
-        (*p)[2].tccra = Z_MOTOR_STEP_TCCRA;
-        (*p)[2].tccrb = Z_MOTOR_STEP_TCCRB;
-        (*p)[2].tcnt_1  = Z_MOTOR_STEP_TCNT;
-        (*p)[2].tcnt_2  = Z_MOTOR_STEP_TCNT;
-        (*p)[2].tcnt_3  = Z_MOTOR_STEP_TCNT;
-        (*p)[2].ocr   = Z_MOTOR_STEP_OCR;
-        (*p)[2].icr   = Z_MOTOR_STEP_ICR;
-        (*p)[2].timsk = Z_MOTOR_STEP_TIMSK;
-        (*p)[2].tifr  = Z_MOTOR_STEP_TIFR;
-
-        (*p)[3].tccra = LASER_PULSE_TCCRA;
-        (*p)[3].tccrb = LASER_PULSE_TCCRB;
-        (*p)[3].tcnt_1  = LASER_PULSE_TCNT;
-        (*p)[3].tcnt_2  = LASER_PULSE_TCNT;
-        (*p)[3].tcnt_3  = LASER_PULSE_TCNT;
-        (*p)[3].ocr   = VISIBLE_LASER_PULSE_OCR;
-        (*p)[3].icr   = LASER_PULSE_ICR;
-        (*p)[3].timsk = LASER_PULSE_TIMSK;
-        (*p)[3].tifr  = LASER_PULSE_TIFR;
-    }
-}
-
-void print_regs(void)
-{
-    for (uint8_t i = 0; i < 4; i++) {
-        printf("%c REGS\n", "XYZP"[i]);
-#define P(reg) \
-        (printf("  %-6s %#6x %#6x\n", #reg, before[i].reg, after[i].reg))
-        P(tccra);
-        P(tccrb);
-        P(tcnt_1);
-        P(tcnt_2);
-        P(tcnt_3);
-        P(ocr);
-        P(icr);
-        P(timsk);
-        P(tifr);
-#undef P
-        printf("\n");
-    }
-}
-
-void print_queues(void)
-{
-    static char      *qnames[4] = { "Xq",    "Yq",    "Zq",    "Pq"    };
-    static queue     *queues[4] = { &Xq,     &Yq,    &Zq,      &Pq     };
-    static queue_buf *qbufs [4] = { &Xq_buf, &Yq_buf, &Zq_buf, &Pq_buf };
-    for (uint8_t i = 0; i < 4; i++) {
-        uint8_t t = queues[i]->q_tail;
-        printf("%s head=%u tail=%u\n", qnames[i], queues[i]->q_head, queues[i]->q_tail);
-        for (uint8_t j = 0; j < t; j++)
-            printf("%s[%u] = %5u\n", qnames[i], j, (*qbufs[i])[j]);
-        printf("\n");
-    }
-}
 
 typedef enum queue_mask {
     qm_x   = 1 << 0,
@@ -132,19 +37,10 @@ engine_state get_engine_state(void)
 
 void start_engine(void)
 {
-#if 0
-    for (uint8_t i = 0; i < 256 / 4; i++)
-        printf("blah");
-#endif
-
-    save_regs(&before);
-
     engine_state estate;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        TRACE('G');
         estate = get_engine_state();
         if (estate == ES_STOPPED) {
-            TRACE('g');
             running_queues = qm_all;
             set_x_step_interval(F_CPU / 1000);
             set_y_step_interval(F_CPU / 1000);
@@ -215,33 +111,13 @@ void stop_engine_immediately(void)
 
 void await_engine_stopped(void)
 {
-    // printf("await\n");
-    TRACE('W');
-#if 0
-    uint32_t n = 0;
-    while (running_queues) {
-        n++;
-        fw_assert(SREG & _BV(SREG_I));
-        if (!(n & 0xFFFF)) {
-            save_regs(&after);
-            print_trace();
-            print_regs();
-            print_queues();
-        }        
-        continue;
-    }
-#else
     while (running_queues)
         continue;
-#endif
-    TRACE(running_queues);
-    // print_queues();
 }
 
 ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 {
     while (true) {
-        TRACE('x');
         uint16_t a = dequeue_atom_X_NONATOMIC();
         if (a < ATOM_MAX) {
             switch (a) {
@@ -249,7 +125,6 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
             case A_STOP:
                 stop_x_timer();
                 running_queues &= ~qm_x;
-                TRACE(running_queues);
                 return;
 
             case A_DIR_POSITIVE:
@@ -314,7 +189,6 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
 {
     while (true) {
-        TRACE('y');
         uint16_t a = dequeue_atom_Y_NONATOMIC();
         if (a < ATOM_MAX) {
             switch (a) {
@@ -322,7 +196,6 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
             case A_STOP:
                 stop_y_timer();
                 running_queues &= ~qm_y;
-                TRACE(running_queues);
                 return;
 
             case A_DIR_POSITIVE:
@@ -387,7 +260,6 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
 ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
 {
     while (true) {
-        TRACE('z');
         uint16_t a = dequeue_atom_Z_NONATOMIC();
         if (a < ATOM_MAX) {
             switch (a) {
@@ -395,7 +267,6 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
             case A_STOP:
                 stop_z_timer();
                 running_queues &= ~qm_z;
-                TRACE(running_queues);
                 return;
 
             case A_DIR_POSITIVE:
@@ -460,7 +331,6 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
 ISR(LASER_PULSE_TIMER_OVF_vect)
 {
     while (true) {
-        TRACE('p');
         uint16_t a = dequeue_atom_P_NONATOMIC();
         if (a < ATOM_MAX) {
             switch (a) {
@@ -468,7 +338,6 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
             case A_STOP:
                 stop_pulse_timer();
                 running_queues &= ~qm_p;
-                TRACE(running_queues);
                 return;
 
             case A_SET_MAIN_MODE_OFF:

@@ -7,7 +7,6 @@
 #include <util/atomic.h>
 
 #include "atoms.h"
-#include "trace.h"
 
 #include "fw_assert.h"
 
@@ -136,8 +135,6 @@ static inline bool all_queues_are_empty(void)
             uint16_t *p;                                                \
         } u;                                                            \
                                                                         \
-        TRACE(Q##q.q_head);                                             \
-        TRACE(Q##q.q_tail);                                             \
         if (queue_is_empty_NONATOMIC(&Q##q))                            \
             return A_STOP;                                              \
         u.b[0] = Q##q.q_head;                                           \
