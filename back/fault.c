@@ -11,6 +11,8 @@
 #include "variables.h"
 
 typedef uint16_t fault_word;
+
+// N.B.  fault_functions are called both from interrupts and from base level.
 typedef void fault_function(void);
 typedef fault_function f_func;
 
@@ -110,9 +112,9 @@ void clear_fault(uint8_t findex)
     }
 }
 
+// N.B.  trigger_fault() is called both from interrupts and from base level.
 void trigger_fault(uint8_t findex)
 {
-    fw_assert(false);
     if (fault_is_set(findex))
         return;
     if (fault_is_overridden(findex)) {
