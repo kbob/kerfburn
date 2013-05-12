@@ -110,7 +110,7 @@ static void report_power(void)
            low_voltage_enabled, low_voltage_ready, high_voltage, air, water);
 }
 
-static void report_queue(void)
+static void report_queues(void)
 {
     printf_P(PSL("Q x=%u y=%u z=%u p=%u\n"),
              queue_length(&Xq), queue_length(&Yq),
@@ -176,7 +176,7 @@ static const report_descriptor report_descriptors[] PROGMEM = {
     { V_RL, report_limit_switches },
     { V_RM, report_motors         },
     { V_RP, report_power          },
-    { V_RQ, report_queue          },
+    { V_RQ, report_queues         },
     { V_RR, report_RAM            },
     { V_RS, report_serial         },
     { V_RV, report_variables      },
