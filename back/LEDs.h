@@ -22,8 +22,8 @@ static inline void init_LEDs(void)
     SPCR |= _BV(SPE) | _BV(MSTR);
 
     // Set SCK, MOSI to output mode.
-    SPI_SCK_DDR_reg |= SPI_SCK_DD_bit;
-    SPI_MOSI_DDR_reg |= SPI_MOSI_DD_bit;
+    SPI_SCK_DDR_reg |= _BV(SPI_SCK_DD_bit);
+    SPI_MOSI_DDR_reg |= _BV(SPI_MOSI_DD_bit);
     // DDRB |= _BV(DDB1) | _BV(DDB2);
 
     // Set bit order MSB-first.
