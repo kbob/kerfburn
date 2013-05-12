@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
+#include "pgmspace.h"
 
 #define DESC_NAME_OFFSET 0
 #define DESC_PUNC_OFFSET 2
@@ -98,10 +99,11 @@ static int8_t cmp2(const char *a, const char *b)
     return 0;
 }
 
-static PGM_P desc_addr(uint8_t index)
+static const char *desc_addr(uint8_t index)
 {
     fw_assert(index < VARIABLE_COUNT);
-    return (PGM_P) pgm_read_word(&variable_descriptors[index]);
+    return variable_descriptors[index];
+    //return (PGM_P) pgm_read_word(&variable_descriptors[index]);
 }
 
 void init_variables(void)
@@ -184,7 +186,7 @@ void get_variable_name(uint8_t index, v_name *out)
 
 v_type get_variable_type(uint8_t index)
 {
-    return pgm_read_byte(desc_addr(index) + DESC_TYPE_OFFSET);
+    return desc_addr(index)[DESC_TYPE_OFFSET];
 }
 
 bool variable_enum_is_OK(uint8_t index, char e)

@@ -64,25 +64,25 @@ typedef variable_name       v_name;
 typedef char                variable_descriptor[VAR_DESC_SIZE];
 typedef variable_descriptor v_desc;
 
-extern        void     init_variables        (void);
-extern        void     reset_all_variables   (void);
+extern void     init_variables        (void);
+extern void     reset_all_variables   (void);
 
 // Reflection interface
-extern        uint8_t  lookup_variable       (const char *name);
-extern        void     get_variable_desc     (uint8_t index, v_desc *out);
-extern        void     get_variable_name     (uint8_t index, v_name *out);
-extern        v_type   get_variable_type     (uint8_t index);
-extern        bool     variable_enum_is_OK   (uint8_t index, char e);
+extern uint8_t  lookup_variable       (const char *name);
+extern void     get_variable_desc     (uint8_t index, v_desc *out);
+extern void     get_variable_name     (uint8_t index, v_name *out);
+extern v_type   get_variable_type     (uint8_t index);
+extern bool     variable_enum_is_OK   (uint8_t index, char e);
 
-static inline v_value  get_variable          (uint8_t index);
-static inline uint32_t get_unsigned_variable (uint8_t index);
-static inline int32_t  get_signed_variable   (uint8_t index);
-static inline uint8_t  get_enum_variable     (uint8_t index);
+inline static v_value  get_variable          (uint8_t index);
+inline static uint32_t get_unsigned_variable (uint8_t index);
+inline static int32_t  get_signed_variable   (uint8_t index);
+inline static uint8_t  get_enum_variable     (uint8_t index);
 
-static inline void     set_variable          (uint8_t, v_value);
-static inline void     set_unsigned_variable (uint8_t index, uint32_t);
-static inline void     set_signed_variable   (uint8_t index, int32_t);
-static inline void     set_enum_variable     (uint8_t index, uint8_t);
+inline static void     set_variable          (uint8_t, v_value);
+inline static void     set_unsigned_variable (uint8_t index, uint32_t);
+inline static void     set_signed_variable   (uint8_t index, int32_t);
+inline static void     set_enum_variable     (uint8_t index, uint8_t);
 
 // Implementation
 

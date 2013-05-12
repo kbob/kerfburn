@@ -7,9 +7,11 @@
 #include "actions.h"
 #include "fault.h"
 #include "fw_assert.h"
-#include "fw_stdio.h"
+//#include "fw_stdio.h"
 #include "serial.h"
 #include "variables.h"
+
+#include "pgmspace.h"
 
 // Commands
 // Da Dh Dl Dr Dw Dx Dy Dz
@@ -97,7 +99,8 @@ static const c_desc command_descriptors[] PROGMEM = {
 static void get_cmd_name(uint8_t i, c_name *out)
 {
     fw_assert(i < COMMAND_COUNT);
-    PGM_P ptr = (PGM_P)pgm_read_word(&command_descriptors[i].cd_name);
+    PGM_P ptr = command_descriptors[i].cd_name;
+    // PGM_P ptr = (PGM_P)pgm_read_word(&command_descriptors[i].cd_name);
     strncpy_P(*out, ptr, sizeof *out);
     (*out)[sizeof *out - 1] = '\0';
 }
@@ -105,7 +108,8 @@ static void get_cmd_name(uint8_t i, c_name *out)
 static c_func *get_cmd_func(uint8_t i)
 {
     fw_assert(i < COMMAND_COUNT);
-    return (c_func *)pgm_read_word(&command_descriptors[i].cd_func);
+    //return (c_func *)pgm_read_word(&command_descriptors[i].cd_func);
+    return command_descriptors[i].cd_func;
 }
 
 void init_parser(void)
@@ -270,8 +274,10 @@ static inline void parse_assignment(uint8_t c0)
     if (consume_line(pos)) {
         // printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);
         set_variable(index, value);
+#if 0
         if (name[0] == 'o')
             update_overrides();
+#endif
     }
 }
 

@@ -2,12 +2,15 @@
 
 #include <stdio.h>
 
-#include "fw_stdio.h"
-#include "low-voltage.h"
-#include "motors.h"
-#include "relays.h"
+//#include "fw_stdio.h"
+//#include "low-voltage.h"
+//#include "motors.h"
+//#include "relays.h"
 #include "report.h"
 #include "scheduler.h"
+
+#define printf_P printf
+#define PSL(s) (s)
 
 #if 0
 #define ANNOUNCE_ACTION (printf_P(PSL("ACTION: %s\n"), __func__ + 7))
@@ -29,22 +32,22 @@ DEFINE_UNIMPLEMENTED_ACTION(enqueue_move);
 DEFINE_UNIMPLEMENTED_ACTION(enqueue_cut);
 DEFINE_UNIMPLEMENTED_ACTION(enqueue_engrave);
 DEFINE_UNIMPLEMENTED_ACTION(enqueue_home);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_low_voltage);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_high_voltage);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_air_pump);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_water_pump);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_X_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_Y_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_Z_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(enable_reporting);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_low_voltage);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_high_voltage);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_air_pump);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_water_pump);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_X_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_Y_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_Z_motor);
-// DEFINE_UNIMPLEMENTED_ACTION(disable_reporting);
+DEFINE_UNIMPLEMENTED_ACTION(enable_low_voltage);
+DEFINE_UNIMPLEMENTED_ACTION(enable_high_voltage);
+DEFINE_UNIMPLEMENTED_ACTION(enable_air_pump);
+DEFINE_UNIMPLEMENTED_ACTION(enable_water_pump);
+DEFINE_UNIMPLEMENTED_ACTION(enable_X_motor);
+DEFINE_UNIMPLEMENTED_ACTION(enable_Y_motor);
+DEFINE_UNIMPLEMENTED_ACTION(enable_Z_motor);
+DEFINE_UNIMPLEMENTED_ACTION(enable_reporting);
+DEFINE_UNIMPLEMENTED_ACTION(disable_low_voltage);
+DEFINE_UNIMPLEMENTED_ACTION(disable_high_voltage);
+DEFINE_UNIMPLEMENTED_ACTION(disable_air_pump);
+DEFINE_UNIMPLEMENTED_ACTION(disable_water_pump);
+DEFINE_UNIMPLEMENTED_ACTION(disable_X_motor);
+DEFINE_UNIMPLEMENTED_ACTION(disable_Y_motor);
+DEFINE_UNIMPLEMENTED_ACTION(disable_Z_motor);
+DEFINE_UNIMPLEMENTED_ACTION(disable_reporting);
 // DEFINE_UNIMPLEMENTED_ACTION(report_status);
 
 void action_wait(void)
@@ -65,6 +68,7 @@ void action_enqueue_dwell(void)
     enqueue_dwell();
 }
 
+#if 0
 void action_enable_low_voltage(void)
 {
     ANNOUNCE_ACTION;
@@ -169,6 +173,7 @@ void action_disable_reporting(void)
     ANNOUNCE_ACTION;
     disable_reporting();
 }
+#endif
 
 void action_report_status(void)
 {

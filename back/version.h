@@ -1,7 +1,7 @@
 #ifndef VERSION_included
 #define VERSION_included
 
-#include <avr/pgmspace.h>
+#include "pgmspace.h"
 
 extern const char version[] PROGMEM;
 

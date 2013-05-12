@@ -4,7 +4,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <avr/io.h>
+//#include <avr/io.h>
+#define _BV(x) (1 << (x))
+#define UDRE0   5
+#define FE0     4
+#define DOR0    3
+#define UPE0    2
 
 typedef enum serial_error_bit {
     SE_OK           = 0,

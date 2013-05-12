@@ -4,11 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <util/atomic.h>
-
 #include "atoms.h"
-
-#include "fw_assert.h"
 
 
 // Interface
@@ -18,32 +14,33 @@ typedef struct queue_private queue;
 // Queues for X, Y, Z motors and laser pulses.
 extern queue Xq, Yq, Zq, Pq;
 
-static inline void     init_queues                (void);
+extern void     init_queues                (void);
 
-static inline bool     queue_is_empty             (const queue *);
-static inline bool     queue_is_full              (const queue *);
-static inline bool     queue_is_empty_NONATOMIC   (const queue *);
-static inline bool     queue_is_full_NONATOMIC    (const queue *);
-static inline bool     any_queue_is_full          (void);
-static inline uint8_t  queue_length               (const queue *);
+extern bool     queue_is_empty             (const queue *);
+extern bool     queue_is_full              (const queue *);
+extern bool     queue_is_empty_NONATOMIC   (const queue *);
+extern bool     queue_is_full_NONATOMIC    (const queue *);
+extern bool     any_queue_is_full          (void);
+extern uint8_t  queue_length               (const queue *);
 
-static inline void     enqueue_atom_X             (uint16_t);
-static inline uint16_t dequeue_atom_X_NONATOMIC   (void);
-static inline void     undequeue_atom_X_NONATOMIC (uint16_t);
+extern void     enqueue_atom_X             (uint16_t);
+extern uint16_t dequeue_atom_X_NONATOMIC   (void);
+extern void     undequeue_atom_X_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_Y             (uint16_t);
-static inline uint16_t dequeue_atom_Y_NONATOMIC   (void);
-static inline void     undequeue_atom_Y_NONATOMIC (uint16_t);
+extern void     enqueue_atom_Y             (uint16_t);
+extern uint16_t dequeue_atom_Y_NONATOMIC   (void);
+extern void     undequeue_atom_Y_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_Z             (uint16_t);
-static inline uint16_t dequeue_atom_Z_NONATOMIC   (void);
-static inline void     undequeue_atom_Z_NONATOMIC (uint16_t);
+extern void     enqueue_atom_Z             (uint16_t);
+extern uint16_t dequeue_atom_Z_NONATOMIC   (void);
+extern void     undequeue_atom_Z_NONATOMIC (uint16_t);
 
-static inline void     enqueue_atom_P             (uint16_t);
-static inline uint16_t dequeue_atom_P_NONATOMIC   (void);
-static inline void     undequeue_atom_P_NONATOMIC (uint16_t);
+extern void     enqueue_atom_P             (uint16_t);
+extern uint16_t dequeue_atom_P_NONATOMIC   (void);
+extern void     undequeue_atom_P_NONATOMIC (uint16_t);
 
 
+#if 0
 // Implementation
 
 struct queue_private {
@@ -165,5 +162,7 @@ DEFINE_ENQUEUE_DEQUEUE(Z);
 DEFINE_ENQUEUE_DEQUEUE(P);
 
 #undef DEFINE_ENQUEUE_DEQUEUE
+
+#endif
 
 #endif /* !QUEUES_included */
