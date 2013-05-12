@@ -4,8 +4,7 @@
 
 #include <avr/interrupt.h>
 
-#include "limit-switches.h"
-#include "queues.h"
+#include "fault.h"
 
 void init_motors(void)
 {
@@ -63,15 +62,15 @@ void init_motors(void)
 
 ISR(X_WATCHDOG_TIMER_COMP_vect)
 {
-    fw_assert(false);
+    trigger_fault(F_SU);
 }
 
 ISR(Y_WATCHDOG_TIMER_COMP_vect)
 {
-    fw_assert(false);
+    trigger_fault(F_SU);
 }
 
 ISR(Z_WATCHDOG_TIMER_COMP_vect)
 {
-    fw_assert(false);
+    trigger_fault(F_SU);
 }

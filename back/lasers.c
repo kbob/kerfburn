@@ -2,6 +2,7 @@
 
 #include <avr/interrupt.h>
 
+#include "fault.h"
 #include "fw_assert.h"
 
 void init_lasers(void)
@@ -26,5 +27,5 @@ void init_lasers(void)
 
 ISR(LASER_WATCHDOG_TIMER_COMP_vect)
 {
-    fw_assert(false);
+    trigger_fault(F_SU);
 }
