@@ -8,6 +8,30 @@
 #include "queues.h"
 #include "variables.h"
 
+//  This is hard.
+//
+//  <strike>
+//  There is a timer.  It measures time from the beginning of the
+//  current stroke.  When the mode changes sufficiently (whatever that
+//  means), each axis's timer also starts at zero.  When the mode
+//  does not change, each axis's timer starts at 
+//  </strike>
+//
+//  When the laser is in timed pulse mode, there is a laser timer.  It
+//  is set to zero when timed pulse mode starts and when a stroke
+//  sequence starts.  It counts up along with the ticks of the stroke.
+//  At the end of the stroke, it is decremented by the stroke
+//  duration, so sometimes it is negative.
+//
+//  When the laser is in distance pulse mode, there is a laser
+//  distance counter.  It is very similar to the timed pulse timer.
+//  There must be a way to avoid using a square root to calculate
+//  distance.  Maybe the front end should send a command.
+//
+//  The timer and counter are only for the laser.  The motors are all
+//  supposed to start and end their strokes together.
+
+
 // minimum and maximum interrupt intervals.
 
 #define MIN_IVL ((uint16_t)0x200)
@@ -32,7 +56,8 @@ static struct output_states {
 
 } output_states;
 
-// volatile uint8_t engine_running;
+uint32_t p_remainder;
+
 
 void init_scheduler(void)
 {
@@ -138,6 +163,58 @@ static inline uint16_t next_ivl(uint32_t now, uint32_t end)
     return (uint16_t)ivl;
 }
 
+// The most general calculation for the next timer interval.
+
+static inline uint16_t gen_next_ivl(uint32_t now,
+                                    uint32_t end,
+                                    uint32_t ivl,
+                                    uint32_t *start_inout,
+                                    bool     *skip_out)
+{
+    // if start,
+    //     if start < ivl, ivl = start
+    //     start = 0
+    // no skip
+    // if remaining < ivl,
+    //     start = ivl - remaining
+    //     skip, ivl = remaining
+    // if ivl > MAX_IVL,
+    //     skip
+    //     wait MAX_IVL or MAX_IVL / 2.
+    // wait ivl
+
+    bool skip = false;
+
+    if (start_inout && *start_inout) {
+        if (*start_inout < ivl)
+            ivl -= *start_inout;
+        *start_inout = 0;
+    }
+
+    uint32_t remaining = end - now;
+    if (ivl > remaining) {
+        if (start_inout)
+            *start_inout = ivl - remaining;
+        ivl = remaining;
+        skip = true;
+    }
+    
+    uint16_t ivl16;
+    if (ivl <= MAX_IVL)
+        ivl16 = ivl;
+    else {
+        skip = true;
+        if (ivl < MAX_IVL + MIN_IVL)
+            ivl16 = MAX_IVL / 2;
+        else
+            ivl16 = MAX_IVL;
+    }
+
+    if (skip_out)
+        *skip_out = skip;
+    return ivl16;
+}
+
 void enqueue_dwell(void)
 {
     set_x_motor_step(false);
@@ -172,14 +249,58 @@ void enqueue_dwell(void)
 
     uint32_t dt = get_unsigned_variable(V_DT);
     if (mode == PM_PULSED) {
-        // Pulsing laser.  Use laser as major axis.
-        fw_assert(false && "XXX write me!");
+        uint32_t pi = get_unsigned_variable(V_PI);
+        uint16_t p_ivl;
+        uint16_t xyz_ivl;
+        if (pi <= MAX_IVL) {
+            // P is major axis.
+            uint32_t next_xyz = 0;
+            for (uint32_t t = 0; t < dt; t += p_ivl) {
+                bool p_skip;
+                p_ivl = gen_next_ivl(t, dt, pi, &p_remainder, &p_skip);
+                enqueue_atom_P(p_ivl);
+                if (next_xyz <= t) {
+                    xyz_ivl = next_ivl(next_xyz, dt);
+                    enqueue_atom_X(xyz_ivl);
+                    enqueue_atom_Y(xyz_ivl);
+                    enqueue_atom_Z(xyz_ivl);
+                    next_xyz += xyz_ivl;
+                }
+            }
+        } else {
+            // XYZ are major axes.
+            uint32_t next_xyz = 0;
+            for (uint32_t t = 0; t < dt; t += p_ivl) {
+                bool p_skip;
+                p_ivl = gen_next_ivl(t, dt, pi, &p_remainder, &p_skip);
+                if (p_skip) {
+                    if (ls == 'm')
+                        set_main_pulse_mode(PM_OFF);
+                    else
+                        set_visible_pulse_mode(PM_OFF);
+                } else {
+                    if (ls == 'm')
+                        set_main_pulse_mode(PM_PULSED);
+                    else
+                        set_visible_pulse_mode(PM_PULSED);
+                }
+                enqueue_atom_P(p_ivl);
+                p_remainder = 0;
+                if (next_xyz <= t) {
+                    xyz_ivl = next_ivl(t, dt);
+                    enqueue_atom_X(xyz_ivl);
+                    enqueue_atom_Y(xyz_ivl);
+                    enqueue_atom_Z(xyz_ivl);
+                    maybe_start_engine();
+                    next_xyz += xyz_ivl;
+                }
+            }
+        }
     } else {
         // No pulse.  Just wait.
-        uint32_t i;
         uint16_t ivl;
-        for (i = 0; i < dt; i += ivl) {
-            ivl = next_ivl(i, dt);
+        for (uint32_t t = 0; t < dt; t += ivl) {
+            ivl = next_ivl(t, dt);
             enqueue_atom_X(ivl);
             enqueue_atom_Y(ivl);
             enqueue_atom_Z(ivl);
@@ -192,6 +313,7 @@ void enqueue_dwell(void)
 
 void enqueue_move(void)
 {
+    fw_assert(false && "XXX Write me!");
 }
 
 void enqueue_cut(void)
