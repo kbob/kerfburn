@@ -28,6 +28,12 @@ typedef struct report_descriptor {
 static          timeout report_timeout;
 static volatile bool    reporting_is_active;
 
+#define DEFINE_UNIMPLEMENTED_REPORT(code, name)                         \
+    static void report_##name(void)                                     \
+    {                                                                   \
+        printf_P(PSL(#code " (" #name ") report not implemented\n"));   \
+    }
+
 static void report_e_stop(void)
 {
     printf_P(PSL("E e=%c\n"), is_emergency_stopped() ? 'y' : 'n');
@@ -91,10 +97,7 @@ static void report_limit_switches(void)
            xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-static void report_motors(void)
-{
-    printf_P(PSL("M not implemented\n"));
-}
+DEFINE_UNIMPLEMENTED_REPORT(M, motors);
 
 static void report_power(void)
 {
@@ -165,10 +168,7 @@ static void report_variables(void)
     putchar('\n');
 }
 
-static void report_water(void)
-{
-    printf_P(PSL("W not implemented\n"));
-}
+DEFINE_UNIMPLEMENTED_REPORT(W, water);
 
 static const report_descriptor report_descriptors[] PROGMEM = {
     { V_RE, report_e_stop         },
