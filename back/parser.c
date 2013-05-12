@@ -108,10 +108,9 @@ static c_func *get_cmd_func(uint8_t i)
     return (c_func *)pgm_read_word(&command_descriptors[i].cd_func);
 }
 
-#ifndef FW_NDEBUG
-
-static void verify_commands(void)
+void init_parser(void)
 {
+#ifndef FW_NDEBUG
     c_name prev_name, curr_name;
     for (uint8_t i = 0; i < COMMAND_COUNT; i++) {
         get_cmd_name(i, &curr_name);
@@ -119,9 +118,9 @@ static void verify_commands(void)
             fw_assert(strcmp(prev_name, curr_name) < 0);
         strncpy(prev_name, curr_name, sizeof prev_name);
     }
+#endif
 }
 
-#endif
 
 static uint8_t lookup_command(c_name name)
 {
@@ -278,13 +277,6 @@ static inline void parse_assignment(uint8_t c0)
 
 void parse_line(void)
 {
-#ifndef FW_NDEBUG
-    static bool been_here = false;
-    if (!been_here) {
-        verify_commands();
-        been_here = true;
-    }
-#endif    
     uint8_t c0 = serial_rx_peek_char(0);
     if (is_eol(c0)) {
         serial_rx_consume(1);

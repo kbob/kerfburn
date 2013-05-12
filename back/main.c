@@ -44,6 +44,7 @@ static void initialize_devices(void)
     // Initialize software modules.
     init_variables();
     init_reporting();
+    init_parser();
     init_atoms();
     init_queues();
     init_engine();
