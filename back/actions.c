@@ -15,37 +15,37 @@
 #define ANNOUNCE_ACTION ((void)0)
 #endif
 
-#define DEFINE_ACTION(name)                                     \
+#define DEFINE_UNIMPLEMENTED_ACTION(name)                       \
     void action_##name(void)                                    \
     {                                                           \
         printf_P(PSL("ACTION: " #name " not implemented\n"));   \
     }
 
-// DEFINE_ACTION(wait);
-// DEFINE_ACTION(stop);
-DEFINE_ACTION(illuminate);
-// DEFINE_ACTION(enqueue_dwell);
-DEFINE_ACTION(enqueue_move);
-DEFINE_ACTION(enqueue_cut);
-DEFINE_ACTION(enqueue_engrave);
-DEFINE_ACTION(enqueue_home);
-// DEFINE_ACTION(enable_low_voltage);
-// DEFINE_ACTION(enable_high_voltage);
-// DEFINE_ACTION(enable_air_pump);
-// DEFINE_ACTION(enable_water_pump);
-// DEFINE_ACTION(enable_X_motor);
-// DEFINE_ACTION(enable_Y_motor);
-// DEFINE_ACTION(enable_Z_motor);
-// DEFINE_ACTION(enable_reporting);
-// DEFINE_ACTION(disable_low_voltage);
-// DEFINE_ACTION(disable_high_voltage);
-// DEFINE_ACTION(disable_air_pump);
-// DEFINE_ACTION(disable_water_pump);
-// DEFINE_ACTION(disable_X_motor);
-// DEFINE_ACTION(disable_Y_motor);
-// DEFINE_ACTION(disable_Z_motor);
-// DEFINE_ACTION(disable_reporting);
-// DEFINE_ACTION(report_status);
+// DEFINE_UNIMPLEMENTED_ACTION(wait);
+// DEFINE_UNIMPLEMENTED_ACTION(stop);
+DEFINE_UNIMPLEMENTED_ACTION(illuminate);
+// DEFINE_UNIMPLEMENTED_ACTION(enqueue_dwell);
+DEFINE_UNIMPLEMENTED_ACTION(enqueue_move);
+DEFINE_UNIMPLEMENTED_ACTION(enqueue_cut);
+DEFINE_UNIMPLEMENTED_ACTION(enqueue_engrave);
+DEFINE_UNIMPLEMENTED_ACTION(enqueue_home);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_low_voltage);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_high_voltage);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_air_pump);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_water_pump);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_X_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_Y_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_Z_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(enable_reporting);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_low_voltage);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_high_voltage);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_air_pump);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_water_pump);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_X_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_Y_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_Z_motor);
+// DEFINE_UNIMPLEMENTED_ACTION(disable_reporting);
+// DEFINE_UNIMPLEMENTED_ACTION(report_status);
 
 void action_wait(void)
 {
