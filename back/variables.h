@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <avr/pgmspace.h>
-
 #include "fw_assert.h"
 
 // Interface

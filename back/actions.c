@@ -5,7 +5,6 @@
 #include "fw_stdio.h"
 #include "low-voltage.h"
 #include "motors.h"
-#include "queues.h"
 #include "relays.h"
 #include "report.h"
 #include "scheduler.h"

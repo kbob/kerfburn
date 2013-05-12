@@ -2,13 +2,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "engine.h"
-#include "lasers.h"
-#include "memory.h"
-#include "motors.h"
 #include "queues.h"
 #include "variables.h"
 
