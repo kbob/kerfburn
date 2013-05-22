@@ -1,7 +1,7 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file is included by the toplevel makefile.
 
-      subdirs := 
+      subdirs := test
      programs := fw
 
 #  fw_sources := main.c abort.c actions.c atoms.c e-stop.c engine.c fault.c \
@@ -34,7 +34,7 @@ BACK_CPPFLAGS := -DF_CPU=16000000L -I. -Iback
 
 all-back:   build-back test-back
 build-back: back-programs back-tests
-test-back:  build-back # $(subdirs:%=test-back/%)
+test-back:  build-back $(subdirs:%=test-back/%)
 #load-back:  back/fw.hex $(THRUPORT)
 #	$(BACK_SUSPEND) $(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
@@ -42,7 +42,7 @@ clean-back: $(subdirs:%=clean-back/%)
 	cd back && rm -f fw a.out core *~ *.o *.d TAGS $(JUNK)
 
 back-programs: back/fw $(test_programs:%=back/%)
-back-tests: # $(subdirs:%:back/%-tests)
+back-tests: $(subdirs:%:back/%-tests)
 
 back/fw: $(fw_ofiles)
 	@( \
@@ -71,4 +71,4 @@ ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''
   -include $(fw_cfiles:back/%.c=back/%.d)
 endif
 
-# include $(subdirs:%=back/%/Make.inc)
+include $(subdirs:%=back/%/Make.inc)

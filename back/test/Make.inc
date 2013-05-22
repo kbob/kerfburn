@@ -1,4 +1,4 @@
-subdirs := cat # softint
+subdirs := sched # cat softint
 
 back/test-tests: $(subdirs:%=back/test/%-tests)
 

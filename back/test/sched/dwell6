@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Unpulsed dwell.  dt > IVL_MAX + IVL_MIN.
+
+./fw <<EOF | sed 's/built .*/built [...]/' > /tmp/x
+dt=70000
+re=n
+rf=n
+rv=y
+R
+Qd
+W
+EOF
+
+diff - /tmp/x <<EOF
+Kerfburn Back End, built [...]
+Ready
+V aa=0 dt=70000 ia=n il=0 lm=o lp=0 ls=m m0=0 ma=+0 oc=n oo=n pd=0 pi=0 pl=0 re=n rf=n ri=0 rl=n rm=n rp=n rq=n rr=n rs=n rv=y rw=n xd=+0 yd=+0 zd=+0
+enqueue_atom_X: a = A_DISABLE_STEP,
+enqueue_atom_Y: a = A_DISABLE_STEP,
+enqueue_atom_Z: a = A_DISABLE_STEP,
+enqueue_atom_P: a = A_SET_MAIN_LASER_OFF,
+enqueue_atom_P: a = A_SET_VISIBLE_LASER_OFF,
+enqueue_atom_X: a = 64512
+enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
+maybe_start_engine
+enqueue_atom_X: a = 5488
+enqueue_atom_Y: a = 5488
+enqueue_atom_Z: a = 5488
+enqueue_atom_P: a = 5488
+maybe_start_engine
+start_engine
+await_engine_stopped
+EOF
