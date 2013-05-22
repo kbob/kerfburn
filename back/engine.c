@@ -340,27 +340,27 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 running_queues &= ~qm_p;
                 return;
 
-            case A_SET_MAIN_MODE_OFF:
+            case A_SET_MAIN_LASER_OFF:
                 set_main_laser_off();
                 break;
 
-            case A_SET_MAIN_MODE_PULSED:
+            case A_SET_MAIN_LASER_PULSED:
                 set_main_laser_pulsed();
                 break;
 
-            case A_SET_MAIN_MODE_CONTINUOUS:
+            case A_SET_MAIN_LASER_CONTINUOUS:
                 set_main_laser_continuous();
                 break;
 
-            case A_SET_VISIBLE_MODE_OFF:
+            case A_SET_VISIBLE_LASER_OFF:
                 set_visible_laser_off();
                 break;
 
-            case A_SET_VISIBLE_MODE_PULSED:
+            case A_SET_VISIBLE_LASER_PULSED:
                 set_visible_laser_pulsed();
                 break;
 
-            case A_SET_VISIBLE_MODE_CONTINUOUS:
+            case A_SET_VISIBLE_LASER_CONTINUOUS:
                 set_visible_laser_continuous();
                 break;
 

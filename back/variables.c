@@ -1,6 +1,7 @@
 #include "variables.h"
 
 #include <stddef.h>
+#include <stdio.h>              /* XXX */
 #include <string.h>
 
 //#include <avr/pgmspace.h>
@@ -15,73 +16,43 @@
 #define SIGNED   "\023"
 #define ENUM     "\005"
 
-#define DEFINE_DESC(name, type, ...) \
-    static const char name##_desc[] PROGMEM = #name "=" type __VA_ARGS__
-
-DEFINE_DESC(dt, UNSIGNED);      // dwell time
-DEFINE_DESC(ia, ENUM, "ncswa"); // illumination animation
-DEFINE_DESC(il, UNSIGNED);      // illumination level
-DEFINE_DESC(lm, ENUM, "octd");  // laser mode
-DEFINE_DESC(lp, UNSIGNED);      // laser power
-DEFINE_DESC(ls, ENUM, "mnv");   // laser select
-DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
-DEFINE_DESC(oo, ENUM, "ny");    // override lid open
-DEFINE_DESC(pd, UNSIGNED);      // pulse distance
-DEFINE_DESC(pi, UNSIGNED);      // pulse interval
-DEFINE_DESC(pl, UNSIGNED);      // pulse length
-DEFINE_DESC(re, ENUM, "yn");    // report E-Stop status
-DEFINE_DESC(rf, ENUM, "yn");    // report fault status
-DEFINE_DESC(ri, UNSIGNED);      // reporting interval
-DEFINE_DESC(rl, ENUM, "ny");    // report limit switch status
-DEFINE_DESC(rm, ENUM, "ny");    // report motor status
-DEFINE_DESC(rp, ENUM, "ny");    // report power status
-DEFINE_DESC(rq, ENUM, "ny");    // report queue status
-DEFINE_DESC(rr, ENUM, "ny");    // report RAM status
-DEFINE_DESC(rs, ENUM, "ny");    // report serial status
-DEFINE_DESC(rv, ENUM, "ny");    // report variables
-DEFINE_DESC(rw, ENUM, "ny");    // report water status
-DEFINE_DESC(x0, UNSIGNED);      // X initial
-DEFINE_DESC(xa, SIGNED);        // X acceleration
-DEFINE_DESC(xd, SIGNED);        // X distance
-DEFINE_DESC(y0, UNSIGNED);      // Y initial
-DEFINE_DESC(ya, SIGNED);        // Y acceleration
-DEFINE_DESC(yd, SIGNED);        // Y distance
-DEFINE_DESC(z0, UNSIGNED);      // Z initial
-DEFINE_DESC(za, SIGNED);        // Z acceleration
-DEFINE_DESC(zd, SIGNED);        // Z distance
+#define DESC(name, type, ...) (PSL(#name "=" type __VA_ARGS__))
 
 static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
-    dt_desc,
-    ia_desc,
-    il_desc,
-    lm_desc,
-    lp_desc,
-    ls_desc,
-    oc_desc,
-    oo_desc,
-    pd_desc,
-    pi_desc,
-    pl_desc,
-    re_desc,
-    rf_desc,
-    ri_desc,
-    rl_desc,
-    rm_desc,
-    rp_desc,
-    rq_desc,
-    rr_desc,
-    rs_desc,
-    rv_desc,
-    rw_desc,
-    x0_desc,
-    xa_desc,
-    xd_desc,
-    y0_desc,
-    ya_desc,
-    yd_desc,
-    z0_desc,
-    za_desc,
-    zd_desc,
+    DESC(aa, UNSIGNED),         // active axes
+    DESC(dt, UNSIGNED),         // dwell time
+    DESC(ia, ENUM, "ncswa"),    // illumination animation
+    DESC(il, UNSIGNED),         // illumination level
+    DESC(lm, ENUM, "octd"),     // laser mode
+    DESC(lp, UNSIGNED),         // laser power
+    DESC(ls, ENUM, "mnv"),      // laser select
+    DESC(m0, UNSIGNED),         // major axis initial velocity
+    DESC(ma, SIGNED),           // major axis acceleration
+    DESC(oc, ENUM, "ny"),       // override lid closed
+    DESC(oo, ENUM, "ny"),       // override lid open
+    DESC(pd, UNSIGNED),         // pulse distance
+    DESC(pi, UNSIGNED),         // pulse interval
+    DESC(pl, UNSIGNED),         // pulse length
+    DESC(re, ENUM, "yn"),       // report E-Stop status
+    DESC(rf, ENUM, "yn"),       // report fault status
+    DESC(ri, UNSIGNED),         // reporting interval
+    DESC(rl, ENUM, "ny"),       // report limit switch status
+    DESC(rm, ENUM, "ny"),       // report motor status
+    DESC(rp, ENUM, "ny"),       // report power status
+    DESC(rq, ENUM, "ny"),       // report queue status
+    DESC(rr, ENUM, "ny"),       // report RAM status
+    DESC(rs, ENUM, "ny"),       // report serial status
+    DESC(rv, ENUM, "ny"),       // report variables
+    DESC(rw, ENUM, "ny"),       // report water status
+    /* DESC(x0, UNSIGNED),         // X initial velocity */
+    /* DESC(xa, SIGNED),           // X acceleration */
+    DESC(xd, SIGNED),           // X distance
+    /* DESC(y0, UNSIGNED),         // Y initial velocity */
+    /* DESC(ya, SIGNED),           // Y acceleration */
+    DESC(yd, SIGNED),           // Y distance
+    /* DESC(z0, UNSIGNED),         // Z initial velocity */
+    /* DESC(za, SIGNED),           // Z acceleration */
+    DESC(zd, SIGNED),           // Z distance
 };
 
 struct variables_private variables_private;

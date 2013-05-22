@@ -13,12 +13,15 @@
 #define VAR_DESC_SIZE   10      // descriptor size, including NUL byte
 
 typedef enum variable_index {
+    V_AA,                       // active axes
     V_DT,                       // dwell time
     V_IA,                       // illumination animation
     V_IL,                       // illumination level
     V_LM,                       // laser mode
     V_LP,                       // laser power
     V_LS,                       // laser select
+    V_M0,                       // major axis initial velocity
+    V_MA,                       // major axis acceleration
     V_OC,                       // override lid closed
     V_OO,                       // override lid open
     V_PD,                       // pulse distance
@@ -35,14 +38,14 @@ typedef enum variable_index {
     V_RS,                       // report serial status
     V_RV,                       // report variables
     V_RW,                       // report water status
-    V_X0,                       // X initial
-    V_XA,                       // X acceleration
+//    V_X0,                       // X initial
+//    V_XA,                       // X acceleration
     V_XD,                       // X distance
-    V_Y0,                       // Y initial
-    V_YA,                       // Y acceleration
+//    V_Y0,                       // Y initial
+//    V_YA,                       // Y acceleration
     V_YD,                       // Y distance
-    V_Z0,                       // Z initial
-    V_ZA,                       // Z acceleration
+//    V_Z0,                       // Z initial
+//    V_ZA,                       // Z acceleration
     V_ZD,                       // Z distance
     VARIABLE_COUNT
 } variable_index, v_index;
@@ -64,15 +67,15 @@ typedef variable_name       v_name;
 typedef char                variable_descriptor[VAR_DESC_SIZE];
 typedef variable_descriptor v_desc;
 
-extern void     init_variables        (void);
-extern void     reset_all_variables   (void);
+extern void            init_variables        (void);
+extern void            reset_all_variables   (void);
 
 // Reflection interface
-extern uint8_t  lookup_variable       (const char *name);
-extern void     get_variable_desc     (uint8_t index, v_desc *out);
-extern void     get_variable_name     (uint8_t index, v_name *out);
-extern v_type   get_variable_type     (uint8_t index);
-extern bool     variable_enum_is_OK   (uint8_t index, char e);
+extern uint8_t         lookup_variable       (const char *name);
+extern void            get_variable_desc     (uint8_t index, v_desc *out);
+extern void            get_variable_name     (uint8_t index, v_name *out);
+extern v_type          get_variable_type     (uint8_t index);
+extern bool            variable_enum_is_OK   (uint8_t index, char e);
 
 inline static v_value  get_variable          (uint8_t index);
 inline static uint32_t get_unsigned_variable (uint8_t index);

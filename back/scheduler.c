@@ -1,335 +1,445 @@
 #include "scheduler.h"
 
+#include <inttypes.h>           // XXX
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>              // XXX
 #include <string.h>
 
 #include "engine.h"
 #include "queues.h"
 #include "variables.h"
 
-//  This is hard.
-//
-//  <strike>
-//  There is a timer.  It measures time from the beginning of the
-//  current stroke.  When the mode changes sufficiently (whatever that
-//  means), each axis's timer also starts at zero.  When the mode
-//  does not change, each axis's timer starts at 
-//  </strike>
-//
-//  When the laser is in timed pulse mode, there is a laser timer.  It
-//  is set to zero when timed pulse mode starts and when a stroke
-//  sequence starts.  It counts up along with the ticks of the stroke.
-//  At the end of the stroke, it is decremented by the stroke
-//  duration, so sometimes it is negative.
-//
-//  When the laser is in distance pulse mode, there is a laser
-//  distance counter.  It is very similar to the timed pulse timer.
-//  There must be a way to avoid using a square root to calculate
-//  distance.  Maybe the front end should send a command.
-//
-//  The timer and counter are only for the laser.  The motors are all
-//  supposed to start and end their strokes together.
 
+//////////////////////////////////////////////////////////////////////////////
+//  Output state control
 
-// minimum and maximum interrupt intervals.
-
-#define MIN_IVL ((uint16_t)0x200)
-#define MAX_IVL ((uint16_t)(0x10000uL - MIN_IVL))
-
-typedef enum pulse_mode {
-    PM_OFF,
-    PM_PULSED,
-    PM_CONTINUOUS
-} pulse_mode;
+typedef enum laser_mode {
+    LM_OFF,
+    LM_PULSED,
+    LM_CONTINUOUS,
+} laser_mode;
 
 static struct output_states {
 
     bool     x_motor_step_enabled;
     bool     y_motor_step_enabled;
     bool     z_motor_step_enabled;
-    uint8_t  main_pulse_mode;
-    uint8_t  visible_pulse_mode;
-    uint16_t main_pulse_duration;
-    uint16_t visible_pulse_duration;
-    uint16_t main_power_level;
+    bool     x_motor_direction_positive;
+    bool     y_motor_direction_positive;
+    bool     z_motor_direction_positive;
+    uint8_t  main_laser_mode;
+    uint8_t  visible_laser_mode;
+    uint16_t main_laser_pulse_duration;
+    uint16_t visible_laser_pulse_duration;
+    uint16_t main_laser_power_level;
 
 } output_states;
 
-uint32_t p_remainder;
+static inline void enqueue_enable_x_motor_step(void)
+{
+    if (output_states.x_motor_step_enabled != true) {
+        enqueue_atom_X(A_ENABLE_STEP);
+        output_states.x_motor_step_enabled = true;
+    }
+}
 
+static inline void enqueue_disable_x_motor_step(void)
+{
+    if (output_states.x_motor_step_enabled != false) {
+        enqueue_atom_X(A_DISABLE_STEP);
+        output_states.x_motor_step_enabled = false;
+    }
+}
+
+static inline void enqueue_enable_y_motor_step(void)
+{
+    if (output_states.y_motor_step_enabled != true) {
+        enqueue_atom_Y(A_ENABLE_STEP);
+        output_states.y_motor_step_enabled = true;
+    }
+}
+
+static inline void enqueue_disable_y_motor_step(void)
+{
+    if (output_states.y_motor_step_enabled != false) {
+        enqueue_atom_Y(A_DISABLE_STEP);
+        output_states.y_motor_step_enabled = false;
+    }
+}
+
+static inline void enqueue_enable_z_motor_step(void)
+{
+    if (output_states.z_motor_step_enabled != true) {
+        enqueue_atom_Z(A_ENABLE_STEP);
+        output_states.z_motor_step_enabled = true;
+    }
+}
+
+static inline void enqueue_disable_z_motor_step(void)
+{
+    if (output_states.z_motor_step_enabled != false) {
+        enqueue_atom_Z(A_DISABLE_STEP);
+        output_states.z_motor_step_enabled = false;
+    }
+}
+
+static inline void enqueue_change_x_motor_step(bool enabled)
+{
+    if (enabled)
+        enqueue_enable_x_motor_step();
+    else
+        enqueue_disable_x_motor_step();
+}
+
+static inline void enqueue_change_y_motor_step(bool enabled)
+{
+    if (enabled)
+        enqueue_enable_y_motor_step();
+    else
+        enqueue_disable_y_motor_step();
+}
+
+static inline void enqueue_change_z_motor_step(bool enabled)
+{
+    if (enabled)
+        enqueue_enable_z_motor_step();
+    else
+        enqueue_disable_z_motor_step();
+}
+
+static inline void enqueue_set_x_motor_direction_positive(void)
+{
+    if (output_states.x_motor_direction_positive != true) {
+        enqueue_atom_X(A_DIR_POSITIVE);
+        output_states.x_motor_direction_positive = true;
+    }
+}
+
+static inline void enqueue_set_y_motor_direction_positive(void)
+{
+    if (output_states.y_motor_direction_positive != true) {
+        enqueue_atom_Y(A_DIR_POSITIVE);
+        output_states.y_motor_direction_positive = true;
+    }
+}
+
+static inline void enqueue_set_z_motor_direction_positive(void)
+{
+    if (output_states.z_motor_direction_positive != true) {
+        enqueue_atom_Z(A_DIR_POSITIVE);
+        output_states.z_motor_direction_positive = true;
+    }
+}
+
+static inline void enqueue_set_x_motor_direction_negative(void)
+{
+    if (output_states.x_motor_direction_positive != false) {
+        enqueue_atom_X(A_DIR_NEGATIVE);
+        output_states.x_motor_direction_positive = false;
+    }
+}
+
+static inline void enqueue_set_y_motor_direction_negative(void)
+{
+    if (output_states.y_motor_direction_positive != false) {
+        enqueue_atom_Y(A_DIR_NEGATIVE);
+        output_states.y_motor_direction_positive = false;
+    }
+}
+
+static inline void enqueue_set_z_motor_direction_negative(void)
+{
+    if (output_states.z_motor_direction_positive != false) {
+        enqueue_atom_Z(A_DIR_NEGATIVE);
+        output_states.z_motor_direction_positive = false;
+    }
+}
+
+static inline void enqueue_set_main_laser_mode_off(void)
+{
+    if (output_states.main_laser_mode != LM_OFF) {
+        enqueue_atom_P(A_SET_MAIN_LASER_OFF);
+        output_states.main_laser_mode = LM_OFF;
+    }
+}
+
+static inline void enqueue_set_main_laser_mode_pulsed(void)
+{
+    if (output_states.main_laser_mode != LM_PULSED) {
+        enqueue_atom_P(A_SET_MAIN_LASER_PULSED);
+        output_states.main_laser_mode = LM_PULSED;
+    }
+}
+
+static inline void enqueue_set_main_laser_mode_continuous(void)
+{
+    if (output_states.main_laser_mode != LM_CONTINUOUS) {
+        enqueue_atom_P(A_SET_MAIN_LASER_CONTINUOUS);
+        output_states.main_laser_mode = LM_CONTINUOUS;
+    }
+}
+
+static inline void enqueue_set_visible_laser_mode_off(void)
+{
+    if (output_states.visible_laser_mode != LM_OFF) {
+        enqueue_atom_P(A_SET_VISIBLE_LASER_OFF);
+        output_states.visible_laser_mode = LM_OFF;
+    }
+}
+
+static inline void enqueue_set_visible_laser_mode_pulsed(void)
+{
+    if (output_states.visible_laser_mode != LM_PULSED) {
+        enqueue_atom_P(A_SET_VISIBLE_LASER_PULSED);
+        output_states.visible_laser_mode = LM_PULSED;
+    }
+}
+
+static inline void enqueue_set_visible_laser_mode_continuous(void)
+{
+    if (output_states.visible_laser_mode != LM_CONTINUOUS) {
+        enqueue_atom_P(A_SET_VISIBLE_LASER_CONTINUOUS);
+        output_states.visible_laser_mode = LM_CONTINUOUS;
+    }
+}
+
+static inline void enqueue_set_main_laser_pulse_duration(uint16_t duration)
+{
+    if (output_states.main_laser_pulse_duration != duration) {
+        enqueue_atom_P(A_SET_MAIN_PULSE_DURATION);
+        enqueue_atom_P(duration);
+        output_states.main_laser_pulse_duration = duration;
+    }
+}
+
+static inline void enqueue_set_visible_laser_pulse_duration(uint16_t duration)
+{
+    if (output_states.visible_laser_pulse_duration != duration) {
+        enqueue_atom_P(A_SET_VISIBLE_PULSE_DURATION);
+        enqueue_atom_P(duration);
+        output_states.visible_laser_pulse_duration = duration;
+    }
+}
+
+static inline void enqueue_set_main_laser_power_level(uint16_t level)
+{
+    if (output_states.main_laser_power_level != level) {
+        enqueue_atom_P(A_SET_MAIN_POWER_LEVEL);
+        enqueue_atom_P(level);
+        output_states.main_laser_power_level = level;
+    }
+}
 
 void init_scheduler(void)
 {
-    // Set all states to invalid values, forcing them to be
-    // initialized when the engine starts.
-    memset(&output_states, 0xFF, sizeof output_states);
+    memset(&output_states, '\xFF', sizeof output_states);
 }
 
-static inline void set_x_motor_step(bool enabled)
+
+//////////////////////////////////////////////////////////////////////////////
+//  Timer Iteration
+
+#define MIN_IVL ((uint16_t)0x400)
+#define MAX_IVL ((uint16_t)(0x10000uL - MIN_IVL))
+
+typedef struct axis_state {
+    uint32_t as_last_pulse_time;
+    uint32_t as_ivl_remaining;
+    bool     as_skip;
+} axis_state;
+
+// The P axis is special.  Because we need to maintain consistent
+// pulse timing across moves and dwells, the P axis state is
+// persistent.
+static axis_state p_axis_state;
+
+static inline uint16_t next_ivl(uint32_t end, uint32_t ivl, axis_state *asp)
 {
-    if (output_states.x_motor_step_enabled != enabled) {
-        enqueue_atom_X(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        output_states.x_motor_step_enabled = enabled;
-    }
-}
+    uint16_t ivl_out;
 
-static inline void set_y_motor_step(bool enabled)
-{
-    if (output_states.y_motor_step_enabled != enabled) {
-        enqueue_atom_Y(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        output_states.y_motor_step_enabled = enabled;
-    }
-}
-
-static inline void set_z_motor_step(bool enabled)
-{
-    if (output_states.z_motor_step_enabled != enabled) {
-        enqueue_atom_Z(enabled ? A_ENABLE_STEP : A_DISABLE_STEP);
-        output_states.z_motor_step_enabled = enabled;
-    }
-}
-
-static inline void set_main_pulse_mode(uint8_t mode)
-{
-    if (output_states.main_pulse_mode != mode) {
-        uint8_t a;
-        if (mode == PM_PULSED)
-            a = A_SET_MAIN_MODE_PULSED;
-        else if (mode == PM_CONTINUOUS)
-            a = A_SET_MAIN_MODE_CONTINUOUS;
-        else {
-            fw_assert(mode == PM_OFF);
-            a = A_SET_MAIN_MODE_OFF;
-        }
-        enqueue_atom_P(a);
-        output_states.main_pulse_mode = mode;
-    }
-}
-
-static inline void set_visible_pulse_mode(uint8_t mode)
-{
-    if (output_states.visible_pulse_mode != mode) {
-        uint8_t a;
-        if (mode == PM_PULSED)
-            a = A_SET_VISIBLE_MODE_PULSED;
-        else if (mode == PM_CONTINUOUS)
-            a = A_SET_VISIBLE_MODE_CONTINUOUS;
-        else {
-            fw_assert(mode == PM_OFF);
-            a = A_SET_VISIBLE_MODE_OFF;
-        }
-        enqueue_atom_P(a);
-        output_states.visible_pulse_mode = mode;
-    }
-}
-
-static inline void set_main_pulse_duration(uint16_t dur)
-{
-    if (output_states.main_pulse_duration != dur) {
-        enqueue_atom_P(A_SET_MAIN_PULSE_DURATION);
-        enqueue_atom_P(dur);
-        output_states.main_pulse_duration = dur;
-    }
-}
-
-static inline void set_visible_pulse_duration(uint16_t dur)
-{
-    if (output_states.visible_pulse_duration != dur) {
-        enqueue_atom_P(A_SET_VISIBLE_PULSE_DURATION);
-        enqueue_atom_P(dur);
-        output_states.visible_pulse_duration = dur;
-    }
-}
-
-static inline void set_main_power_level(uint16_t level)
-{
-    if (output_states.main_power_level != level) {
-        enqueue_atom_P(A_SET_MAIN_POWER_LEVEL);
-        enqueue_atom_P(level);
-        output_states.main_power_level = level;
-    }
-}
-
-static inline uint16_t next_ivl(uint32_t now, uint32_t end)
-{
-    uint32_t ivl = end - now;
-    if (ivl > MAX_IVL) {
-        if (ivl < MAX_IVL + MIN_IVL)
-            ivl = MAX_IVL / 2;
-        else
-            ivl = MAX_IVL;
-    }
-    return (uint16_t)ivl;
-}
-
-// The most general calculation for the next timer interval.
-
-static inline uint16_t gen_next_ivl(uint32_t now,
-                                    uint32_t end,
-                                    uint32_t ivl,
-                                    uint32_t *start_inout,
-                                    bool     *skip_out)
-{
-    // if start,
-    //     if start < ivl, ivl = start
-    //     start = 0
-    // no skip
-    // if remaining < ivl,
-    //     start = ivl - remaining
-    //     skip, ivl = remaining
-    // if ivl > MAX_IVL,
-    //     skip
-    //     wait MAX_IVL or MAX_IVL / 2.
-    // wait ivl
-
-    bool skip = false;
-
-    if (start_inout && *start_inout) {
-        if (*start_inout < ivl)
-            ivl -= *start_inout;
-        *start_inout = 0;
-    }
-
-    uint32_t remaining = end - now;
-    if (ivl > remaining) {
-        if (start_inout)
-            *start_inout = ivl - remaining;
-        ivl = remaining;
-        skip = true;
-    }
-    
-    uint16_t ivl16;
-    if (ivl <= MAX_IVL)
-        ivl16 = ivl;
+    uint32_t ivl_remaining = asp->as_ivl_remaining;
+    if (ivl_remaining)
+        ivl = ivl_remaining;
     else {
-        skip = true;
-        if (ivl < MAX_IVL + MIN_IVL)
-            ivl16 = MAX_IVL / 2;
-        else
-            ivl16 = MAX_IVL;
+        uint32_t t_remaining = end - asp->as_last_pulse_time;
+        if (ivl > t_remaining)
+            ivl = t_remaining;
+        asp->as_ivl_remaining = ivl;
     }
 
-    if (skip_out)
-        *skip_out = skip;
-    return ivl16;
+    if (ivl <= MAX_IVL) {
+        asp->as_skip = false;
+        ivl_out = ivl;
+    } else {
+        asp->as_skip = true;
+        if (ivl <= MAX_IVL + MIN_IVL)
+            ivl_out = MAX_IVL / 2;
+        else
+            ivl_out = MAX_IVL;
+    }
+    asp->as_last_pulse_time += ivl_out;
+    asp->as_ivl_remaining -= ivl_out;
+    return ivl_out;
 }
 
-void enqueue_dwell(void)
+static inline void init_axis(axis_state *asp)
 {
-    set_x_motor_step(false);
-    set_y_motor_step(false);
-    set_z_motor_step(false);
+    asp->as_last_pulse_time = 0;
+    asp->as_ivl_remaining = 0;
+    asp->as_skip = false;
+}
 
-    uint8_t lm = get_enum_variable(V_LM);
-    uint8_t mode;
-    if (lm == 'c')
-        mode = PM_CONTINUOUS;
-    else if (lm == 't')
-        mode = PM_PULSED;
-    else
-        mode = PM_OFF;
 
-    uint8_t ls = get_enum_variable(V_LS);
-    if (ls == 'm') {
-        set_main_pulse_mode(mode);
-        if (mode != PM_OFF) {
-            set_main_power_level(get_unsigned_variable(V_LP));
-            if (mode == PM_PULSED)
-                set_visible_pulse_duration(get_unsigned_variable(V_PD));
-        }
-    } else
-        set_main_pulse_mode(PM_OFF);
-    if (ls == 'v') {
-        set_visible_pulse_mode(mode);
-        if (mode == PM_PULSED)
-            set_visible_pulse_duration(get_unsigned_variable(V_PD));
-    } else
-        set_visible_pulse_mode(PM_OFF);
+//////////////////////////////////////////////////////////////////////////////
+//  Dwell
 
-    uint32_t dt = get_unsigned_variable(V_DT);
-    if (mode == PM_PULSED) {
-        uint32_t pi = get_unsigned_variable(V_PI);
-        uint16_t p_ivl;
-        uint16_t xyz_ivl;
-        if (pi <= MAX_IVL) {
-            // P is major axis.
-            uint32_t next_xyz = 0;
-            for (uint32_t t = 0; t < dt; t += p_ivl) {
-                bool p_skip;
-                p_ivl = gen_next_ivl(t, dt, pi, &p_remainder, &p_skip);
-                enqueue_atom_P(p_ivl);
-                if (next_xyz <= t) {
-                    xyz_ivl = next_ivl(next_xyz, dt);
-                    enqueue_atom_X(xyz_ivl);
-                    enqueue_atom_Y(xyz_ivl);
-                    enqueue_atom_Z(xyz_ivl);
-                    next_xyz += xyz_ivl;
-                }
-            }
-        } else {
-            // XYZ are major axes.
-            uint32_t next_xyz = 0;
-            for (uint32_t t = 0; t < dt; t += p_ivl) {
-                bool p_skip;
-                p_ivl = gen_next_ivl(t, dt, pi, &p_remainder, &p_skip);
-                if (p_skip) {
-                    if (ls == 'm')
-                        set_main_pulse_mode(PM_OFF);
-                    else
-                        set_visible_pulse_mode(PM_OFF);
-                } else {
-                    if (ls == 'm')
-                        set_main_pulse_mode(PM_PULSED);
-                    else
-                        set_visible_pulse_mode(PM_PULSED);
-                }
-                enqueue_atom_P(p_ivl);
-                p_remainder = 0;
-                if (next_xyz <= t) {
-                    xyz_ivl = next_ivl(t, dt);
-                    enqueue_atom_X(xyz_ivl);
-                    enqueue_atom_Y(xyz_ivl);
-                    enqueue_atom_Z(xyz_ivl);
-                    maybe_start_engine();
-                    next_xyz += xyz_ivl;
-                }
-            }
-        }
-    } else {
-        // No pulse.  Just wait.
-        uint16_t ivl;
-        for (uint32_t t = 0; t < dt; t += ivl) {
-            ivl = next_ivl(t, dt);
-            enqueue_atom_X(ivl);
-            enqueue_atom_Y(ivl);
-            enqueue_atom_Z(ivl);
-            enqueue_atom_P(ivl);
+static void enqueue_fast_pulsed_dwell(uint32_t pi)
+{
+    uint32_t dt = get_unsigned_variable(V_DT); // dwell time
+    uint8_t  ls = get_unsigned_variable(V_LS); // laser select
+
+    if (ls == 'm')
+        enqueue_set_main_laser_mode_pulsed();
+    else if (ls == 'v')
+        enqueue_set_visible_laser_mode_pulsed();
+
+    axis_state xyz;
+    init_axis(&xyz);
+
+    uint16_t p_ivl;
+    for (uint32_t t = 0; t < dt; t += p_ivl) {
+        if (dt < t + pi)
+            dt = t + pi;
+        p_ivl = next_ivl(dt, pi, &p_axis_state);
+        enqueue_atom_P(p_ivl);
+        if (xyz.as_last_pulse_time <= t + p_ivl) {
+            uint16_t xyz_ivl = next_ivl(dt, dt, &xyz);
+            enqueue_atom_X(xyz_ivl);
+            enqueue_atom_Y(xyz_ivl);
+            enqueue_atom_Z(xyz_ivl);
             maybe_start_engine();
         }
     }
     start_engine();
 }
 
-void enqueue_move(void)
+static void enqueue_slow_pulsed_dwell(uint32_t pi)
 {
-    fw_assert(false && "XXX Write me!");
+    uint32_t dt = get_unsigned_variable(V_DT); // dwell time
+    uint8_t  ls = get_unsigned_variable(V_LS); // laser select
+
+    axis_state xyz;
+    init_axis(&xyz);
+
+    uint16_t p_ivl;
+    for (uint32_t t = 0; t < dt; t += p_ivl) {
+        if (!p_axis_state.as_skip && dt < t + pi)
+            dt = t + pi;
+        p_ivl = next_ivl(dt, pi, &p_axis_state);
+        if (ls == 'm') {
+            if (p_axis_state.as_skip)
+                enqueue_set_main_laser_mode_off();
+            else
+                enqueue_set_main_laser_mode_pulsed();
+        } else if (ls == 'v') {
+            if (p_axis_state.as_skip)
+                enqueue_set_visible_laser_mode_off();
+            else
+                enqueue_set_visible_laser_mode_pulsed();
+        }
+            
+        enqueue_atom_P(p_ivl);
+        if (xyz.as_last_pulse_time <= t) {
+            uint16_t xyz_ivl = next_ivl(dt, MAX_IVL, &xyz);
+            enqueue_atom_X(xyz_ivl);
+            enqueue_atom_Y(xyz_ivl);
+            enqueue_atom_Z(xyz_ivl);
+            maybe_start_engine();
+        }
+    }
+    start_engine();
 }
 
-void enqueue_cut(void)
+static void enqueue_unpulsed_dwell(void)
 {
-    fw_assert(false && "XXX Write me!");
+    uint32_t dt = get_unsigned_variable(dt); // dwell time
+
+    axis_state xyzp;
+    init_axis(&xyzp);
+    uint16_t xyzp_ivl;
+    for (uint32_t t = 0; t < dt; t += xyzp_ivl) {
+        xyzp_ivl = next_ivl(dt, dt, &xyzp);
+        enqueue_atom_X(xyzp_ivl);
+        enqueue_atom_Y(xyzp_ivl);
+        enqueue_atom_Z(xyzp_ivl);
+        enqueue_atom_P(xyzp_ivl);
+        maybe_start_engine();
+    }
+    start_engine();
 }
+
+void enqueue_dwell(void)
+{
+    // Disable x, y, z.
+    enqueue_disable_x_motor_step();
+    enqueue_disable_y_motor_step();
+    enqueue_disable_z_motor_step();
+
+    // Calculate laser mode.  Map Distance Pulse mode to LM_OFF;
+    uint8_t lm = get_enum_variable(V_LM); // laser mode
+    uint8_t mode = LM_OFF;
+    if (lm == 'c')
+        mode = LM_CONTINUOUS;
+    else if (lm == 't')         // Timed Pulse mode
+        mode = LM_PULSED;
+
+    uint8_t ls = get_enum_variable(V_LS); // laser select
+    if (ls != 'm' || mode == LM_OFF)
+        enqueue_set_main_laser_mode_off();
+    else { 
+        uint32_t lp = get_unsigned_variable(V_LP); // laser power (level)
+        enqueue_set_main_laser_power_level(lp);
+        if (mode == LM_CONTINUOUS)
+            enqueue_set_main_laser_mode_continuous();
+        else {
+            // Do not set laser mode yet.
+            // Do initialize the P axis state if previous mode was not pulsed.
+            if (output_states.main_laser_mode != LM_PULSED)
+                init_axis(&p_axis_state);
+            uint32_t pl =
+                get_unsigned_variable(V_PL); // pulse length (duration)
+            enqueue_set_main_laser_pulse_duration(pl);
+        }
+    }
+
+    if (ls != 'v' || mode == LM_OFF)
+        enqueue_set_visible_laser_mode_off();
+    else if (mode == LM_CONTINUOUS)
+        enqueue_set_visible_laser_mode_continuous();
+    else {
+        // Do not set laser mode yet.
+        enqueue_set_visible_laser_pulse_duration(get_unsigned_variable(V_PL));
+    }
+
+    if (mode == LM_PULSED) {
+        uint32_t pi = get_unsigned_variable(V_PI); // (laser) pulse interval
+        if (pi <= MAX_IVL)
+            enqueue_fast_pulsed_dwell(pi);
+        else
+            enqueue_slow_pulsed_dwell(pi);
+    } else
+        enqueue_unpulsed_dwell();
+}
+
+void enqueue_move(void)
+{}
 
 void enqueue_engrave(void)
-{
-    fw_assert(false && "XXX Write me!");
-}
+{}
 
 void enqueue_home(void)
-{
-    fw_assert(false && "XXX Write me!");
-}
+{}
 
 void stop_immediately(void)
 {
@@ -340,4 +450,5 @@ void stop_immediately(void)
 void await_completion(void)
 {
     await_engine_stopped();
+    init_scheduler();
 }
