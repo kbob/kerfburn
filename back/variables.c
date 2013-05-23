@@ -1,7 +1,6 @@
 #include "variables.h"
 
 #include <stddef.h>
-#include <stdio.h>              /* XXX */
 #include <string.h>
 
 //#include <avr/pgmspace.h>
@@ -44,14 +43,14 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     DESC(rs, ENUM, "ny"),       // report serial status
     DESC(rv, ENUM, "ny"),       // report variables
     DESC(rw, ENUM, "ny"),       // report water status
-    /* DESC(x0, UNSIGNED),         // X initial velocity */
-    /* DESC(xa, SIGNED),           // X acceleration */
+    // DESC(x0, UNSIGNED),         // X initial velocity
+    // DESC(xa, SIGNED),           // X acceleration
     DESC(xd, SIGNED),           // X distance
-    /* DESC(y0, UNSIGNED),         // Y initial velocity */
-    /* DESC(ya, SIGNED),           // Y acceleration */
+    // DESC(y0, UNSIGNED),         // Y initial velocity
+    // DESC(ya, SIGNED),           // Y acceleration
     DESC(yd, SIGNED),           // Y distance
-    /* DESC(z0, UNSIGNED),         // Z initial velocity */
-    /* DESC(za, SIGNED),           // Z acceleration */
+    // DESC(z0, UNSIGNED),         // Z initial velocity
+    // DESC(za, SIGNED),           // Z acceleration
     DESC(zd, SIGNED),           // Z distance
 };
 
