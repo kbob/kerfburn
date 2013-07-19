@@ -20,6 +20,10 @@ Is this a bug database?
 * What is the frequency response of the D2A + laser?  Do I need
   to schedule changes ahead of time?
 
+* Repetier has `LOW_TICKS_PER_MOVE`, the minimum time that a move can take.
+  It does that so that the baselevel can keep up with the interrupts.
+  Kerfburn could use something similar.
+
 
 ## Testing
 
@@ -67,6 +71,11 @@ Is this a bug database?
   for an interval.
   
   Use this terminology in the code.
+
+* Renumber the verbs so they're closer together.
+
+* Testing: change pin-mapping.py to swap the visible and main lasers.
+  Then use the red laser diode to test that the main laser is fired correctly.
 
 
 ### Thruport
