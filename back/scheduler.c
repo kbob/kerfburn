@@ -753,18 +753,6 @@ void enqueue_move(void)
     (*f)();
 }
 
-#if 0
-__attribute__((constructor))
-static void foo(void)
-{
-    set_unsigned_variable(V_AA, 1);
-    set_signed_variable(V_XD, +5);
-    set_unsigned_variable(V_M0, 10);
-    set_unsigned_variable(V_MA, 123 << 16);
-    enqueue_move();
-}
-#endif
-
 //////////////////////////////////////////////////////////////////////////////
 
 void enqueue_engrave(void)
