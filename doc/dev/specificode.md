@@ -69,13 +69,13 @@ A Z microstep is ~0.000165 millimeters (0.0000065 inch).
 #### x0, y0, z0 &mdash;  Initial X, Y, Z Param
 *unsigned integer*  
 Reciprocal of initial x, y, or z motor velocity.
-Expressed in ticks per microstep
+Expressed in CPU clock ticks per microstep.
 
 
-#### xa, ya, za &mdash; X, Y, Z Acceleration
+#### ma &mdash; Motor Acceleration
 *signed integer*  
-X, Y, or Z Acceleration.
-Acceleration in microsteps per 16777216 clock ticks (roughly 1.05 seconds).
+Acceleration of the fastest-moving axis.
+Expressed in microsteps per second.
 
 
 #### ls &mdash; Laser Select
