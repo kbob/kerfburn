@@ -23,7 +23,7 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     DESC(ia, ENUM, "ncswa"),    // illumination animation
     DESC(il, UNSIGNED),         // illumination level
     DESC(lm, ENUM, "octd"),     // laser mode
-    DESC(lp, UNSIGNED),         // laser power
+    DESC(lp, UNSIGNED),         // laser power level
     DESC(ls, ENUM, "mnv"),      // laser select
     DESC(m0, UNSIGNED),         // major axis initial velocity
     DESC(ma, SIGNED),           // major axis acceleration
@@ -31,7 +31,7 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     DESC(oo, ENUM, "ny"),       // override lid open
     DESC(pd, UNSIGNED),         // pulse distance
     DESC(pi, UNSIGNED),         // pulse interval
-    DESC(pl, UNSIGNED),         // pulse length
+    DESC(pl, UNSIGNED),         // pulse length (duration)
     DESC(re, ENUM, "yn"),       // report E-Stop status
     DESC(rf, ENUM, "yn"),       // report fault status
     DESC(ri, UNSIGNED),         // reporting interval
