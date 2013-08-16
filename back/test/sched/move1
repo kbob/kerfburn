@@ -1,9 +1,10 @@
-#!/bin/sh
+#!/usr/bin/python
 
 # Move +X only, constant speed, positive direction, fast.
 
-./fw <<EOF | sed 's/built .*/built [...]/' > /tmp/x
-aa=1
+import sched_test
+
+input = """aa=1
 m0=1000
 ma=+0
 xd=+5
@@ -13,29 +14,29 @@ rv=y
 R
 Qm
 W
-EOF
+"""
 
-diff - /tmp/x <<EOF
-Kerfburn Back End, built [...]
+expected = """Kerfburn Back End, built [...]
 Ready
 V aa=1 dt=0 ia=n il=0 lm=o lp=0 ls=m m0=1000 ma=+0 oc=n oo=n pd=0 pi=0 pl=0 re=n rf=n ri=0 rl=n rm=n rp=n rq=n rr=n rs=n rv=y rw=n xd=+5 yd=+0 zd=+0
 enqueue_atom_P: a = A_SET_MAIN_LASER_OFF
 enqueue_atom_P: a = A_SET_VISIBLE_LASER_OFF
-enqueue_atom_Y: a = A_DISABLE_STEP
-enqueue_atom_Z: a = A_DISABLE_STEP
 enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 16000
+maybe_start_engine
 enqueue_atom_X: a = 16000
+maybe_start_engine
 enqueue_atom_X: a = 16000
+maybe_start_engine
 enqueue_atom_X: a = 16000
+maybe_start_engine
 enqueue_atom_X: a = 16000
+enqueue_atom_Y: a = A_DISABLE_STEP
 enqueue_atom_Y: a = 64512
-enqueue_atom_Z: a = 64512
-enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_Y: a = 15488
-enqueue_atom_Z: a = 15488
-enqueue_atom_P: a = 15488
 start_engine
 await_engine_stopped
-EOF
+"""
+
+sched_test.test(input, expected)

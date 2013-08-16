@@ -1,9 +1,10 @@
-#!/bin/sh
+#!/usr/bin/python
 
 # Fast pulsed dwell.  dt < pi < IVL_MAX.
 
-./fw <<EOF | sed 's/built .*/built [...]/' > /tmp/x
-dt=8500
+import sched_test
+
+input = """dt=8500
 lm=t
 lp=600
 pi=16000
@@ -14,10 +15,9 @@ rv=y
 R
 Qd
 W
-EOF
+"""
 
-diff - /tmp/x <<EOF
-Kerfburn Back End, built [...]
+expected = """Kerfburn Back End, built [...]
 Ready
 V aa=0 dt=8500 ia=n il=0 lm=t lp=600 ls=m m0=0 ma=+0 oc=n oo=n pd=0 pi=16000 pl=6000 re=n rf=n ri=0 rl=n rm=n rp=n rq=n rr=n rs=n rv=y rw=n xd=+0 yd=+0 zd=+0
 enqueue_atom_X: a = A_DISABLE_STEP
@@ -36,4 +36,6 @@ enqueue_atom_Z: a = 16000
 maybe_start_engine
 start_engine
 await_engine_stopped
-EOF
+"""
+
+sched_test.test(input, expected)
