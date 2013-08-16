@@ -83,6 +83,7 @@ static const c_desc command_descriptors[] PROGMEM = {
     { Ey_name, action_enable_Y_motor       },
     { Ez_name, action_enable_Z_motor       },
     { I_name,  action_illuminate           },
+    { Qc_name, action_enqueue_cut          },
     { Qd_name, action_enqueue_dwell        },
     { Qe_name, action_enqueue_engrave      },
     { Qh_name, action_enqueue_home         },
