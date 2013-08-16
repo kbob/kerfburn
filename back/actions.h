@@ -8,6 +8,7 @@ DECLARE_ACTION(stop);
 DECLARE_ACTION(illuminate);
 DECLARE_ACTION(enqueue_dwell);
 DECLARE_ACTION(enqueue_move);
+DECLARE_ACTION(enqueue_cut);
 DECLARE_ACTION(enqueue_engrave);
 DECLARE_ACTION(enqueue_home);
 DECLARE_ACTION(enable_low_voltage);
