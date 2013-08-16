@@ -471,6 +471,8 @@ void enqueue_dwell(void)
 //////////////////////////////////////////////////////////////////////////////
 //  Move
 
+#if 0
+
 // There are 36 move functions.  They are distinguished like this.
 //   - What is the major axis?
 //   - Which other (motor) axes are active?
@@ -659,7 +661,7 @@ static move_func *const move_funcs[] PROGMEM = {
     enqueue_z_d,    enqueue_z_x_d,  enqueue_z_y_d,  enqueue_z_xy_d,
 };
 
-void enqueue_move(void)
+void XXX_enqueue_move(void)
 {
     uint8_t aa = (uint8_t)get_unsigned_variable(V_AA); // active axes
     uint8_t ls = get_enum_variable(V_LS);              // laser select
@@ -753,7 +755,291 @@ void enqueue_move(void)
     (*f)();
 }
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
+
+static inline uint16_t step_X(uint32_t    t,
+                              uint32_t    ivl,
+                              axis_state *asp,
+                              bool       *pulsed_out)
+{
+    // printf("step_X(t=%u, ivl=%u, state={last_pulse_time=%u, ivl_remaining=%u, skip=%s})\n", t, ivl, asp->as_last_pulse_time, asp->as_ivl_remaining, asp->as_skip ? "true" : "false");
+    uint16_t pivl = next_ivl(t, ivl, asp);
+    if (pivl == ivl) {
+        enqueue_enable_x_motor_step();
+        *pulsed_out = true;
+    } else {
+        enqueue_disable_x_motor_step();
+        *pulsed_out = false;
+    }
+    enqueue_atom_X(pivl);
+    return pivl;
+}
+
+typedef struct major_axis_state {
+    uint32_t maj_distance;
+    uint32_t maj_velocity;
+    int32_t  maj_accel;
+    uint32_t maj_ivl_remaining;
+} major_axis_state;
+
+typedef struct minor_axis_state {
+    uint32_t min_distance;
+    int32_t  min_error;
+    uint32_t min_ivl_remaining;
+    uint32_t min_prev_t;
+} minor_axis_state;
+
+static inline void init_major_axis_state(major_axis_state *majp, uint32_t d)
+{
+    majp->maj_distance      = d;
+    majp->maj_velocity      = get_signed_variable(V_M0);
+    majp->maj_accel         = get_signed_variable(V_MA);
+    majp->maj_ivl_remaining = 0;
+}
+
+static inline bool just_pulsed(const major_axis_state *majp)
+{
+    return majp->maj_ivl_remaining == 0;
+}
+
+static inline void init_minor_axis_state(minor_axis_state *minp,
+                                         uint32_t min_d,
+                                         const major_axis_state *majp)
+{
+    minp->min_distance      = min_d;
+    minp->min_error         = majp->maj_distance / 2;
+    minp->min_ivl_remaining = 0;
+    minp->min_prev_t        = 0;
+}
+
+static uint16_t interval_piece(uint32_t ivl)
+{
+    if (ivl < MAX_IVL)
+        return (uint16_t)ivl;
+    if (ivl < MAX_IVL + MIN_IVL)
+        return MAX_IVL / 2;
+    return MAX_IVL;
+}
+
+static inline uint16_t step_major_X(uint32_t          t,
+                                    uint32_t          d,
+                                    major_axis_state *majp)
+{
+    // printf("step_major_X(t=%d, d=%d, major={})\n", t, d);
+
+    uint32_t ivl = majp->maj_ivl_remaining;
+    if (!ivl) {
+        ivl = F_CPU / majp->maj_velocity; // XXX use fast divide.
+        // XXX update velocity
+    }
+
+    uint16_t ivl_out = interval_piece(ivl);
+    uint32_t remaining = ivl - ivl_out;
+    majp->maj_ivl_remaining = remaining;
+    if (remaining == 0) {
+        enqueue_enable_x_motor_step();
+        enqueue_atom_X((uint16_t)ivl);
+    } else {
+        enqueue_disable_x_motor_step();
+        enqueue_atom_X(ivl_out);
+    }    
+    return ivl_out;
+}
+
+static inline void step_minor_Y(uint32_t                t,
+                                uint32_t                d,
+                                minor_axis_state       *minp,
+                                const major_axis_state *majp)
+{
+    uint32_t ivl = majp->maj_ivl_remaining;
+    if (!ivl) {
+        // Do the regular Bresenham.  If no step, exit here.
+        minp->min_error -= minp->min_distance;
+        if (minp->min_error >= 0) {
+            while (t - minp->min_prev_t > MAX_IVL + MIN_IVL) {
+                enqueue_disable_y_motor_step();
+                enqueue_atom_Y(MAX_IVL);
+                minp->min_prev_t += MAX_IVL;
+            }
+            return;
+        }
+        minp->min_error += majp->maj_distance;
+        ivl = t - minp->min_prev_t;
+        printf("step_minor_Y: ivl = %u\n", ivl);
+        minp->min_prev_t = t;
+    }
+    uint16_t ivl_out = interval_piece(ivl);
+    uint32_t remaining = ivl - ivl_out;
+    minp->min_ivl_remaining = remaining;
+    if (remaining == 0) {
+        enqueue_enable_y_motor_step();
+        enqueue_atom_Y((uint16_t)ivl);
+    } else {
+        enqueue_disable_y_motor_step();
+        enqueue_atom_Y(ivl_out);
+    }    
+}
+
+static inline void step_minor_Z(uint32_t                t,
+                                uint32_t                d,
+                                minor_axis_state       *minp,
+                                const major_axis_state *majp)
+{}
+
+static inline void finish_minor_Y(uint32_t                t,
+                                  uint32_t                d,
+                                  minor_axis_state       *minp,
+                                  const major_axis_state *majp)
+{
+    uint32_t ivl = t - minp->min_prev_t;
+    if (ivl) {
+        enqueue_disable_y_motor_step();
+        while (ivl) {
+            uint16_t ivl_out = interval_piece(ivl);
+            enqueue_atom_Y(ivl_out);
+            ivl -= ivl_out;
+        }
+    }
+}
+
+static inline void finish_minor_Z(uint32_t                t,
+                                  uint32_t                d,
+                                  minor_axis_state       *minp,
+                                  const major_axis_state *majp)
+{}
+
+static inline void enqueue_move_x_major(uint32_t xd, uint32_t yd, uint32_t zd)
+{
+#if 0
+    uint32_t m0 = get_unsigned_variable(V_M0); // major axis initial velocity
+    // int32_t  a0 = get_signed_variable(V_MA);   // major axis acceleration
+
+    axis_state x;
+    init_axis(&x);
+    uint32_t v = m0;            // usteps/sec
+    uint32_t t = 0;             // ticks
+    for (uint32_t d = 0; d < xd; d++) {
+        uint32_t x_ivl = F_CPU / v; // ticks, XXX replace with fast divide.
+        bool x_pulsed;
+        t += x_ivl;
+        do {
+            uint16_t px_ivl = step_X(t, x_ivl, &x, &x_pulsed);
+            px_ivl = px_ivl;
+            maybe_start_engine();
+        } while (!x_pulsed);
+    }
+#else
+    major_axis_state x_state;
+    minor_axis_state y_state, z_state;
+    init_major_axis_state(&x_state, xd);
+    init_minor_axis_state(&y_state, yd, &x_state);
+    init_minor_axis_state(&z_state, zd, &x_state);
+    uint32_t t, d;
+    for (t = d = 0; d < xd; ) {
+        t += step_major_X(t, d, &x_state);
+        if (just_pulsed(&x_state)) {
+            d++;
+            step_minor_Y(t, d, &y_state, &x_state);
+            step_minor_Z(t, d, &z_state, &x_state);
+            maybe_start_engine();
+        }
+    }
+    finish_minor_Y(t, d, &y_state, &x_state);
+    finish_minor_Z(t, d, &z_state, &x_state);
+    start_engine();
+#endif
+}
+
+static inline void enqueue_move_y_major(int32_t xd, int32_t yd, int32_t zd)
+{
+}
+
+static inline void enqueue_move_z_major(int32_t xd, int32_t yd, int32_t zd)
+{
+}
+
+void enqueue_move(void)
+{
+    // Get xd, yd, zd
+    // Get absolute values of those.
+    // Find major axis.
+    // Dispatch to a function for each major axis.
+    // As a side effect, set the direction bits, turn off lasers.
+    
+    typedef enum axis {
+        no_axis,
+        X_axis,
+        Y_axis,
+        Z_axis,
+    } axis;
+    uint32_t major_d_abs = 0;
+    uint8_t major_axis = no_axis;
+
+    int32_t xd = get_signed_variable(V_XD); // X distance
+    uint32_t xd_abs = xd;
+    if (xd != 0) {
+        if (xd < 0) {
+            xd_abs = -xd;
+            enqueue_set_x_motor_direction_negative();
+        } else
+            enqueue_set_x_motor_direction_positive();
+        major_d_abs = xd_abs;
+        major_axis = X_axis;
+    }
+
+    int32_t yd = get_signed_variable(V_YD); // Y distance
+    uint32_t yd_abs = yd;
+    if (yd != 0) {
+        if (yd < 0) {
+            yd_abs = -yd;
+            enqueue_set_y_motor_direction_negative();
+        } else
+            enqueue_set_y_motor_direction_positive();
+        major_d_abs = yd_abs;
+        major_axis = Y_axis;
+    }
+
+    int32_t zd = get_signed_variable(V_ZD); // Z distance
+    uint32_t zd_abs = zd;
+    if (zd != 0) {
+        if (zd < 0) {
+            zd_abs = -zd;
+            enqueue_set_z_motor_direction_negative();
+        } else
+            enqueue_set_z_motor_direction_positive();
+        major_d_abs = zd_abs;
+        major_axis = Z_axis;
+    }
+
+    enqueue_set_main_laser_mode_off();
+    enqueue_set_visible_laser_mode_off();
+
+    switch (major_axis) {
+
+    case no_axis:
+        // no movement, so nothing to do.
+        break;
+
+    case X_axis:
+        enqueue_move_x_major(xd_abs, yd_abs, zd_abs);
+        break;
+
+    case Y_axis:
+        enqueue_move_y_major(xd_abs, yd_abs, zd_abs);
+        break;
+
+    case Z_axis:
+        enqueue_move_z_major(xd_abs, yd_abs, zd_abs);
+        break;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void enqueue_cut(void)
+{}
 
 void enqueue_engrave(void)
 {}
