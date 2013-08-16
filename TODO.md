@@ -46,6 +46,8 @@ Is this a bug database?
 
 ## Coding
 
+* Make all memory buffers contiguous.
+
 * The Makefiles need a lot of refactoring.
 
 * `gen-pin-defs.py` should emit a better autogen disclaimer.
