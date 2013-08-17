@@ -13,6 +13,7 @@
 #define VAR_DESC_SIZE   10      // descriptor size, including NUL byte
 
 typedef enum variable_index {
+    // DEPRECATE AA
     V_AA,                       // active axes
     V_DT,                       // dwell time
     V_IA,                       // illumination animation
