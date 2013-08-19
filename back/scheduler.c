@@ -61,7 +61,11 @@ static inline void enqueue_disable_x_motor_step(void)
 
 static inline void enqueue_enable_y_motor_step(void)
 {
-    if (output_states.y_motor_step_enabled != true) {
+    // XXX Why doesn't this work on OS X?
+    //if ((uint8_t)output_states.y_motor_step_enabled != (uint8_t)true) {
+    uint8_t a = output_states.y_motor_step_enabled;
+    uint8_t b = true;
+    if (a != b) {
         enqueue_atom_Y(A_ENABLE_STEP);
         output_states.y_motor_step_enabled = true;
     }
@@ -77,7 +81,11 @@ static inline void enqueue_disable_y_motor_step(void)
 
 static inline void enqueue_enable_z_motor_step(void)
 {
-    if (output_states.z_motor_step_enabled != true) {
+    // XXX Why doesn't this work on OS X?
+    //if ((uint8_t)output_states.z_motor_step_enabled != (uint8_t)true) {
+    uint8_t a = output_states.z_motor_step_enabled;
+    uint8_t b = true;
+    if (a != b) {
         enqueue_atom_Z(A_ENABLE_STEP);
         output_states.z_motor_step_enabled = true;
     }
@@ -493,22 +501,26 @@ typedef struct major_axis_state {
     uint32_t maj_distance;
     uint32_t maj_velocity;
     int32_t  maj_accel;
+    uint32_t maj_ivl;
+    uint32_t maj_dist_remaining;
     uint32_t maj_ivl_remaining;
 } major_axis_state;
 
 typedef struct minor_axis_state {
-    uint32_t min_distance;
-    int32_t  min_error;
-    uint32_t min_ivl_remaining;
-    uint32_t min_prev_t;
+    uint32_t mi_distance;
+    uint32_t mi_dist_remaining;
+    uint32_t mi_ivl_remaining;
+    uint32_t mi_prev_t;
 } minor_axis_state;
 
 static inline void init_major_axis_state(major_axis_state *majp, uint32_t d)
 {
-    majp->maj_distance      = d;
-    majp->maj_velocity      = get_signed_variable(V_M0);
-    majp->maj_accel         = get_signed_variable(V_MA);
-    majp->maj_ivl_remaining = 0;
+    majp->maj_distance       = d;
+    majp->maj_velocity       = get_signed_variable(V_M0);
+    majp->maj_accel          = get_signed_variable(V_MA);
+    majp->maj_ivl            = 0;
+    majp->maj_dist_remaining = d;
+    majp->maj_ivl_remaining  = 0;
 }
 
 static inline bool just_pulsed(const major_axis_state *majp)
@@ -517,13 +529,13 @@ static inline bool just_pulsed(const major_axis_state *majp)
 }
 
 static inline void init_minor_axis_state(minor_axis_state *minp,
-                                         uint32_t min_d,
+                                         uint32_t mi_d,
                                          const major_axis_state *majp)
 {
-    minp->min_distance      = min_d;
-    minp->min_error         = majp->maj_distance / 2;
-    minp->min_ivl_remaining = 0;
-    minp->min_prev_t        = 0;
+    minp->mi_distance       = mi_d;
+    minp->mi_dist_remaining = mi_d;
+    minp->mi_ivl_remaining  = 0;
+    minp->mi_prev_t         = 0;
 }
 
 static uint16_t interval_piece(uint32_t ivl)
@@ -545,10 +557,12 @@ static inline uint16_t step_major_X(uint32_t          t,
     if (!ivl) {
         ivl = F_CPU / majp->maj_velocity; // XXX use fast divide.
         // XXX update velocity
+        majp->maj_ivl = ivl;
+        majp->maj_dist_remaining--;
     }
 
-    uint16_t ivl_out = interval_piece(ivl);
-    uint32_t remaining = ivl - ivl_out;
+    uint16_t ivl_out        = interval_piece(ivl);
+    uint32_t remaining      = ivl - ivl_out;
     majp->maj_ivl_remaining = remaining;
     if (remaining == 0) {
         enqueue_enable_x_motor_step();
@@ -565,33 +579,34 @@ static inline void step_minor_Y(uint32_t                t,
                                 minor_axis_state       *minp,
                                 const major_axis_state *majp)
 {
-    uint32_t ivl = majp->maj_ivl_remaining;
+    uint32_t ivl = minp->mi_ivl_remaining;
     if (!ivl) {
-        // Do the regular Bresenham.  If no step, exit here.
-        minp->min_error -= minp->min_distance;
-        if (minp->min_error >= 0) {
-            while (t - minp->min_prev_t > MAX_IVL + MIN_IVL) {
+        if (minp->mi_dist_remaining) {
+            // t1 = time until major will finish at current rate
+            uint32_t t1 = majp->maj_dist_remaining * majp->maj_ivl +
+                     t - minp->mi_prev_t;
+            ivl = t1 / minp->mi_dist_remaining;
+            minp->mi_dist_remaining--;
+            minp->mi_prev_t += ivl;
+        } else {
+            while (t > minp->mi_prev_t + MAX_IVL + MIN_IVL) {
                 enqueue_disable_y_motor_step();
                 enqueue_atom_Y(MAX_IVL);
-                minp->min_prev_t += MAX_IVL;
+                minp->mi_prev_t += MAX_IVL;
             }
             return;
         }
-        minp->min_error += majp->maj_distance;
-        ivl = t - minp->min_prev_t;
-        printf("step_minor_Y: ivl = %u\n", ivl);
-        minp->min_prev_t = t;
     }
-    uint16_t ivl_out = interval_piece(ivl);
-    uint32_t remaining = ivl - ivl_out;
-    minp->min_ivl_remaining = remaining;
-    if (remaining == 0) {
-        enqueue_enable_y_motor_step();
-        enqueue_atom_Y((uint16_t)ivl);
-    } else {
-        enqueue_disable_y_motor_step();
+    while (ivl) {
+        uint16_t ivl_out = interval_piece(ivl);
+        uint32_t remaining = ivl - ivl_out;
+        if (remaining == 0)
+            enqueue_enable_y_motor_step();
+        else
+            enqueue_disable_y_motor_step();
         enqueue_atom_Y(ivl_out);
-    }    
+        ivl -= ivl_out;
+    }
 }
 
 static inline void step_minor_Z(uint32_t                t,
@@ -605,7 +620,8 @@ static inline void finish_minor_Y(uint32_t                t,
                                   minor_axis_state       *minp,
                                   const major_axis_state *majp)
 {
-    uint32_t ivl = t - minp->min_prev_t;
+    assert(t >= minp->mi_prev_t);
+    uint32_t ivl = t - minp->mi_prev_t;
     if (ivl) {
         enqueue_disable_y_motor_step();
         while (ivl) {
@@ -689,8 +705,10 @@ void enqueue_move(void)
             enqueue_set_y_motor_direction_negative();
         } else
             enqueue_set_y_motor_direction_positive();
-        major_d_abs = yd_abs;
-        major_axis = Y_axis;
+        if (major_d_abs < yd_abs) {
+            major_d_abs = yd_abs;
+            major_axis = Y_axis;
+        }
     }
 
     int32_t zd = get_signed_variable(V_ZD); // Z distance
@@ -701,8 +719,10 @@ void enqueue_move(void)
             enqueue_set_z_motor_direction_negative();
         } else
             enqueue_set_z_motor_direction_positive();
-        major_d_abs = zd_abs;
-        major_axis = Z_axis;
+        if (major_d_abs < zd_abs) {
+            major_d_abs = zd_abs;
+            major_axis = Z_axis;
+        }
     }
 
     enqueue_set_main_laser_mode_off();

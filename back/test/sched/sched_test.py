@@ -2,18 +2,32 @@
 
 import argparse
 import re
+import signal
 from subprocess import call, Popen, PIPE
 import tempfile
 import sys
 
+def strsignal(sig):
+    signames = dict((getattr(signal, name), name)
+                    for name in dir(signal)
+                    if re.match(r'SIG[^_]', name))
+    return signames.get(sig, 'Unknown signal %d' % sig)
+
+def show_exit(returncode, out, err):
+    if err:
+        exit(err)
+    if returncode:
+        if returncode < 0:
+            exit('./fw killed with %s' % strsignal(-returncode))
+        else:
+            exit('exit status: %d' % returncode)
+    exit(0)
+
 def run_command(input):
     fw = Popen(['./fw'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
     out, err = fw.communicate(input)
-    if err:
-        print >>sys.stderr, err,
-        exit(1)
     out = re.sub(r'built \d.*', 'built [...]', out, 1)
-    return out
+    return fw.returncode, out, err
 
 def show_diff(expected, actual, diff):
     ef = tempfile.NamedTemporaryFile(prefix='expected.')
@@ -29,8 +43,9 @@ def show_input(input):
     print input,
 
 def show_actual(input):
-    actual = run_command(input)
+    returncode, actual, err = run_command(input)
     print actual,
+    show_exit(returncode, actual, err)
 
 def show_expected(expected):
     print expected,
@@ -38,10 +53,11 @@ def show_expected(expected):
 def run_test(input, expected, diff):
     if diff is None:
         diff = 'diff'
-    actual = run_command(input)
-    if actual != expected:
+    returncode, actual, err = run_command(input)
+    if not returncode and not err and actual != expected:
         show_diff(expected, actual, diff)
         exit(1)
+    show_exit(returncode, actual, err)
 
 def test(input, expected):
 

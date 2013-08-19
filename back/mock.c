@@ -79,43 +79,51 @@ const char *atom_name(unsigned a)
 void maybe_start_engine(void)
 {
     printf("%s\n", __func__);
+    fflush(stdout);
 }
 
 void start_engine(void)
 {
     printf("%s\n", __func__);
+    fflush(stdout);
 }
 
 
 void stop_engine_immediately(void)
 {
     printf("%s\n", __func__);
+    fflush(stdout);
 }
 
 void await_engine_stopped(void)
 {
     printf("%s\n", __func__);
+    fflush(stdout);
 }
 
 
 void enqueue_atom_X (uint16_t a)
 {
     printf("%s: a = %s\n", __func__, atom_name(a));
+    fflush(stdout);
 }
 
 void enqueue_atom_Y (uint16_t a)
 {
     printf("%s: a = %s\n", __func__, atom_name(a));
+    fflush(stdout);
 }
 
 void enqueue_atom_Z (uint16_t a)
 {
     printf("%s: a = %s\n", __func__, atom_name(a));
+    fflush(stdout);
 }
 
 void enqueue_atom_P (uint16_t a)
 {
     printf("%s: a = %s\n", __func__, atom_name(a));
+    fflush(stdout);
 }
 
 static void initialize_devices(void)
@@ -131,6 +139,7 @@ static void initialize_devices(void)
 static void do_background_task(void)
 {
     printf("%s\nReady\n", version);
+    fflush(stdout);
     while (true) {
         while (!serial_rx_has_lines())
             continue;
