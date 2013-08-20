@@ -23,14 +23,17 @@ typedef enum laser_mode {
     LM_CONTINUOUS,
 } laser_mode;
 
+// This is a Boolean that can be initialized to a value neither true nor false.
+typedef uint8_t ibool;
+
 static struct output_states {
 
-    bool     x_motor_step_enabled;
-    bool     y_motor_step_enabled;
-    bool     z_motor_step_enabled;
-    bool     x_motor_direction_positive;
-    bool     y_motor_direction_positive;
-    bool     z_motor_direction_positive;
+    ibool     x_motor_step_enabled;
+    ibool     y_motor_step_enabled;
+    ibool     z_motor_step_enabled;
+    ibool     x_motor_direction_positive;
+    ibool     y_motor_direction_positive;
+    ibool     z_motor_direction_positive;
     uint8_t  main_laser_mode;
     uint8_t  visible_laser_mode;
     uint16_t main_laser_pulse_duration;
@@ -41,11 +44,7 @@ static struct output_states {
 
 static inline void enqueue_enable_x_motor_step(void)
 {
-    // XXX Why doesn't this work on OS X?
-    //if ((uint8_t)output_states.x_motor_step_enabled != (uint8_t)true) {
-    uint8_t a = output_states.x_motor_step_enabled;
-    uint8_t b = true;
-    if (a != b) {
+    if (output_states.x_motor_step_enabled != true) {
         enqueue_atom_X(A_ENABLE_STEP);
         output_states.x_motor_step_enabled = true;
     }
@@ -61,11 +60,7 @@ static inline void enqueue_disable_x_motor_step(void)
 
 static inline void enqueue_enable_y_motor_step(void)
 {
-    // XXX Why doesn't this work on OS X?
-    //if ((uint8_t)output_states.y_motor_step_enabled != (uint8_t)true) {
-    uint8_t a = output_states.y_motor_step_enabled;
-    uint8_t b = true;
-    if (a != b) {
+    if (output_states.y_motor_step_enabled != true) {
         enqueue_atom_Y(A_ENABLE_STEP);
         output_states.y_motor_step_enabled = true;
     }
@@ -81,11 +76,7 @@ static inline void enqueue_disable_y_motor_step(void)
 
 static inline void enqueue_enable_z_motor_step(void)
 {
-    // XXX Why doesn't this work on OS X?
-    //if ((uint8_t)output_states.z_motor_step_enabled != (uint8_t)true) {
-    uint8_t a = output_states.z_motor_step_enabled;
-    uint8_t b = true;
-    if (a != b) {
+    if (output_states.z_motor_step_enabled != true) {
         enqueue_atom_Z(A_ENABLE_STEP);
         output_states.z_motor_step_enabled = true;
     }
