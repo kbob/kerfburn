@@ -34,8 +34,13 @@ maybe_start_engine
 enqueue_atom_X: a = 16000
 enqueue_atom_Y: a = A_DISABLE_STEP
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = A_DISABLE_STEP
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_Y: a = 15488
+enqueue_atom_Z: a = 15488
+enqueue_atom_P: a = 15488
 start_engine
 await_engine_stopped
 """

@@ -5,6 +5,24 @@ Is this a bug database?
 
 ## Next!
 
+* More movement tests.
+
+        DONE    medium speed move in X.
+                fast X, fast Y == X.
+        DONE    fast X, fast Y.
+                fast X, medium Y.
+                fast X, slow Y.
+                medium X, medium Y == X.
+                medium X, medium Y.
+                medium X, slow Y.
+                slow X, slow Y == X.
+        DONE    slow X, slow Y.
+
+                Y major moves
+
+                Z minor moves
+                Z major moves
+
 ## Design
 
 
@@ -19,6 +37,25 @@ Is this a bug database?
 
 * What is the frequency response of the D2A + laser?  Do I need
   to schedule changes ahead of time?
+
+  The Full Spectrum Laser guy at Maker Faire says they do not modulate
+  power level, just pulse length.  I can do the same.  So setting the
+  power level should be done w/ laser off and motors stationary and
+  followed by a pause long enough for voltage to stabilize.
+  
+  I still have to test how long it takes voltage to stabilize.
+  Probably ought to test the laser beam itself.  I can probably do
+  something where the beam is moving and I turn the power up (or
+  down), then go back and measure the depth of cut vs. space.
+  
+  So the front end would generate something like this.
+  
+        lm=o
+        lp=100    (or whatever)
+        dt=100000 (or whatever)
+        Qd
+        lm=t      (or whatever)
+        ...
 
 * Repetier has `LOW_TICKS_PER_MOVE`, the minimum time that a move can take.
   It does that so that the baselevel can keep up with the interrupts.
@@ -50,11 +87,10 @@ Is this a bug database?
 
 * The Makefiles need a lot of refactoring.
 
-* `gen-pin-defs.py` should emit a better autogen disclaimer.
-
 * `make clean` should clean up `tools/bin` and `config` subdirectories.
 
 * Write a curses-based status report tool.
+
 
 ### Back End
 

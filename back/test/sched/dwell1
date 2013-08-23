@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Fast pulsed dwell.  dt < pi < IVL_MAX.
+# Fast pulsed dwell.  dt < pi < MAX_IVL.
 
 import sched_test
 

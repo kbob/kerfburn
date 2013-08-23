@@ -28,32 +28,45 @@ enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 5663
 enqueue_atom_Y: a = A_DISABLE_STEP
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = A_DISABLE_STEP
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_X: a = A_DISABLE_STEP
 enqueue_atom_X: a = 64512
 enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 5663
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_X: a = A_DISABLE_STEP
 enqueue_atom_X: a = 64512
 enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 5663
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_X: a = A_DISABLE_STEP
 enqueue_atom_X: a = 64512
 enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 5663
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_X: a = A_DISABLE_STEP
 enqueue_atom_X: a = 64512
 enqueue_atom_X: a = A_ENABLE_STEP
 enqueue_atom_X: a = 5663
 enqueue_atom_Y: a = 64512
+enqueue_atom_Z: a = 64512
+enqueue_atom_P: a = 64512
 maybe_start_engine
 enqueue_atom_Y: a = 28315
+enqueue_atom_Z: a = 28315
+enqueue_atom_P: a = 28315
 start_engine
 await_engine_stopped
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Slow pulsed dwell.
+# Slow pulsed dwell.  dt > MAX_IVL
 
 import sched_test
 

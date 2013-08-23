@@ -470,24 +470,6 @@ void enqueue_dwell(void)
 //////////////////////////////////////////////////////////////////////////////
 //  Move
 
-static inline uint16_t step_X(uint32_t    t,
-                              uint32_t    ivl,
-                              axis_state *asp,
-                              bool       *pulsed_out)
-{
-    // printf("step_X(t=%u, ivl=%u, state={last_pulse_time=%u, ivl_remaining=%u, skip=%s})\n", t, ivl, asp->as_last_pulse_time, asp->as_ivl_remaining, asp->as_skip ? "true" : "false");
-    uint16_t pivl = next_ivl(t, ivl, asp);
-    if (pivl == ivl) {
-        enqueue_enable_x_motor_step();
-        *pulsed_out = true;
-    } else {
-        enqueue_disable_x_motor_step();
-        *pulsed_out = false;
-    }
-    enqueue_atom_X(pivl);
-    return pivl;
-}
-
 typedef struct major_axis_state {
     uint32_t maj_distance;
     uint32_t maj_velocity;
@@ -503,6 +485,17 @@ typedef struct minor_axis_state {
     uint32_t mi_ivl_remaining;
     uint32_t mi_prev_t;
 } minor_axis_state;
+
+typedef struct laser_axis_state {
+    uint32_t la_distance;
+    uint32_t la_dist_remaining;
+    uint32_t la_ivl_remaining;
+    uint32_t la_prev_t;
+} laser_axis_state;
+
+// XXX This variable duplicates/conflicts with p_axis_state (lowercase)
+// XXX defined above.
+static laser_axis_state P_axis_state;
 
 static inline void init_major_axis_state(major_axis_state *majp, uint32_t d)
 {
@@ -527,6 +520,14 @@ static inline void init_minor_axis_state(minor_axis_state *minp,
     minp->mi_dist_remaining = mi_d;
     minp->mi_ivl_remaining  = 0;
     minp->mi_prev_t         = 0;
+}
+
+static inline void init_P_axis_state(uint32_t pd, const major_axis_state *majp)
+{
+    P_axis_state.la_distance       = pd;
+    P_axis_state.la_dist_remaining = pd;
+    P_axis_state.la_ivl_remaining  = 0;
+    P_axis_state.la_prev_t         = 0;
 }
 
 static uint16_t interval_piece(uint32_t ivl)
@@ -604,7 +605,65 @@ static inline void step_minor_Z(uint32_t                t,
                                 uint32_t                d,
                                 minor_axis_state       *minp,
                                 const major_axis_state *majp)
-{}
+{
+    uint32_t ivl = minp->mi_ivl_remaining;
+    if (!ivl) {
+        if (minp->mi_dist_remaining) {
+            // t1 = time until major will finish at current rate
+            uint32_t t1 = majp->maj_dist_remaining * majp->maj_ivl +
+                     t - minp->mi_prev_t;
+            ivl = t1 / minp->mi_dist_remaining;
+            minp->mi_dist_remaining--;
+            minp->mi_prev_t += ivl;
+        } else {
+            while (t > minp->mi_prev_t + MAX_IVL + MIN_IVL) {
+                enqueue_disable_z_motor_step();
+                enqueue_atom_Z(MAX_IVL);
+                minp->mi_prev_t += MAX_IVL;
+            }
+            return;
+        }
+    }
+    while (ivl) {
+        uint16_t ivl_out = interval_piece(ivl);
+        uint32_t remaining = ivl - ivl_out;
+        if (remaining == 0)
+            enqueue_enable_z_motor_step();
+        else
+            enqueue_disable_z_motor_step();
+        enqueue_atom_Z(ivl_out);
+        ivl -= ivl_out;
+    }
+}
+
+static inline void step_minor_P(uint32_t                t,
+                                uint32_t                d,
+                                const major_axis_state *majp)
+{
+    uint32_t ivl = P_axis_state.la_ivl_remaining;
+    if (ivl == 0) {
+        // XXX Assume P is inactive.
+        while (t > P_axis_state.la_prev_t + MAX_IVL + MIN_IVL) {
+            enqueue_set_main_laser_mode_off();
+            enqueue_set_visible_laser_mode_off();
+            enqueue_atom_P(MAX_IVL);
+            P_axis_state.la_prev_t += MAX_IVL;
+        }
+        return;
+    }
+#if 0
+    while (ivl) {
+        uint16_t ivl_out = interval_piece(ivl);
+        uint32_t remaining = ivl - ivl_out;
+        if (remaining == 0)
+            enqueue_enable_p_motor_step();
+        else
+            enqueue_disable_z_motor_step();
+        enqueue_atom_Z(ivl_out);
+        ivl -= ivl_out;
+    }
+#endif
+}
 
 static inline void finish_minor_Y(uint32_t                t,
                                   uint32_t                d,
@@ -627,7 +686,36 @@ static inline void finish_minor_Z(uint32_t                t,
                                   uint32_t                d,
                                   minor_axis_state       *minp,
                                   const major_axis_state *majp)
-{}
+{
+    assert(t >= minp->mi_prev_t);
+    uint32_t ivl = t - minp->mi_prev_t;
+    if (ivl) {
+        enqueue_disable_z_motor_step();
+        while (ivl) {
+            uint16_t ivl_out = interval_piece(ivl);
+            enqueue_atom_Z(ivl_out);
+            ivl -= ivl_out;
+        }
+    }
+}
+
+static inline void finish_minor_P(uint32_t                t,
+                                  uint32_t                d,
+                                  const major_axis_state *majp)
+{
+    // XXX is this true?
+    assert(t >= P_axis_state.la_prev_t);
+    uint32_t ivl = t - P_axis_state.la_prev_t;
+    if (ivl) {
+        enqueue_set_main_laser_mode_off();
+        enqueue_set_visible_laser_mode_off();
+        while (ivl) {
+            uint16_t ivl_out = interval_piece(ivl);
+            enqueue_atom_P(ivl_out);
+            ivl -= ivl_out;
+        }
+    }
+}
 
 static inline void enqueue_move_x_major(uint32_t xd, uint32_t yd, uint32_t zd)
 {
@@ -636,6 +724,7 @@ static inline void enqueue_move_x_major(uint32_t xd, uint32_t yd, uint32_t zd)
     init_major_axis_state(&x_state, xd);
     init_minor_axis_state(&y_state, yd, &x_state);
     init_minor_axis_state(&z_state, zd, &x_state);
+    init_P_axis_state(0, &x_state);
     uint32_t t, d;
     for (t = d = 0; d < xd; ) {
         t += step_major_X(t, d, &x_state);
@@ -643,11 +732,13 @@ static inline void enqueue_move_x_major(uint32_t xd, uint32_t yd, uint32_t zd)
             d++;
             step_minor_Y(t, d, &y_state, &x_state);
             step_minor_Z(t, d, &z_state, &x_state);
+            step_minor_P(t, d, &x_state);
             maybe_start_engine();
         }
     }
     finish_minor_Y(t, d, &y_state, &x_state);
     finish_minor_Z(t, d, &z_state, &x_state);
+    finish_minor_P(t, d, &x_state);
     start_engine();
 }
 
