@@ -14,7 +14,7 @@ Is this a bug database?
         DONE    fast X, slow Y.
         DONE    medium X, medium Y == X.
         DONE    medium X, medium Y.
-                medium X, slow Y.
+        DONE    medium X, slow Y.
                 slow X, slow Y == X.
         DONE    slow X, slow Y.
 
@@ -22,6 +22,8 @@ Is this a bug database?
 
                 Z minor moves
                 Z major moves
+
+                Acceleration!
 
 ## Design
 
