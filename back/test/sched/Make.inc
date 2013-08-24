@@ -11,6 +11,7 @@ test-back/test/sched: back/fw
 	cd back; test/sched/move4
 	cd back; test/sched/move5
 	cd back; test/sched/move6
+	cd back; test/sched/move7
 
 clean-back/test/sched:
 	cd back/test/sched && rm -f fw a.out core *~ *.o .*.d TAGS $(JUNK)
