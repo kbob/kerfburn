@@ -8,7 +8,7 @@ Is this a bug database?
 * More movement tests.
 
         DONE    medium speed move in X.
-                fast X, fast Y == X.
+        DONE    fast X, fast Y == X.
         DONE    fast X, fast Y.
                 fast X, medium Y.
                 fast X, slow Y.
