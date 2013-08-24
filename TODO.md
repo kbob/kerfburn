@@ -15,7 +15,7 @@ Is this a bug database?
         DONE    medium X, medium Y == X.
         DONE    medium X, medium Y.
         DONE    medium X, slow Y.
-                slow X, slow Y == X.
+        DONE    slow X, slow Y == X.
         DONE    slow X, slow Y.
 
                 Y major moves
