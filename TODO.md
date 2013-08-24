@@ -12,8 +12,8 @@ Is this a bug database?
         DONE    fast X, fast Y.
         DONE    fast X, medium Y.
         DONE    fast X, slow Y.
-                medium X, medium Y == X.
-                medium X, medium Y.
+        DONE    medium X, medium Y == X.
+        DONE    medium X, medium Y.
                 medium X, slow Y.
                 slow X, slow Y == X.
         DONE    slow X, slow Y.
