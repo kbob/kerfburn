@@ -10,7 +10,7 @@ Is this a bug database?
         DONE    medium speed move in X.
         DONE    fast X, fast Y == X.
         DONE    fast X, fast Y.
-                fast X, medium Y.
+        DONE    fast X, medium Y.
                 fast X, slow Y.
                 medium X, medium Y == X.
                 medium X, medium Y.
