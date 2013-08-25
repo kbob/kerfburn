@@ -1,0 +1,14 @@
+#!/bin/sh
+
+for i
+do
+
+    dest="$(echo $i | tr XYxy YXyx)"
+
+    [ -e "$dest" ] && { echo "$dest: file exists"; exit 1; }
+
+    cat ${1+"$@"}    | \
+        tr XYxy YXyx | \
+        sed -E 's/(yd=[-+][0-9]+) (xd=[-+][0-9]+)/\2 \1/' > "$dest"
+
+done

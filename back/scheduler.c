@@ -566,6 +566,68 @@ static inline uint16_t step_major_X(uint32_t          t,
     return ivl_out;
 }
 
+static inline uint16_t step_major_Y(uint32_t          t,
+                                    uint32_t          d,
+                                    major_axis_state *majp)
+{
+    // printf("step_major_Y(t=%d, d=%d, major={})\n", t, d);
+
+    uint32_t ivl = majp->maj_ivl_remaining;
+    if (!ivl) {
+        ivl = F_CPU / majp->maj_velocity; // XXX use fast divide.
+        // XXX update velocity
+        majp->maj_ivl = ivl;
+        majp->maj_dist_remaining--;
+    }
+
+    uint16_t ivl_out        = interval_piece(ivl);
+    uint32_t remaining      = ivl - ivl_out;
+    majp->maj_ivl_remaining = remaining;
+    if (remaining == 0) {
+        enqueue_enable_y_motor_step();
+        enqueue_atom_Y((uint16_t)ivl);
+    } else {
+        enqueue_disable_y_motor_step();
+        enqueue_atom_Y(ivl_out);
+    }    
+    return ivl_out;
+}
+
+static inline void step_minor_X(uint32_t                t,
+                                uint32_t                d,
+                                minor_axis_state       *minp,
+                                const major_axis_state *majp)
+{
+    uint32_t ivl = minp->mi_ivl_remaining;
+    if (!ivl) {
+        if (minp->mi_dist_remaining) {
+            // t1 = time until major will finish at current rate
+            uint32_t t1 = majp->maj_dist_remaining * majp->maj_ivl +
+                     t - minp->mi_prev_t;
+            ivl = t1 / minp->mi_dist_remaining;
+            minp->mi_dist_remaining--;
+            minp->mi_prev_t += ivl;
+        } else {
+            while (t > minp->mi_prev_t + MAX_IVL + MIN_IVL) {
+                enqueue_disable_x_motor_step();
+                enqueue_atom_X(MAX_IVL);
+                minp->mi_prev_t += MAX_IVL;
+            }
+            return;
+        }
+    }
+    while (ivl) {
+        uint16_t ivl_out = interval_piece(ivl);
+        uint32_t remaining = ivl - ivl_out;
+        if (remaining == 0)
+            enqueue_enable_x_motor_step();
+        else
+            enqueue_disable_x_motor_step();
+        enqueue_atom_X(ivl_out);
+        ivl -= ivl_out;
+    }
+}
+
 static inline void step_minor_Y(uint32_t                t,
                                 uint32_t                d,
                                 minor_axis_state       *minp,
@@ -665,6 +727,23 @@ static inline void step_minor_P(uint32_t                t,
 #endif
 }
 
+static inline void finish_minor_X(uint32_t                t,
+                                  uint32_t                d,
+                                  minor_axis_state       *minp,
+                                  const major_axis_state *majp)
+{
+    assert(t >= minp->mi_prev_t);
+    uint32_t ivl = t - minp->mi_prev_t;
+    if (ivl) {
+        enqueue_disable_x_motor_step();
+        while (ivl) {
+            uint16_t ivl_out = interval_piece(ivl);
+            enqueue_atom_X(ivl_out);
+            ivl -= ivl_out;
+        }
+    }
+}
+
 static inline void finish_minor_Y(uint32_t                t,
                                   uint32_t                d,
                                   minor_axis_state       *minp,
@@ -744,6 +823,27 @@ static inline void enqueue_move_x_major(uint32_t xd, uint32_t yd, uint32_t zd)
 
 static inline void enqueue_move_y_major(int32_t xd, int32_t yd, int32_t zd)
 {
+    major_axis_state y_state;
+    minor_axis_state x_state, z_state;
+    init_major_axis_state(&y_state, yd);
+    init_minor_axis_state(&x_state, xd, &y_state);
+    init_minor_axis_state(&z_state, zd, &y_state);
+    init_P_axis_state(0, &y_state);
+    uint32_t t, d;
+    for (t = d = 0; d < yd; ) {
+        t += step_major_Y(t, d, &y_state);
+        if (just_pulsed(&y_state)) {
+            d++;
+            step_minor_X(t, d, &x_state, &y_state);
+            step_minor_Z(t, d, &z_state, &y_state);
+            step_minor_P(t, d, &y_state);
+            maybe_start_engine();
+        }
+    }
+    finish_minor_X(t, d, &x_state, &y_state);
+    finish_minor_Z(t, d, &z_state, &y_state);
+    finish_minor_P(t, d, &y_state);
+    start_engine();
 }
 
 static inline void enqueue_move_z_major(int32_t xd, int32_t yd, int32_t zd)
