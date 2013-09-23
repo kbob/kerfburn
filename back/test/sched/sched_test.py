@@ -211,7 +211,8 @@ def show_actual(input):
 def show_expected(expected):
     print expected,
 
-def run_test(input, expected, diff):
+
+def run_test(input, expected, diff, extra_axes):
     if diff is None:
         diff = 'diff'
     global phase
@@ -224,6 +225,13 @@ def run_test(input, expected, diff):
         show_diff(expected, actual, diff)
         exit(1)
     show_exit(returncode, actual, err)
+
+
+# def run_test_extra(input, expected, diff, extra):
+#     if extra:
+#         axes = count_active_axes(input)
+#         if axe
+        
 
 def test(input, expected):
 
@@ -238,8 +246,11 @@ def test(input, expected):
     group.add_argument('-e', '--expected',
                        action='store_true',
                        help='show expected result')
-    group.add_argument('-d', '--diff',
-                       help='use diff program')
+    parser.add_argument('-d', '--diff',
+                        help='use diff program')
+    parser.add_argument('-x', '--extra-axes',
+                        action='store_true',
+                        help='use all axes/pairs')
     args = parser.parse_args()
     
     if args.input:
@@ -249,5 +260,5 @@ def test(input, expected):
     elif args.expected:
         show_expected(expected)
     else:
-        run_test(input, expected, args.diff)
+        run_test(input, expected, args.diff, args.extra_axes)
 
