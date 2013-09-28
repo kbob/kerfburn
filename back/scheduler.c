@@ -593,6 +593,33 @@ static inline uint16_t step_major_Y(uint32_t          t,
     return ivl_out;
 }
 
+static inline uint16_t step_major_Z(uint32_t          t,
+                                    uint32_t          d,
+                                    major_axis_state *majp)
+{
+    // printf("step_major_Z(t=%d, d=%d, major={})\n", t, d);
+
+    uint32_t ivl = majp->maj_ivl_remaining;
+    if (!ivl) {
+        ivl = F_CPU / majp->maj_velocity; // XXX use fast divide.
+        // XXX update velocity
+        majp->maj_ivl = ivl;
+        majp->maj_dist_remaining--;
+    }
+
+    uint16_t ivl_out        = interval_piece(ivl);
+    uint32_t remaining      = ivl - ivl_out;
+    majp->maj_ivl_remaining = remaining;
+    if (remaining == 0) {
+        enqueue_enable_z_motor_step();
+        enqueue_atom_Z((uint16_t)ivl);
+    } else {
+        enqueue_disable_z_motor_step();
+        enqueue_atom_Z(ivl_out);
+    }    
+    return ivl_out;
+}
+
 static inline void step_minor_X(uint32_t                t,
                                 uint32_t                d,
                                 minor_axis_state       *minp,
@@ -848,6 +875,27 @@ static inline void enqueue_move_y_major(int32_t xd, int32_t yd, int32_t zd)
 
 static inline void enqueue_move_z_major(int32_t xd, int32_t yd, int32_t zd)
 {
+    major_axis_state z_state;
+    minor_axis_state x_state, y_state;
+    init_major_axis_state(&z_state, zd);
+    init_minor_axis_state(&x_state, xd, &z_state);
+    init_minor_axis_state(&y_state, yd, &z_state);
+    init_P_axis_state(0, &z_state);
+    uint32_t t, d;
+    for (t = d = 0; d < zd; ) {
+        t += step_major_Z(t, d, &z_state);
+        if (just_pulsed(&z_state)) {
+            d++;
+            step_minor_X(t, d, &x_state, &z_state);
+            step_minor_Y(t, d, &y_state, &z_state);
+            step_minor_P(t, d, &z_state);
+            maybe_start_engine();
+        }
+    }
+    finish_minor_X(t, d, &x_state, &z_state);
+    finish_minor_Y(t, d, &y_state, &z_state);
+    finish_minor_P(t, d, &z_state);
+    start_engine();
 }
 
 void enqueue_move(void)
