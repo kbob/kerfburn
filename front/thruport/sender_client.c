@@ -29,8 +29,10 @@ static int send_file(const char *file)
     if (strcmp(file, "-") == 0)
         return send_stdin();
     FILE *f = fopen(file, "r");
-    if (!f)
+    if (!f) {
+        perror(file);
         return false;
+    }
     return send_stream(f, file);
 }
 
