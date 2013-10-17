@@ -113,10 +113,15 @@ extern void fw_assertion_failed(unsigned int line_no)
     cli();
     init_serial();
     init_LED();
-    while (true) {
-        put_str("Assertion failed on line ");
-        put_dec(line_no);
-        put_str(".\r\n");
+    bool do_print = true;
+    for (uint8_t i = 0;; i++) {
+        if (do_print) {
+            put_str("Assertion failed on line ");
+            put_dec(line_no);
+            put_str(".\r\n");
+            if (i == 3)
+                do_print = false;
+        }
         throb_once();
     }
 }
