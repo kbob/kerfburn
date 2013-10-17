@@ -236,14 +236,14 @@ void enqueue_dwell(void)
         if (mode != PM_OFF) {
             set_main_power_level(get_unsigned_variable(V_LP));
             if (mode == PM_PULSED)
-                set_visible_pulse_duration(get_unsigned_variable(V_PD));
+                set_visible_pulse_duration(get_unsigned_variable(V_PL));
         }
     } else
         set_main_pulse_mode(PM_OFF);
     if (ls == 'v') {
         set_visible_pulse_mode(mode);
         if (mode == PM_PULSED)
-            set_visible_pulse_duration(get_unsigned_variable(V_PD));
+            set_visible_pulse_duration(get_unsigned_variable(V_PL));
     } else
         set_visible_pulse_mode(PM_OFF);
 
