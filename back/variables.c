@@ -17,12 +17,12 @@
 #define DEFINE_DESC(name, type, ...) \
     static const char name##_desc[] PROGMEM = #name "=" type __VA_ARGS__
 
-DEFINE_DESC(dt, UNSIGNED);      // dwell time
 DEFINE_DESC(ia, ENUM, "ncswa"); // illumination animation
 DEFINE_DESC(il, UNSIGNED);      // illumination level
 DEFINE_DESC(lm, ENUM, "octd");  // laser mode
 DEFINE_DESC(lp, UNSIGNED);      // laser power
 DEFINE_DESC(ls, ENUM, "mnv");   // laser select
+DEFINE_DESC(mt, UNSIGNED);      // move time
 DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
 DEFINE_DESC(oo, ENUM, "ny");    // override lid open
 DEFINE_DESC(pd, UNSIGNED);      // pulse distance
@@ -39,23 +39,17 @@ DEFINE_DESC(rr, ENUM, "ny");    // report RAM status
 DEFINE_DESC(rs, ENUM, "ny");    // report serial status
 DEFINE_DESC(rv, ENUM, "ny");    // report variables
 DEFINE_DESC(rw, ENUM, "ny");    // report water status
-DEFINE_DESC(x0, UNSIGNED);      // X initial
-DEFINE_DESC(xa, SIGNED);        // X acceleration
 DEFINE_DESC(xd, SIGNED);        // X distance
-DEFINE_DESC(y0, UNSIGNED);      // Y initial
-DEFINE_DESC(ya, SIGNED);        // Y acceleration
 DEFINE_DESC(yd, SIGNED);        // Y distance
-DEFINE_DESC(z0, UNSIGNED);      // Z initial
-DEFINE_DESC(za, SIGNED);        // Z acceleration
 DEFINE_DESC(zd, SIGNED);        // Z distance
 
 static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
-    dt_desc,
     ia_desc,
     il_desc,
     lm_desc,
     lp_desc,
     ls_desc,
+    mt_desc,
     oc_desc,
     oo_desc,
     pd_desc,
@@ -72,14 +66,8 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     rs_desc,
     rv_desc,
     rw_desc,
-    x0_desc,
-    xa_desc,
     xd_desc,
-    y0_desc,
-    ya_desc,
     yd_desc,
-    z0_desc,
-    za_desc,
     zd_desc,
 };
 

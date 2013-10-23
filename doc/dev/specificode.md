@@ -53,12 +53,6 @@ characters.
 
 ### Variables
 
-#### dt &mdash; Dwell Time
-*unsigned integer*  
-Duration of next-enqueued dwell in CPU clock ticks.
-The CPU clock ticks at 16 MHz.
-
-
 #### xd, yd, zd &mdash; X, Y, Z Distance
 *signed integer*  
 Change of x, y, or z motor position in microsteps.
@@ -66,16 +60,10 @@ An X or Y microstep is 0.0127 millimeters (0.0005 inch).
 A Z microstep is ~0.000165 millimeters (0.0000065 inch).
 
 
-#### x0, y0, z0 &mdash;  Initial X, Y, Z Param
+#### mt &mdash; Move time
 *unsigned integer*  
-Reciprocal of initial x, y, or z motor velocity.
-Expressed in ticks per microstep
-
-
-#### xa, ya, za &mdash; X, Y, Z Acceleration
-*signed integer*  
-X, Y, or Z Acceleration.
-Acceleration in microsteps per 16777216 clock ticks (roughly 1.05 seconds).
+Duration of next move in CPU clock ticks.
+The CPU clock ticks at 16 MHz.
 
 
 #### ls &mdash; Laser Select
