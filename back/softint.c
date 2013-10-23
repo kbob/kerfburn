@@ -15,7 +15,7 @@ void softint_dispatch(void)
                 softint_private.is_active = false;
         }
         if (tasks == 0)
-            return;
+            break;
 #if 0 // not defined yet.
         if (tasks & ST_STEPGEN)
             stepgen_softint();
