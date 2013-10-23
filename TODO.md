@@ -5,6 +5,14 @@ Is this a bug database?
 
 ## Next!
 
+* Change the variables in doc/dev/specificode.md to support constant velocity only.  I think that means we need xd, yd, zd, and time (whatever it's called, mt?) only.
+
+* Get rid of {x,y,z}{a,0}.  Get rid of dt.
+
+* Recode scheduler to do constant velocity w/ Bresenham.
+
+* I need to move the engine to the soft interrupt.  That is probably not next.
+
 ## Design
 
 
