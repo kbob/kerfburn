@@ -25,7 +25,7 @@ void init_timer(void)
     TCCR0B = _BV(WGM02) | _BV(CS00) | _BV(CS01);
 
     // Output Compare Register 0A = 250 (1 millisecond);
-    #if F_CPU % (64 * 1000) || F_CPU / 64 / 5000 >= 256
+    #if F_CPU % (64L * 1000L) || F_CPU / 64 / 5000 >= 256
         #error F_CPU does not work with prescale 64
     #endif
     OCR0A = F_CPU / 64 / 1000;
@@ -58,9 +58,11 @@ void enqueue_timeout(timeout *newt, uint32_t expiration)
         dequeue_timeout_NONATOMIC(newt);
 
         // Find spot and insert.
-        for (pp = &timeout_queue; (p = *pp); pp = &p->to_next)
+        for (pp = &timeout_queue; (p = *pp); pp = &p->to_next) {
+            fw_assert(p != newt);
             if (compare_times(p->to_expiration, expiration) > 0)
                 break;
+        }
         newt->to_expiration = expiration;
         newt->to_next = p;
         *pp = newt;
