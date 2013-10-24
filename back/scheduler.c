@@ -432,7 +432,7 @@ static inline uint16_t interval_piece(uint32_t ivl)
 {
     if (ivl < MAX_IVL)
         return (uint16_t)ivl;
-    if (ivl < MAX_IVL + MIN_IVL)
+    if (ivl - MAX_IVL < MIN_IVL)
         return MAX_IVL / 2;
     return MAX_IVL;
 }
@@ -473,6 +473,15 @@ static inline uint32_t subdivide_interval(timer_state *tp,
     tp->ts_remaining = ivl;
     return resume_interval(tp, availp, qp);
 }
+
+static inline bool all_timers_loaded(uint32_t mt)
+{
+    return (x_state.ms_t == mt &&
+            y_state.ms_t == mt &&
+            z_state.ms_t == mt &&
+            p_state.ls_t == mt);
+}
+
 
 // motor_timer_state methods
 
@@ -535,7 +544,7 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
             enqueue_atom(dir_atom, qp);
             --avail;
         }
-        while (avail) {
+        while (avail && mp->ms_t < mp->ms_mt) {
             uint_fast24 ivl = mp->ms_q;
             int_fast24 delta_err;
             if (mp->ms_err <= 0)
@@ -552,41 +561,6 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
     }
 }
 
-// static inline void gen_x_atoms()
-// {
-//     uint8_t avail = queue_available(&Xq);
-//    
-//     x_state.ms_t += resume_interval(&x_state.ms_ts, &avail, &Xq);
-//     if (!avail || x_state.ms_t == x_state.ms_mt)
-//         return;
-//
-//     if (!x_state.ms_ts.ts_is_active) {
-//         uint32_t dt = x_state.ms_mt - x_state.ms_t;
-//         uint32_t t = subdivide_interval(&x_state.ms_ts, dt, &avail, &Xq);
-//         x_state.ms_t += t;
-//     } else {
-//         if (x_state.ms_dir != x_state.ms_dir_pending) {
-//             uint8_t dir_atom = x_state.ms_dir_pending;
-//             x_state.ms_dir = dir_atom;
-//             enqueue_atom(dir_atom, &Xq);
-//             --avail;
-//         }
-//         while (avail) {
-//             uint_fast24 ivl = x_state.ms_q;
-//             int_fast24 delta_err;
-//             if (x_state.ms_err <= 0)
-//                 delta_err = x_state.ms_err_inc;
-//             else {
-//                 ivl++;
-//                 delta_err = x_state.ms_err_dec;
-//             }
-//             uint32_t t = subdivide_interval(&x_state.ms_ts, ivl, &avail, &Xq);
-//             x_state.ms_err += delta_err;
-//             x_state.ms_t += t;
-//             x_state.ms_d++;
-//         }
-//     }
-// }
 
 // laser_timer_state methods
 
@@ -598,6 +572,8 @@ static inline void init_laser_timer_state(laser_timer_state *lp)
 static inline void prep_laser_inactive(laser_timer_state *lp, uint32_t mt)
 {
     lp->ls_ts.ts_is_active = false;
+    lp->ls_ts.ts_enable_atom = A_SET_MAIN_LASER_OFF;
+    lp->ls_ts.ts_disable_atom = A_SET_MAIN_LASER_OFF;
     lp->ls_t = 0;
     lp->ls_mt = mt;
 }
@@ -620,6 +596,7 @@ static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
     }
 }
 
+
 // public interface
 
 void init_scheduler(void)
@@ -636,6 +613,8 @@ void init_scheduler(void)
 void enqueue_dwell(void)
 {
 #if 0
+    // Dead code not yet removed -- laser state code needs to be moved
+    // to a better place.
     set_x_motor_step(false);
     set_y_motor_step(false);
     set_z_motor_step(false);
@@ -733,20 +712,15 @@ void enqueue_dwell(void)
     prep_motor_state(&x_state, mt, 0);
     prep_motor_state(&y_state, mt, 0);
     prep_motor_state(&z_state, mt, 0);
-    // prep_laser_state(&p_state, mt, laser variables);
-    while (true) {
+    //XXX prep_laser_state(&p_state, mt, laser variables);
+    prep_laser_inactive(&p_state, mt);
+    do {
         gen_motor_atoms(&x_state, &Xq);
         gen_motor_atoms(&y_state, &Yq);
         gen_motor_atoms(&z_state, &Zq);
         gen_laser_atoms(&p_state, &Pq);
         start_engine();
-        if (x_state.ms_t == mt &&
-            x_state.ms_t == mt &&
-            x_state.ms_t == mt &&
-            p_state.ls_t == mt)
-            break;
-    }
-    fw_assert(false && "XXX Write me!");
+    } while (!all_timers_loaded(mt));
 #endif
 }
 
@@ -764,8 +738,8 @@ void enqueue_move(void)
         gen_laser_atoms(&p_state, &Pq);
         start_engine();
         if (x_state.ms_t == mt &&
-            x_state.ms_t == mt &&
-            x_state.ms_t == mt &&
+            y_state.ms_t == mt &&
+            z_state.ms_t == mt &&
             p_state.ls_t == mt)
             break;
     }
