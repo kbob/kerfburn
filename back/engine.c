@@ -86,12 +86,6 @@ void start_engine(void)
         trigger_fault(F_SU);
 }
 
-void maybe_start_engine(void)
-{
-    if (get_engine_state() != ES_RUNNING && any_queue_is_full())
-        start_engine();
-}
-
 void stop_engine_immediately(void)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -176,7 +170,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf(stderr, "a = %u\n", a);
+                fprintf(stderr, "a = %u\n\n", a);
                 fw_assert(false);
             }
         } else {
