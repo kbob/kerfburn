@@ -17,9 +17,6 @@ static int putc_stout(char c, FILE *stream)
     bool ok = serial_tx_put_char(c);
     ok = ok;
     fw_assert(ok);
-    if (c == '\n')
-        while (!serial_tx_is_idle())
-            continue;
     return 0;
 }
 
