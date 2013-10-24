@@ -33,7 +33,7 @@ def_timer_pin  (OC3A,    'X Watchdog')
 # Y Axis Motor
 
 def_output_pin (PF2,     'Y Motor Enable',      enabled=low)
-def_output_pin (PF7,     'Y Motor Direction',   positive=low)
+def_output_pin (PF7,     'Y Motor Direction',   positive=high)
 def_timer_pin  (OC1A,    'Y Motor Step',        on=high)
 def_timer_pin  (OC1B,    'Y Watchdog')
 # step_size  =   0.08 * 20 / 200 * 25.4, # mm
