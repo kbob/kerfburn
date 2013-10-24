@@ -113,7 +113,7 @@ static inline uint8_t queue_length(const queue *q)
         h = q->q_head;
         t = q->q_tail;
     }
-    return t - h;
+    return (t - h) / sizeof (uint16_t);
 }
 
 static inline uint8_t queue_available(const queue *q)
