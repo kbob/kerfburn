@@ -3,7 +3,6 @@
 #include <avr/interrupt.h>
 
 #include "fault.h"
-#include "fw_assert.h"
 
 void init_lasers(void)
 {
