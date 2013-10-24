@@ -69,13 +69,13 @@ void enqueue_timeout(timeout *newt, uint32_t expiration)
     }
 }
 
-void dequeue_timeout(timeout *newt)
+bool dequeue_timeout(timeout *newt)
 {
+    bool dequeued;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        bool ok = dequeue_timeout_NONATOMIC(newt);
-        ok = ok;
-        fw_assert(ok);
+        dequeued = dequeue_timeout_NONATOMIC(newt);
     }
+    return dequeued;
 }
 
 void timer_softint(void)

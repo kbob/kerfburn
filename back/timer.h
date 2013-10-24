@@ -1,6 +1,7 @@
 #ifndef TIMER_included
 #define TIMER_included
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <avr/interrupt.h>
@@ -27,7 +28,7 @@ static inline uint32_t millisecond_time           (void);
 
 extern        void     enqueue_timeout            (timeout *,
                                                    uint32_t expiration);
-extern        void     dequeue_timeout            (timeout *);
+extern        bool     dequeue_timeout            (timeout *);
 extern        void     timer_softint              (void);
 
 // Implementation
