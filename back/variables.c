@@ -19,15 +19,15 @@
 
 DEFINE_DESC(ia, ENUM, "ncswa"); // illumination animation
 DEFINE_DESC(il, UNSIGNED);      // illumination level
-DEFINE_DESC(lm, ENUM, "octd");  // laser mode
 DEFINE_DESC(lp, UNSIGNED);      // laser power
 DEFINE_DESC(ls, ENUM, "mnv");   // laser select
 DEFINE_DESC(mt, UNSIGNED);      // move time
 DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
 DEFINE_DESC(oo, ENUM, "ny");    // override lid open
-DEFINE_DESC(pd, UNSIGNED);      // pulse distance
+DEFINE_DESC(pd, UNSIGNED);      // pulse duration
 DEFINE_DESC(pi, UNSIGNED);      // pulse interval
-DEFINE_DESC(pl, UNSIGNED);      // pulse length
+DEFINE_DESC(pm, ENUM, "octd");  // pulse mode
+DEFINE_DESC(ps, UNSIGNED);      // pulse spacing
 DEFINE_DESC(re, ENUM, "yn");    // report E-Stop status
 DEFINE_DESC(rf, ENUM, "yn");    // report fault status
 DEFINE_DESC(ri, UNSIGNED);      // reporting interval
@@ -46,7 +46,6 @@ DEFINE_DESC(zd, SIGNED);        // Z distance
 static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     ia_desc,
     il_desc,
-    lm_desc,
     lp_desc,
     ls_desc,
     mt_desc,
@@ -54,7 +53,8 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     oo_desc,
     pd_desc,
     pi_desc,
-    pl_desc,
+    pm_desc,
+    ps_desc,
     re_desc,
     rf_desc,
     ri_desc,

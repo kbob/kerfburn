@@ -76,9 +76,9 @@ These values are legal.
 + **n** - none
 
 
-#### lm &mdash; Laser Mode
+#### pm &mdash; Pulse Mode
 *enumeration*  
-Set the current laser's firing mode.  These values are legal.
+Set the current laser's pulse mode.  These values are legal.
 
 + **c** - continuous
 + **t** - timed pulse
@@ -101,7 +101,7 @@ The visible laser's power level can not be changed.
 It always fires at full power.
 
 
-#### pd &mdash; Pulse Distance
+#### ps &mdash; Pulse Spacing
 *unsigned integer*  
 Distance between laser pulses.
 Only used when laser is in distance pulse mode.
@@ -113,7 +113,7 @@ Laser pulse repetition interval in CPU clock ticks.
 Only used when laser is in timed pulsed mode.
 
 
-#### pl &mdash; Pulse Length
+#### pd &mdash; Pulse Duration
 *unsigned integer*  
 Laser pulse duration in CPU clock ticks.
 
@@ -175,7 +175,7 @@ letter.
 #### Qd &mdash; Dwell
 
 Stop movement for a specified time.  If a laser is selected and the
-laser mode is continuous, continue to fire at the current power level.
+pulse mode is continuous, continue to fire at the current power level.
 If the mode is timed pulse, pulse at the current rate.  If the mode is
 distance pulse, the laser will not fire more than once at the dwell
 location.
@@ -184,10 +184,10 @@ Implicit Parameters
 
  * **dt** - Dwell Time
  * **ls** - Laser Select
- * **lm** - Laser Mode
+ * **pm** - Pulse Mode
  * **lp** - Laser Power
  * **pi** - Pulse Interval
- * **pl** - Pulse Length
+ * **pd** - Pulse Duration
 
 
 #### Qm &mdash; Move
@@ -230,7 +230,7 @@ along which the cutting point will travel furthest during the cut.
 The laser's pulse duration and power level will be as specified by
 **pl** and **lp**.
 
-If the laser mode is off, the laser will not fire.
+If the pulse mode is off, the laser will not fire.
 
 The Z motor can not move during a cut.
 
@@ -243,11 +243,11 @@ Implicit Parameters
  * **xa** - X acceleration
  * **ya** - Y acceleration
  * **ls** - Laser Select
- * **lm** - Laser Mode
+ * **pm** - Pulse Mode
  * **lp** - Laser Power
- * **pd** - Pulse Distance
+ * **ps** - Pulse Spacing
  * **pi** - Pulse Interval
- * **pl** - Pulse Length
+ * **pd** - Pulse Duration
 
 
 #### Qe &mdash; Engrave

@@ -5,12 +5,30 @@ Is this a bug database?
 
 ## Next!
 
-* Change the variables in doc/dev/specificode.md to support constant velocity only.  I think that means we need xd, yd, zd, and time (whatever it's called, mt?) only.
+* Laser variable renaming:
+   pd (pulse distance) -> ps (pulse spacing)
+   pl (pulse length) -> pd (pulse duration)
+   lm (laser mode) -> pm (pulse mode)
 
-* Get rid of {x,y,z}{a,0}.  Get rid of dt.
+* Implement all the laser modes.
+  - Laser Select: main, visible, none.
+  - Laser Mode: continuous, timed pulse, distance pulse, off.
+  - for main laser: Laser Power.
+  - for timed pulse mode: Pulse Length (duration), Pulse Interval
+  - for distance pulse mode: Pulse Duration, Pulse Distance
 
-* Recode scheduler to do constant velocity w/ Bresenham.
-
+  Laser pulse trains do not align with movement boundaries.  That
+  means the laser will sometimes finish early.
+  
+  For engine start/stop, I think that means that any time start_engine
+  finds the engine in partially running state, it has to quiesce the
+  running queues, then start them all up.  That means the whole engine
+  has an unexpected pause, but it's really no different than any other
+  queue underflow.
+  
+  We should store the current laser mode in the `laser_timer_state`.
+  Not just "laser mode" but all the laser mode info.
+  
 * I need to move the engine to the soft interrupt.  That is probably not next.
 
 ## Design
