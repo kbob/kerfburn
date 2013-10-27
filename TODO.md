@@ -6,9 +6,9 @@ Is this a bug database?
 ## Next!
 
 * Laser variable renaming:
-   pd (pulse distance) -> ps (pulse spacing)
-   pl (pulse length) -> pd (pulse duration)
-   lm (laser mode) -> pm (pulse mode)
+   - pd (pulse distance) -> ps (pulse spacing)
+   - pl (pulse length) -> pd (pulse duration)
+   - lm (laser mode) -> pm (pulse mode)
 
 * Implement all the laser modes.
   - Laser Select: main, visible, none.
