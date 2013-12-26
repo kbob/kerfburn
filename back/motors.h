@@ -153,4 +153,5 @@ static inline void set_z_step_interval(uint16_t ticks)
 {
     Z_MOTOR_STEP_ICR = ticks;
 }
+
 #endif /* !MOTORS_included */

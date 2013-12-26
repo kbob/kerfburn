@@ -29,6 +29,7 @@ void init_motors(void)
     X_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     X_MOTOR_STEP_TIFR |= _BV(X_MOTOR_STEP_TOV);
     X_MOTOR_STEP_TIMSK = _BV(X_MOTOR_STEP_TOIE);
+
     // Set the X watchdog
     X_WATCHDOG_OCR     = 0xFFFF;
     X_WATCHDOG_TIFR   |= _BV(X_WATCHDOG_OCF);
@@ -41,6 +42,7 @@ void init_motors(void)
     Y_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     Y_MOTOR_STEP_TIFR |= _BV(Y_MOTOR_STEP_TOV);
     Y_MOTOR_STEP_TIMSK = _BV(Y_MOTOR_STEP_TOIE);
+
     // Set the Y watchdog
     Y_WATCHDOG_OCR     = 0xFFFF;
     Y_WATCHDOG_TIFR   |= _BV(Y_WATCHDOG_OCF);
@@ -53,6 +55,7 @@ void init_motors(void)
     Z_MOTOR_STEP_OCR   = F_CPU / 1000000L;
     Z_MOTOR_STEP_TIFR |= _BV(Z_MOTOR_STEP_TOV);
     Z_MOTOR_STEP_TIMSK = _BV(Z_MOTOR_STEP_TOIE);
+
     // Set the Z watchdog
     Z_WATCHDOG_OCR     = 0xFFFF;
     Z_WATCHDOG_TIFR   |= _BV(Z_WATCHDOG_OCF);
