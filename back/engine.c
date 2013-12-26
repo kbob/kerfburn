@@ -174,7 +174,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
                 fw_assert(false);
             }
         } else {
-            X_MOTOR_STEP_ICR = a;
+            set_x_step_interval(a);
             return;
         }
     }
@@ -245,7 +245,7 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
                 fw_assert(false);
             }
         } else {
-            Y_MOTOR_STEP_ICR = a;
+            set_y_step_interval(a);
             return;
         }
     }
@@ -316,7 +316,7 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
                 fw_assert(false);
             }
         } else {
-            Z_MOTOR_STEP_ICR = a;
+            set_z_step_interval(a);
             return;
         }
     }
@@ -331,9 +331,12 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
 
             case A_STOP:
                 stop_pulse_timer();
+                set_main_laser_off();
+                set_visible_laser_off();
                 running_queues &= ~qm_p;
                 return;
 
+#if 0
             case A_SET_MAIN_LASER_OFF:
                 set_main_laser_off();
                 break;
@@ -358,6 +361,20 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 set_visible_laser_continuous();
                 break;
 
+#else
+            case A_MAIN_LASER_OFF:
+                break;
+
+            case A_MAIN_LASER_ON:
+                break;
+
+            case A_MAIN_LASER_START_ON_MATCH:
+                break;
+
+            case A_MAIN_LASER_STOP_ON_MATCH:
+                break;
+
+#endif
             case A_SET_MAIN_PULSE_DURATION:
                 set_main_laser_pulse_duration(dequeue_atom_P_NONATOMIC());
                 break;
@@ -379,7 +396,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 fw_assert(false);
             }
         } else {
-            LASER_PULSE_ICR = a;
+            set_laser_pulse_interval(a);
             return;
         }
     }
