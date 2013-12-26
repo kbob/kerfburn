@@ -383,6 +383,9 @@ typedef uint32_t uint_fast24;
 // timer_state is the abstract base class.  motor_timer_state and
 // laser_timer_state are concrete derived classes.
 
+
+// timer_state definitions
+
 typedef struct timer_state {
     bool        ts_is_active;
     uint32_t    ts_remaining;
@@ -390,33 +393,6 @@ typedef struct timer_state {
     uint8_t     ts_enable_atom;
     uint8_t     ts_disable_atom;
 } timer_state;
-
-typedef struct motor_timer_state {
-    timer_state ms_ts;
-    uint8_t     ms_dir;         // direction currently set
-    uint8_t     ms_dir_pending; // direction to be set
-    uint32_t    ms_mt;          // duration of move
-    uint_fast24 ms_md;          // move distance (absolute value)
-    uint32_t    ms_t;           // time emitted
-    uint_fast24 ms_d;           // distance emitted
-    uint_fast24 ms_q;           // quotient: t / d
-    int_fast24  ms_err;         // error: d * (ideal time - t)
-    int_fast24  ms_err_inc;     // add to error on small steps
-    int_fast24  ms_err_dec;     // add to error on large steps (negative)
-} motor_timer_state;
-
-typedef struct laser_timer_state {
-    timer_state ls_ts;
-    uint32_t    ls_mt;
-    uint32_t    ls_t;
-    // XXX more fields TBD.
-} laser_timer_state;
-
-static motor_timer_state x_state, y_state, z_state;
-static laser_timer_state p_state;
-
-
-// timer_state methods
 
 static inline void init_timer_state(timer_state *tp,
                                     uint8_t      enable_atom,
@@ -474,16 +450,24 @@ static inline uint32_t subdivide_interval(timer_state *tp,
     return resume_interval(tp, availp, qp);
 }
 
-static inline bool all_timers_loaded(uint32_t mt)
-{
-    return (x_state.ms_t == mt &&
-            y_state.ms_t == mt &&
-            z_state.ms_t == mt &&
-            p_state.ls_t == mt);
-}
 
+// motor_timer_state definitions
 
-// motor_timer_state methods
+typedef struct motor_timer_state {
+    timer_state ms_ts;
+    uint8_t     ms_dir;         // direction currently set
+    uint8_t     ms_dir_pending; // direction to be set
+    uint32_t    ms_mt;          // duration of move
+    uint_fast24 ms_md;          // move distance (absolute value)
+    uint32_t    ms_t;           // time emitted
+    uint_fast24 ms_d;           // distance emitted
+    uint_fast24 ms_q;           // quotient: t / d
+    int_fast24  ms_err;         // error: d * (ideal time - t)
+    int_fast24  ms_err_inc;     // add to error on small steps
+    int_fast24  ms_err_dec;     // add to error on large steps (negative)
+} motor_timer_state;
+
+static motor_timer_state x_state, y_state, z_state;
 
 static inline void init_motor_timer_state(motor_timer_state *mp)
 {
@@ -562,38 +546,177 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
 }
 
 
-// laser_timer_state methods
+// laser_timer_state definitions
+
+typedef struct laser_timer_state {
+    timer_state ls_ts;
+    // XXX other fields TBD
+} laser_timer_state;
+
+static laser_timer_state p_state;
+
+// just_a_bunch_of_code() illustrates the laser timer state transitions
+// desired.  Instead of being spread across the prep and gen methods,
+// the logic is in this function.  Also, it is organized for readability,
+// not for efficiency.
+
+// void just_a_bunch_of_code()
+// {
+//     // laser_timer_state *lp = &p_state;
+//     queue   *qp           = &Pq;
+//     uint8_t  ls           = get_enum_variable(V_LS);
+//     uint8_t  pm           = get_enum_variable(V_PM);
+//     // uint32_t mt           = get_unsigned_variable(V_MT);
+//     // uint32_t pw           = get_unsigned_variable(V_PW);
+//     // uint32_t pi           = get_unsigned_variable(V_PI);
+//     // uint32_t pd           = get_unsigned_variable(V_PD);
+
+//     if (ls == 'n') {
+
+//         // laser select: none
+
+//         enqueue_atom(A_MAIN_LASER_OFF, qp);
+//         enqueue_atom(A_VISIBLE_LASER_OFF, qp);
+
+//     } else if (ls == 'm' && pm == 'o') {
+
+//         // laser select: main; pulse mode: off
+
+//         enqueue_atom(A_MAIN_LASER_OFF, qp);
+//         enqueue_atom(A_VISIBLE_LASER_OFF, qp);
+
+//     } else if (ls == 'm' && pm == 'c') {
+
+//         // laser select: main; pulse mode: continupus
+
+//         enqueue_atom(A_MAIN_LASER_ON, qp);
+//         enqueue_atom(A_VISIBLE_LASER_OFF, qp);
+
+//     } else if (ls == 'm' && pm == 't') {
+
+//         // laser select: main; pulse mode: timed pulse
+
+//         enqueue_atom(A_VISIBLE_LASER_OFF, qp);
+//         // lp->ls_ts.ts_enable_atom = A_MAIN_LASER_PULSED;
+//         // lp->ls_ts.ts_disable_atom = A_MAIN_LASER_OFF;
+//         // lp->ls_pulse_width = pw;
+//         // for (int32_t t = lp->ls_pulse_start, t1; t < mt; t = t1) {
+//         //     subdivide
+            
+//         // }
+
+//         // gen_laser_atoms(lp, &qp);
+
+//     } else if (ls == 'm' && pm == 'd') {
+
+//         // laser select: main; pulse mode: timed pulse
+
+//         enqueue_atom(A_VISIBLE_LASER_OFF, qp);
+
+//     } else if (ls == 'v' && pm == 'o') {
+
+//         // laser select: visible; pulse mode: off
+
+//         // XXX ... 
+
+//     } else if (ls == 'v' && pm == 'c') {
+
+//         // laser select: visible; pulse mode: continupus
+
+//         // XXX ... 
+
+//     } else if (ls == 'v' && pm == 't') {
+
+//         // laser select: visible; pulse mode: timed pulse
+
+//         // XXX ... 
+
+//     } else if (ls == 'v' && pm == 'd') {
+
+//         // laser select: visible; pulse mode: distance pulse
+
+//         // XXX ... 
+
+//     }
+// }
 
 static inline void init_laser_timer_state(laser_timer_state *lp)
 {
-    init_timer_state(&lp->ls_ts, 0, 0);
+    init_timer_state(&lp->ls_ts, INVALID_ATOM, INVALID_ATOM);
+    // XXX init laser state.
+}
+
+static inline void prep_laser_state(laser_timer_state *lp,
+                                    uint32_t           mt,
+                                    uint8_t            ls,
+                                    uint_fast24        md)
+{
+    switch (get_enum_variable(V_PM)) {
+    case 'c':
+    case 't':
+    case 'd':
+    case 'o':
+        // XXX do something
+        break;
+    }
+
+    switch (ls) {
+
+    case 'm':                   // main laser
+        // XXX do something
+        break;
+
+    case 'v':                   // visible laser
+        // XXX do something
+        break;
+
+    case 'n':                   // none
+        // XXX do something
+        return;
+    }
 }
 
 static inline void prep_laser_inactive(laser_timer_state *lp, uint32_t mt)
 {
-    lp->ls_ts.ts_is_active = false;
-    lp->ls_ts.ts_enable_atom = A_SET_MAIN_LASER_OFF;
-    lp->ls_ts.ts_disable_atom = A_SET_MAIN_LASER_OFF;
-    lp->ls_t = 0;
-    lp->ls_mt = mt;
+    // XXX is this function useful?
 }
 
 static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
 {
-    uint8_t avail = queue_available(qp);
-    
-    lp->ls_t += resume_interval(&lp->ls_ts, &avail, qp);
-    if (!avail || lp->ls_t == lp->ls_mt)
-        return;
+    // XXX write me!
+}
 
-    if (!lp->ls_ts.ts_is_active) {
-        // XXX turn off both lasers.
-        uint32_t dt = lp->ls_mt - lp->ls_t;
-        uint32_t t = subdivide_interval(&lp->ls_ts, dt, &avail, qp);
-        lp->ls_t += t;
-    } else {
-        fw_assert(false && "XXX Write me!");
-    }
+
+// utility functions
+
+static inline uint_fast24 major_distance(int32_t xd, int32_t yd, int32_t zd)
+{
+    uint_fast24 md = 0;
+
+    if (xd < 0)
+        xd = -xd;
+    if (md < xd)
+        md = xd;
+
+    if (yd < 0)
+        yd = -yd;
+    if (md < yd)
+        md = yd;
+
+    if (zd < 0)
+        zd = -zd;
+    if (md < zd)
+        md = zd;
+
+    return md;
+}
+
+static inline bool all_timers_loaded(uint32_t mt)
+{
+    return (x_state.ms_t == mt &&
+            y_state.ms_t == mt &&
+            z_state.ms_t == mt);
+    // XXX check laser timer too.
 }
 
 
@@ -712,8 +835,8 @@ void enqueue_dwell(void)
     prep_motor_state(&x_state, mt, 0);
     prep_motor_state(&y_state, mt, 0);
     prep_motor_state(&z_state, mt, 0);
-    //XXX prep_laser_state(&p_state, mt, laser variables);
-    prep_laser_inactive(&p_state, mt);
+    // prep_laser_inactive(&p_state, mt);
+    prep_laser_state(&p_state, mt, get_enum_variable(V_LS), 0);
     do {
         gen_motor_atoms(&x_state, &Xq);
         gen_motor_atoms(&y_state, &Yq);
@@ -730,24 +853,38 @@ void enqueue_move(void)
     prep_motor_state(&x_state, mt, get_signed_variable(V_XD));
     prep_motor_state(&y_state, mt, get_signed_variable(V_YD));
     prep_motor_state(&z_state, mt, get_signed_variable(V_ZD));
-    prep_laser_inactive(&p_state, mt);
-    while (true) {
+    // XXX
+    // prep_laser_inactive(&p_state, mt);
+    prep_laser_state(&p_state, mt, 'n', 0);
+    do {
         gen_motor_atoms(&x_state, &Xq);
         gen_motor_atoms(&y_state, &Yq);
         gen_motor_atoms(&z_state, &Zq);
         gen_laser_atoms(&p_state, &Pq);
         start_engine();
-        if (x_state.ms_t == mt &&
-            y_state.ms_t == mt &&
-            z_state.ms_t == mt &&
-            p_state.ls_t == mt)
-            break;
-    }
+    } while (!all_timers_loaded(mt));
 }
 
 void enqueue_cut(void)
 {
-    fw_assert(false && "XXX Write me!");
+    uint32_t    mt = get_unsigned_variable(V_MT);
+    int32_t     xd = get_signed_variable(V_XD);
+    int32_t     yd = get_signed_variable(V_YD);
+    int32_t     zd = get_signed_variable(V_ZD);
+
+    prep_motor_state(&x_state, mt, xd);
+    prep_motor_state(&y_state, mt, yd);
+    prep_motor_state(&z_state, mt, zd);
+    prep_laser_state(&p_state, mt,
+                     get_enum_variable(V_LS),
+                     major_distance(xd, yd, zd));
+    do {
+        gen_motor_atoms(&x_state, &Xq);
+        gen_motor_atoms(&y_state, &Yq);
+        gen_motor_atoms(&z_state, &Zq);
+        gen_laser_atoms(&p_state, &Pq);
+        start_engine();
+    } while (!all_timers_loaded(mt));
 }
 
 void enqueue_engrave(void)

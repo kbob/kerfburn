@@ -24,10 +24,10 @@ DEFINE_DESC(ls, ENUM, "mnv");   // laser select
 DEFINE_DESC(mt, UNSIGNED);      // move time
 DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
 DEFINE_DESC(oo, ENUM, "ny");    // override lid open
-DEFINE_DESC(pd, UNSIGNED);      // pulse duration
+DEFINE_DESC(pd, UNSIGNED);      // pulse distance
 DEFINE_DESC(pi, UNSIGNED);      // pulse interval
 DEFINE_DESC(pm, ENUM, "octd");  // pulse mode
-DEFINE_DESC(ps, UNSIGNED);      // pulse spacing
+DEFINE_DESC(pw, UNSIGNED);      // pulse width
 DEFINE_DESC(re, ENUM, "yn");    // report E-Stop status
 DEFINE_DESC(rf, ENUM, "yn");    // report fault status
 DEFINE_DESC(ri, UNSIGNED);      // reporting interval
@@ -54,7 +54,7 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     pd_desc,
     pi_desc,
     pm_desc,
-    ps_desc,
+    pw_desc,
     re_desc,
     rf_desc,
     ri_desc,

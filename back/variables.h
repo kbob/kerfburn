@@ -20,10 +20,10 @@ typedef enum variable_index {
     V_MT,                       // move time
     V_OC,                       // override lid closed
     V_OO,                       // override lid open
-    V_PD,                       // pulse duration
     V_PI,                       // pulse interval
     V_PM,                       // pulse mode
-    V_PS,                       // pulse spacing
+    V_PD,                       // pulse distance
+    V_PW,                       // pulse width
     V_RE,                       // report E-Stop status
     V_RF,                       // report fault status
     V_RI,                       // reporting interval (milliseconds)

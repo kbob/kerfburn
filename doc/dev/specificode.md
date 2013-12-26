@@ -101,7 +101,7 @@ The visible laser's power level can not be changed.
 It always fires at full power.
 
 
-#### ps &mdash; Pulse Spacing
+#### pd &mdash; Pulse Distance
 *unsigned integer*  
 Distance between laser pulses.
 Only used when laser is in distance pulse mode.
@@ -113,7 +113,7 @@ Laser pulse repetition interval in CPU clock ticks.
 Only used when laser is in timed pulsed mode.
 
 
-#### pd &mdash; Pulse Duration
+#### pw &mdash; Pulse Width
 *unsigned integer*  
 Laser pulse duration in CPU clock ticks.
 
@@ -187,7 +187,7 @@ Implicit Parameters
  * **pm** - Pulse Mode
  * **lp** - Laser Power
  * **pi** - Pulse Interval
- * **pd** - Pulse Duration
+ * **pw** - Pulse Width
 
 
 #### Qm &mdash; Move
@@ -221,14 +221,14 @@ If the laser's mode is continuous, it will be fired for the duration
 of the cut at the power level specified by **lp**.
 
 If the mode is timed pulse,the laser will be pulsed at the interval
-specified by **pi** and duration specified by **pl**.  The power level
+specified by **pi** and width specified by **pw**.  The power level
 will be as specified by **lp**.
 
 If the mode is distance pulse,the laser will be pulsed every **pd**
 microsteps along the cut's major axis.  The major axis is the axis
 along which the cutting point will travel furthest during the cut.
-The laser's pulse duration and power level will be as specified by
-**pl** and **lp**.
+The laser's pulse width and power level will be as specified by
+**pw** and **lp**.
 
 If the pulse mode is off, the laser will not fire.
 
@@ -245,9 +245,9 @@ Implicit Parameters
  * **ls** - Laser Select
  * **pm** - Pulse Mode
  * **lp** - Laser Power
- * **ps** - Pulse Spacing
+ * **pd** - Pulse Distance
  * **pi** - Pulse Interval
- * **pd** - Pulse Duration
+ * **pw** - Pulse Width
 
 
 #### Qe &mdash; Engrave
