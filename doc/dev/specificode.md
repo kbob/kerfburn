@@ -85,11 +85,11 @@ Set the current laser's pulse mode.  These values are legal.
 * **d** - distance pulse
 + **o** - off
 
-In continuous mode, the laser fires continuously during a Cut
+In continuous mode, the laser fires continuously during a Cut or Dwell
 operation.  In timed pulse mode, the laser pulses every **pi** CPU
-ticks.  In distance pulse mode, the laser pulses each time the motors
-have moved the cutting point by **pd** microsteps along the major
-axis.
+ticks during a Cut or Dwell operation.  In distance pulse mode, the
+laser pulses each time the motors have moved the cutting point by
+**pd** microsteps along the major axis during a Cut operation only.
 
 
 #### lp &mdash; Laser Power
