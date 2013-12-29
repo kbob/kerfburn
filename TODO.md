@@ -47,6 +47,9 @@ Is this a bug database?
   
 * I need to move the engine to the soft interrupt.  That is probably not next.
 
+* Force 256 byte buffers to be allocated contiguously.
+
+
 ## Design
 
 
@@ -110,6 +113,8 @@ Is this a bug database?
   
   Use this terminology in the code.
 
+  "Verb" is a silly word.  How about directive?  Special?   
+
 
 ### Thruport
 
@@ -153,6 +158,25 @@ Is this a bug database?
 
 * Standardize filenames on "\_" or "-" separators.  I think I prefer
   "-" for C, but Python requires "\_".
+
+* GCC allows enums with attribute packed.  That shrinks the enum to
+  just the size it needs.
+  I should declare all my enumerated types with the packed attribute,
+  then use named types to store them instead of uint8_t.
+
+  There are currently 9 enumerated types:
+
+    * atom - convert.
+    * engine\_state - convert.
+    * fault\_index - convert.
+    * animation\_index - convert.
+    * serial\_error\_bit - no.
+    * softint\_task - convert.
+    * variable\_index - convert.
+    * varible\_type - convert.
+    * queue\_mask - convert.
+    
+* Globally replace fw\_stdio.h:PSL() with avr/pgm\_space.h:PSTR().
 
 
 ## Hardware
