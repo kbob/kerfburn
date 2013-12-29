@@ -65,15 +65,15 @@ void init_motors(void)
 
 ISR(X_WATCHDOG_TIMER_COMP_vect)
 {
-    trigger_fault(F_SU);
+    trigger_fault(F_SI);
 }
 
 ISR(Y_WATCHDOG_TIMER_COMP_vect)
 {
-    trigger_fault(F_SU);
+    trigger_fault(F_SI);
 }
 
 ISR(Z_WATCHDOG_TIMER_COMP_vect)
 {
-    trigger_fault(F_SU);
+    trigger_fault(F_SI);
 }
