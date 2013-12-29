@@ -18,7 +18,7 @@
  BACK_AVRDUDE := avrdude
 
 BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -I. -Iback
-  BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror
+  BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror -fshort-enums
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
          JUNK += *.hex
 
