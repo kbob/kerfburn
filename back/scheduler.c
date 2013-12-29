@@ -585,6 +585,7 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
 // Inherit from timer_state.
 // Laser pulse train is not synced to motor moves.
 // Handle slow pulses first, maybe fast pulses later.
+// Pulse is off first, then on.
 
 // laser state:
 //     user state in ls, pm, pd, pi, pw
@@ -594,7 +595,7 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
 //         did the user change the active laser or the pulse mode?
 //         current move parameters: md (pc) and mt.
 
-typedef enum pulse_level { PL_LOW, PL_HIGH } pulse_level;
+typedef enum pulse_level { PL_OFF, PL_ON } pulse_level;
 
 typedef struct laser_timer_state {
 
@@ -608,10 +609,10 @@ typedef struct laser_timer_state {
     uint32_t    ls_pw;          // pulse width param
 
     // Move Constants
-    atom        ls_enable_high;
-    atom        ls_disable_high;
-    atom        ls_enable_low;
-    atom        ls_disable_low;
+    atom        ls_disable_off;
+    atom        ls_enable_off;
+    atom        ls_disable_on;
+    atom        ls_enable_on;
     uint32_t    ls_q;           // quotient: mt / pi
     int_fast24  ls_err_inc;     // add to error on small steps
     int_fast24  ls_err_dec;     // add to error on large steps (negative)
@@ -623,7 +624,6 @@ typedef struct laser_timer_state {
 
     // Pulse Variables
     pulse_level ls_level;       // current level
-    uint32_t    ls_off_ivl;     // time between pulse and next pulse
 
 } laser_timer_state;
 
@@ -653,11 +653,22 @@ static inline bool should_continue_pulse_train(laser_timer_state *lp,
     // return ls == lp->ls_ls && pm == lp->ls_pm;
 }
 
-// If ls == 'm',
-//  enable_high  = A_MAIN_LASER_START
-//  disable_high = A_MAIN_LASER_ON
-//  enable_low   = A_MAIN_LASER_STOP
-//  disable_low  = A_MAIN_LASER_OFF
+// If ls == 'n' || pm == 'o' || (pm == 'd' && md == 0),
+//   is_active   = false
+//   disable_off = A_LASERS_OFF
+//   disable_on  = A_LASERS_OFF
+
+// If ls == 'm' && pm in {'d', 't'},
+//   is_active   = true
+//   disable_off = A_MAIN_LASER_OFF
+//   enable_off  = A_MAIN_LASER_START
+//   disable_on  = A_MAIN_LASER_ON
+//   enable_on   = A_MAIN_LASER_STOP
+
+// If pm == 'c' && ls != 'n',
+//   is_active   = false
+//   disable_off = A_xxxx_LASER_ON
+//   disable_on  = A_xxx__LASER_ON
 
 static inline void prep_laser_state(laser_timer_state *lp,
                                     uint32_t           mt,
@@ -667,50 +678,58 @@ static inline void prep_laser_state(laser_timer_state *lp,
     uint8_t     pm        = get_enum_variable(V_PM);
     uint32_t    pw        = get_unsigned_variable(V_PW);
 
-    bool        is_active = true;
-    uint32_t    remaining = 0;
     uint_fast24 q, r;
 
     if (lasers_are_inactive(ls, pm, md)) {
-        is_active = false;
-        lp->ls_ts.ts_disable_atom = A_LASERS_OFF;
-        q = mt;
-        r = 0;
-    } else if (should_continue_pulse_train(lp, ls, pm)) {
-        // XXX write me!
-        // remaining = [something];
+        // Keep both lasers off; mark time until move over.
+        lp->ls_ts.ts_is_active = false;
+        lp->ls_disable_off     = A_LASERS_OFF;
+        lp->ls_disable_on  =     A_LASERS_OFF;
         q = mt;
         r = 0;
     } else {
+        // A laser is on.
+        lp->ls_ts.ts_is_active = true;
+        if (ls == 'm') {
+            lp->ls_disable_off = A_MAIN_LASER_OFF;
+            lp->ls_enable_off  = A_MAIN_LASER_START;
+            lp->ls_disable_on  = A_MAIN_LASER_ON;
+            lp->ls_enable_on   = A_MAIN_LASER_STOP;
+        } else {
+            fw_assert(ls == 'v');
+            lp->ls_disable_off = A_VISIBLE_LASER_OFF;
+            lp->ls_enable_off  = A_VISIBLE_LASER_START;
+            lp->ls_disable_on  = A_VISIBLE_LASER_ON;
+            lp->ls_enable_on   = A_VISIBLE_LASER_STOP;
+        }
 
-        // Start new pulse train.
-        lp->ls_t = 0;
-
-        switch (pm) {
-
-        case 'c':
+        if (pm == 'c') {
+            // Continuous laser mode.
+            lp->ls_ts.ts_is_active = false;
+            lp->ls_disable_off = lp->ls_disable_on;
             q = mt;
-            r = mt;
-            break;
-
-        case 't':
-            q = get_unsigned_variable(V_PI);
             r = 0;
-            break;
-
-        case 'd':
-            q = mt / md;
-            r = mt % md;
-            break;
-
-        default:
-            fw_assert(false);
+        } else if (should_continue_pulse_train(lp, ls, pm)) {
+            // XXX write me!
+            // remaining = [something];
+            q = mt;
+            r = 0;
+        } else {
+            // Start new pulse train.
+            lp->ls_t = 0;
+            lp->ls_ts.ts_remaining = 0;
+            if (pm == 't') {
+                // Timed pulse mode
+                q = get_unsigned_variable(V_PI);
+                r = 0;
+            } else {
+                // Distance pulse mode
+                fw_assert(pm == 'd');
+                q = mt / md;
+                r = mt % md;
+            }                
         }
     }
-
-    // Base Class
-    lp->ls_ts.ts_is_active = is_active;
-    lp->ls_ts.ts_remaining = remaining;
 
     // Move Parameters
     lp->ls_ls              = ls;
@@ -719,10 +738,6 @@ static inline void prep_laser_state(laser_timer_state *lp,
     lp->ls_pw              = pw;
 
     // Move Constants
-    lp->ls_enable_high     = -1; // XXX
-    lp->ls_disable_high    = -1; // XXX
-    lp->ls_enable_low      = -1; // XXX
-    lp->ls_disable_low     = -1; // XXX
     lp->ls_q               = q;
     lp->ls_err_inc         = r;
     lp->ls_err_dec         = r - md;
@@ -747,12 +762,12 @@ static inline uint32_t resume_laser_interval(laser_timer_state *lp,
                                              queue             *qp)
 {
     uint32_t t = resume_interval(&lp->ls_ts, availp, qp);
-    if (*availp && lp->ls_level == PL_HIGH) {
-        // Set up for the OFF period.
-        lp->ls_level = PL_LOW;
-        lp->ls_ts.ts_enable_atom = lp->ls_enable_low;
-        lp->ls_ts.ts_disable_atom = lp->ls_disable_low;
-        t += subdivide_interval(&lp->ls_ts, lp->ls_off_ivl, availp, qp);
+    if (*availp && lp->ls_level == PL_OFF) {
+        // Set up for the ON period.
+        lp->ls_level = PL_ON;
+        lp->ls_ts.ts_enable_atom = lp->ls_enable_on;
+        lp->ls_ts.ts_disable_atom = lp->ls_disable_on;
+        t += subdivide_interval(&lp->ls_ts, lp->ls_pw, availp, qp);
     }
     return t;
 }
@@ -762,12 +777,12 @@ static inline uint32_t subdivide_laser_interval(laser_timer_state *lp,
                                                 uint8_t *availp,
                                                 queue   *qp)
 {
-    // Set up for the ON period.
-    lp->ls_level = PL_HIGH;
-    lp->ls_ts.ts_enable_atom = lp->ls_enable_high;
-    lp->ls_ts.ts_disable_atom = lp->ls_disable_high;
-    lp->ls_off_ivl = ivl - lp->ls_pw;
-    return subdivide_interval(&lp->ls_ts, lp->ls_pw, availp, qp);
+    // Set up for the OFF period.
+    lp->ls_level = PL_OFF;
+    lp->ls_ts.ts_enable_atom = lp->ls_enable_off;
+    lp->ls_ts.ts_disable_atom = lp->ls_disable_off;
+    uint32_t off_ivl = ivl - lp->ls_pw;
+    return subdivide_interval(&lp->ls_ts, off_ivl, availp, qp);
 }
 
 static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
