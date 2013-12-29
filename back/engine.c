@@ -26,7 +26,7 @@ void init_engine(void)
 {
 }
 
-engine_state get_engine_state(void)
+static inline engine_state get_engine_state(void)
 {
     uint8_t tmp = running_queues;
     if (tmp == 0)
