@@ -25,7 +25,7 @@ void do_background_task(void)
             continue;
         uint8_t e = serial_rx_errors();
         if (e) {
-            printf("\nerrors: %#x\n", e);
+            printf_P(PSTR("\nerrors: %#x\n"), e);
             continue;
         }
         if (!t)

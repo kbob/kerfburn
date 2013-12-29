@@ -1,3 +1,4 @@
+#define PRINTF_COMPAT
 #include "fw_stdio.h"
 
 #include <stdio.h>

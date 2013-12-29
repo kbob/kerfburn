@@ -6,6 +6,7 @@
 #include <util/atomic.h>
 
 #include "fault.h"
+#include "fw_stdio.h"
 #include "lasers.h"
 #include "limit-switches.h"
 #include "motors.h"
@@ -170,7 +171,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf(stderr, "a = %u\n\n", a);
+                fprintf_P(stderr, PSL("a = %u\n\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -241,7 +242,7 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf(stderr, "a = %u\n", a);
+                fprintf_P(stderr, PSL("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -312,7 +313,7 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf(stderr, "a = %u\n", a);
+                fprintf_P(stderr, PSL("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -352,6 +353,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
             case A_SET_VISIBLE_LASER_OFF:
                 set_visible_laser_off();
                 break;
+                fprintf_P(stderr, PSL("a = %u = %u\n"), a, a);
 
             case A_SET_VISIBLE_LASER_PULSED:
                 set_visible_laser_pulsed();
@@ -392,7 +394,6 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf(stderr, "a = %u = %u\n", a, a);
                 fw_assert(false);
             }
         } else {

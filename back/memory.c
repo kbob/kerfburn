@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "fw_stdio.h"
+
 extern const uint8_t _etext;
 extern const uint8_t __data_start;
 extern const uint8_t _edata;
@@ -58,9 +60,9 @@ void get_memory_use(segment_sizes *ssp)
 void print_backtrace(void)
 {
     auto uint8_t x;
-    printf("STACK\n");
+    printf_P(PSL("STACK\n"));
     for (const uint8_t *p = &x; p < &__stack; p++)
         if (*(uint8_t **)p < &_etext)
-            printf("%6p\n", *(uint8_t **)p);
+            printf_P(PSTR("%6p\n"), *(uint8_t **)p);
     putchar('\n');
 }
