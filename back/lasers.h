@@ -7,85 +7,137 @@
 
 extern void init_lasers(void);
 
+static inline void stop_pulse_timer_NONATOMIC(void)
+{
+    // Stop clock; WGM[3:2] = normal mode
+    LASER_PULSE_TCCRB = 0;
+
+    if (REG_BIT_IS(MAIN_LASER_PULSE_PIN, MAIN_LASER_PULSE_ON)) {
+#if MAIN_LASER_PULSE_ON
+        // COM[1:0] = clear on match, WGM[1:0] = normal mode
+        LASER_PULSE_TCCRA = _BV(MAIN_LASER_PULSE_COM1);
+#else
+        // COM[1:0] = set on match, WGM[1:0] = normal mode
+        LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
+                             _BV(MAIN_LASER_PULSE_COM0));
+#endif
+        // Strobe Force Output Compare.
+        LASER_PULSE_TCCRC = _BV(MAIN_LASER_PULSE_FOC);
+    }
+    // Clear port output.
+    SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
+
+    if (REG_BIT_IS(VISIBLE_LASER_PULSE_PIN, VISIBLE_LASER_PULSE_ON)) {
+#if VISIBLE_LASER_PULSE_ON
+        // COM[1:0] = clear on match, WGM[1:0] = normal mode
+        LASER_PULSE_TCCRA = _BV(VISIBLE_LASER_PULSE_COM1);
+#else
+        // COM[1:0] = set on match, WGM[1:0] = normal mode
+        LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
+                             _BV(VISIBLE_LASER_PULSE_COM0));
+#endif
+        // Strobe Force Output Compare.
+        LASER_PULSE_TCCRC = _BV(VISIBLE_LASER_PULSE_FOC);
+    }
+    // Clear port output.
+    SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
+
+    // Clear all.
+    LASER_PULSE_TCCRA = 0;
+    LASER_PULSE_TCNT  = 0;
+    LASER_PULSE_TIMSK = 0;
+    LASER_PULSE_TIFR  = 0;
+}
+
 static inline void set_laser_pulse_interval(uint16_t interval)
 {
     LASER_PULSE_ICR = interval;
 }
 
+static inline void set_lasers_off(void)
+{
+    SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
+    SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
+    MAIN_LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
+}
+
 
 // Main Laser
 
-static inline void set_main_laser_continuous(void)
+static inline void set_main_laser_on(void)
 {
     SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_ON);
-    MAIN_LASER_PULSE_TCCRA &=
-        ~(_BV(MAIN_LASER_PULSE_COM1) | _BV(MAIN_LASER_PULSE_COM0));
-}
-
-static inline void set_main_laser_start_on_match(void)
-{
-#if MAIN_LASER_PULSE_ON
-    MAIN_LASER_PULSE_TCCRA |=
-        _BV(MAIN_LASER_PULSE_COM1) | _BV(MAIN_LASER_PULSE_COM0);
-#else
-    const uint8_t com1 = _BV(MAIN_LASER_PULSE_COM1);
-    const uint8_t com0 = _BV(MAIN_LASER_PULSE_COM0);
-    MAIN_LASER_PULSE_TCCRA = MAIN_LASER_PULSE_TCCRA & ~(com1 | com0) | com1;
-#endif
-}
-
-static inline void set_main_laser_stop_on_match(void)
-{
-#if MAIN_LASER_PULSE_ON
-    MAIN_LASER_PULSE_TCCRA = (MAIN_LASER_PULSE_TCCRA |
-                              _BV(MAIN_LASER_PULSE_COM1)) &
-        ~_BV(MAIN_LASER_PULSE_COM0);
-#else
-    MAIN_LASER_PULSE_TCCRA |=
-        _BV(MAIN_LASER_PULSE_COM1) | _BV(MAIN_LASER_PULSE_COM0);
-#endif
+    LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
 static inline void set_main_laser_off(void)
 {
     SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
-    MAIN_LASER_PULSE_TCCRA &=
-        ~(_BV(MAIN_LASER_PULSE_COM1) | _BV(MAIN_LASER_PULSE_COM0));
+    LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_main_laser_pulse_duration(uint16_t duration)
+static inline void set_main_laser_start_on_timer(void)
 {
-    MAIN_LASER_PULSE_OCR = duration;
+#if MAIN_LASER_PULSE_ON
+    LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
+                         _BV(MAIN_LASER_PULSE_COM0) |
+                         _BV(LASER_PULSE_WGM1));
+#else
+    LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
+                         _BV(LASER_PULSE_WGM1));
+#endif
+}
+
+static inline void set_main_laser_stop_on_timer(void)
+{
+#if MAIN_LASER_PULSE_ON
+    LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
+                         _BV(LASER_PULSE_WGM1));
+#else
+    LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
+                         _BV(MAIN_LASER_PULSE_COM0) |
+                         _BV(LASER_PULSE_WGM1));
+#endif
 }
 
 
 // Visible Laser
 
-static inline void set_visible_laser_continuous(void)
+static inline void set_visible_laser_on(void)
 {
     SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_ON);
-    VISIBLE_LASER_PULSE_TCCRA &= ~_BV(VISIBLE_LASER_PULSE_COM1);
-}
-
-static inline void set_visible_laser_pulsed(void)
-{
-    VISIBLE_LASER_PULSE_TCCRA |= _BV(VISIBLE_LASER_PULSE_COM1);
+    LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
 static inline void set_visible_laser_off(void)
 {
     SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
-    VISIBLE_LASER_PULSE_TCCRA &= ~_BV(VISIBLE_LASER_PULSE_COM1);
+    LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_visible_laser_pulse_duration(uint16_t duration)
+static inline void set_visible_laser_start_on_timer(void)
 {
-    VISIBLE_LASER_PULSE_OCR = duration;
+#if VISIBLE_LASER_PULSE_ON
+    LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
+                         _BV(VISIBLE_LASER_PULSE_COM0) |
+                         _BV(LASER_PULSE_WGM1));
+#else
+    LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
+                         _BV(LASER_PULSE_WGM1));
+#endif
 }
 
-static inline void stop_pulse_timer(void)
+static inline void set_visible_laser_stop_on_timer(void)
 {
-    LASER_PULSE_TCCRB &= ~_BV(LASER_PULSE_CS0);
+#if VISIBLE_LASER_PULSE_ON
+    LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
+                         _BV(LASER_PULSE_WGM1));
+#else
+    LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
+                         _BV(VISIBLE_LASER_PULSE_COM0) |
+                         _BV(LASER_PULSE_WGM1));
+#endif
 }
+
 
 #endif /* !LASERS_included */

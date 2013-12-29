@@ -41,7 +41,9 @@ void start_engine(void)
     engine_state estate;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         estate = get_engine_state();
-        if (estate == ES_STOPPED) {
+        if (estate == ES_STOPPING)
+            await_engine_stopped();
+        if (estate != ES_RUNNING) {
             running_queues = qm_all;
             set_x_step_interval(F_CPU / 1000);
             set_y_step_interval(F_CPU / 1000);
@@ -90,23 +92,17 @@ void start_engine(void)
 void stop_engine_immediately(void)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-
-        stop_x_timer();
-        stop_y_timer();
-        stop_z_timer();
-        stop_pulse_timer();
-
-        set_main_laser_off();
-        set_visible_laser_off();
-        clear_x_step();
-        clear_y_step();
-        clear_z_step();
+        stop_x_timer_NONATOMIC();
+        stop_y_timer_NONATOMIC();
+        stop_z_timer_NONATOMIC();
+        stop_pulse_timer_NONATOMIC();
+        running_queues = 0;
     }
 }
 
 void await_engine_stopped(void)
 {
-    while (running_queues)
+    while (get_engine_state() != ES_STOPPED)
         continue;
 }
 
@@ -118,7 +114,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
             switch (a) {
 
             case A_STOP:
-                stop_x_timer();
+                stop_x_timer_NONATOMIC();
                 running_queues &= ~qm_x;
                 return;
 
@@ -189,7 +185,7 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
             switch (a) {
 
             case A_STOP:
-                stop_y_timer();
+                stop_y_timer_NONATOMIC();
                 running_queues &= ~qm_y;
                 return;
 
@@ -260,7 +256,7 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
             switch (a) {
 
             case A_STOP:
-                stop_z_timer();
+                stop_z_timer_NONATOMIC();
                 running_queues &= ~qm_z;
                 return;
 
@@ -331,69 +327,48 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
             switch (a) {
 
             case A_STOP:
-                stop_pulse_timer();
-                set_main_laser_off();
-                set_visible_laser_off();
+                stop_pulse_timer_NONATOMIC();
                 running_queues &= ~qm_p;
                 return;
 
-#if 0
-            case A_SET_MAIN_LASER_OFF:
+            case A_LASERS_OFF:
+                set_lasers_off();
+                break;
+
+            case A_MAIN_LASER_OFF:
                 set_main_laser_off();
                 break;
 
-            case A_SET_MAIN_LASER_PULSED:
-                set_main_laser_pulsed();
+            case A_MAIN_LASER_ON:
+                set_main_laser_on();
                 break;
 
-            case A_SET_MAIN_LASER_CONTINUOUS:
-                set_main_laser_continuous();
+            case A_MAIN_LASER_START:
+                set_main_laser_start_on_timer();
                 break;
 
-            case A_SET_VISIBLE_LASER_OFF:
+            case A_MAIN_LASER_STOP:
+                set_main_laser_stop_on_timer();
+                break;
+
+            case A_VISIBLE_LASER_OFF:
                 set_visible_laser_off();
                 break;
-                fprintf_P(stderr, PSL("a = %u = %u\n"), a, a);
 
-            case A_SET_VISIBLE_LASER_PULSED:
-                set_visible_laser_pulsed();
+            case A_VISIBLE_LASER_ON:
+                set_visible_laser_on();
                 break;
 
-            case A_SET_VISIBLE_LASER_CONTINUOUS:
-                set_visible_laser_continuous();
+            case A_VISIBLE_LASER_START:
+                set_visible_laser_start_on_timer();
                 break;
 
-#else
-            case A_MAIN_LASER_OFF:
-                break;
-
-            case A_MAIN_LASER_ON:
-                break;
-
-            case A_MAIN_LASER_START_ON_MATCH:
-                break;
-
-            case A_MAIN_LASER_STOP_ON_MATCH:
-                break;
-
-#endif
-            case A_SET_MAIN_PULSE_DURATION:
-                set_main_laser_pulse_duration(dequeue_atom_P_NONATOMIC());
-                break;
-
-            case A_SET_VISIBLE_PULSE_DURATION:
-                set_visible_laser_pulse_duration(dequeue_atom_P_NONATOMIC());
-                break;
-
-            case A_SET_MAIN_POWER_LEVEL:
-                {
-                    uint16_t power = dequeue_atom_P_NONATOMIC();
-                    power = power;
-                    fw_assert(false && power);
-                }
+            case A_VISIBLE_LASER_STOP:
+                set_visible_laser_stop_on_timer();
                 break;
 
             default:
+                fprintf_P(stderr, PSL("a = %u = %u\n"), a, a);
                 fw_assert(false);
             }
         } else {
