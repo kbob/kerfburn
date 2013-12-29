@@ -55,7 +55,6 @@ static inline void init_LEDs(void)
     SPCR |= _BV(SPIE);
 }
 
-// XXX we will never read.  Do not need these.
 static inline bool SPI_data_is_ready(void)
 {
     return bit_is_set(SPSR, SPIF);
