@@ -1,7 +1,5 @@
 #include "serial.h"
 
-#include <stdio.h>              // XXX
-
 #include <util/atomic.h>
 
 #include "e-stop.h"
