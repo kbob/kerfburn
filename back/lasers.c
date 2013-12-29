@@ -13,18 +13,18 @@ void init_lasers(void)
     // Initialize timer.
     LASER_PULSE_TCCRA       = _BV(LASER_PULSE_WGM1);
     LASER_PULSE_TCCRB       = _BV(LASER_PULSE_WGM3) | _BV(LASER_PULSE_WGM2);
-    MAIN_LASER_PULSE_OCR    = 1;
-    VISIBLE_LASER_PULSE_OCR = 1;
+    MAIN_LASER_PULSE_OCR    = 0;
+    VISIBLE_LASER_PULSE_OCR = 0;
     LASER_PULSE_TIFR       |= _BV(LASER_PULSE_TOV);
     LASER_PULSE_TIMSK       = _BV(LASER_PULSE_TOIE);
+
     // Set the laser watchdog
     LASER_WATCHDOG_OCR      = 0xFFFF;
     LASER_WATCHDOG_TIFR    |= _BV(LASER_WATCHDOG_OCF);
     LASER_WATCHDOG_TIMSK   |= _BV(LASER_WATCHDOG_OCIE);
-    OCR4C = 0xFFFF;
 }
 
 ISR(LASER_WATCHDOG_TIMER_COMP_vect)
 {
-    trigger_fault(F_SU);
+    trigger_fault(F_SI);
 }
