@@ -92,16 +92,19 @@ static inline v_value get_variable(uint8_t index)
 
 static inline uint32_t get_unsigned_variable(uint8_t index)
 {
+    fw_assert(get_variable_type(index) == VT_UNSIGNED);
     return get_variable(index).vv_unsigned;
 }
 
 static inline int32_t get_signed_variable(uint8_t index)
 {
+    fw_assert(get_variable_type(index) == VT_SIGNED);
     return get_variable(index).vv_signed;
 }
 
 static inline uint8_t get_enum_variable(uint8_t index)
 {
+    fw_assert(get_variable_type(index) == VT_ENUM);
     return get_variable(index).vv_enum;
 }
 
