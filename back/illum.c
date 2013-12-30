@@ -9,5 +9,5 @@ void init_illumination(void)
 
 void start_animation(uint8_t seq)
 {
-    fw_assert(0 && "XXX write start_animation!");
+    // XXX write me
 }
