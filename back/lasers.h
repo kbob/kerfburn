@@ -7,6 +7,29 @@
 
 extern void init_lasers(void);
 
+static inline void pre_start_pulse_timer(uint16_t ivl)
+{
+    LASER_PULSE_TCCRA       = 0;
+    LASER_PULSE_TCCRB       = 0;
+    LASER_PULSE_TIFR        = ~0; // clear all interrupts by writing all 1s.
+    LASER_PULSE_TIFR        = _BV(LASER_PULSE_TOV) | _BV(LASER_WATCHDOG_OCF);
+    LASER_PULSE_TIMSK       = _BV(LASER_PULSE_TOIE) | _BV(LASER_WATCHDOG_OCIE);
+    LASER_PULSE_ICR         = ivl;
+    LASER_PULSE_TCNT        = 0;
+    MAIN_LASER_PULSE_OCR    = 0;
+    VISIBLE_LASER_PULSE_OCR = 0;
+    LASER_WATCHDOG_OCR      = 0xFFFF;
+    LASER_PULSE_TCCRA        = _BV(LASER_PULSE_WGM1);
+    // TCCRB is set in engine.c:start_engine().
+}
+
+static inline uint8_t pulse_timer_starting_tccrb()
+{
+    return (_BV(LASER_PULSE_WGM3) |
+            _BV(LASER_PULSE_WGM2) |
+            _BV(LASER_PULSE_CS0));
+}
+
 static inline void stop_pulse_timer_NONATOMIC(void)
 {
     // Stop clock; WGM[3:2] = normal mode

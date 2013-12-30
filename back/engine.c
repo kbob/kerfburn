@@ -45,29 +45,21 @@ void start_engine(void)
             await_engine_stopped();
         if (estate != ES_RUNNING) {
             running_queues = qm_all;
-            set_x_step_interval(F_CPU / 1000);
-            set_y_step_interval(F_CPU / 1000);
-            set_z_step_interval(F_CPU / 1000);
-            set_laser_pulse_interval(F_CPU / 1000);
 
             // In the asm instruction sequence below, the counters are
-            // started exactly two CPU cycles apart.  So we preload the
-            // counters with initial values exactly two counts apart, and
-            // then the counters will all start off in sync.
+            // started exactly two CPU cycles apart.  So we preload
+            // the overflow value with values exactly two counts
+            // apart, and then the counters will all overflow on the
+            // exact same clock tick, and the timers will be in sync.
 
-            X_MOTOR_STEP_TCNT = 0;
-            Y_MOTOR_STEP_TCNT = 2;
-            Z_MOTOR_STEP_TCNT = 4;
-            LASER_PULSE_TCNT  = 6;
-
-            uint8_t xrb = X_MOTOR_STEP_TCCRB | _BV(X_MOTOR_STEP_CS0);
-            uint8_t yrb = Y_MOTOR_STEP_TCCRB | _BV(Y_MOTOR_STEP_CS0);
-            uint8_t zrb = Z_MOTOR_STEP_TCCRB | _BV(Z_MOTOR_STEP_CS0);
-            uint8_t prb =  LASER_PULSE_TCCRB | _BV(LASER_PULSE_CS0);
-            fw_assert(xrb == 0x19);
-            fw_assert(yrb == 0x19);
-            fw_assert(zrb == 0x19);
-            fw_assert(prb == 0x19);
+            pre_start_x_timer(F_CPU / 1000);
+            pre_start_y_timer(F_CPU / 1000 - 2);
+            pre_start_z_timer(F_CPU / 1000 - 4);
+            pre_start_pulse_timer(F_CPU / 1000 - 6);
+            uint8_t xrb = x_timer_starting_tccrb();
+            uint8_t yrb = y_timer_starting_tccrb();
+            uint8_t zrb = z_timer_starting_tccrb();
+            uint8_t prb = pulse_timer_starting_tccrb();
 
             __asm__ volatile (
                 "sts %0, %1\n\t"
