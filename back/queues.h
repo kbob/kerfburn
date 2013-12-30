@@ -7,7 +7,7 @@
 #include <util/atomic.h>
 
 #include "atoms.h"
-
+#include "bufs.h"
 #include "fw_assert.h"
 
 
@@ -51,19 +51,20 @@ static inline void     undequeue_atom_P_NONATOMIC (uint16_t);
 typedef uint16_t queue_buf[256 / 2] __attribute__((aligned(256)));
 
 struct queue_private {
-    uint8_t    q_head;
-    uint8_t    q_tail;
-    queue_buf *q_buf;
+    uint8_t   q_head;
+    uint8_t   q_tail;
+    uint16_t *q_buf;
 };
 
-extern queue_buf Xq_buf, Yq_buf, Zq_buf, Pq_buf;
+// X, Y, Z, Pq_buf are actually defined in bufs.h.
+//extern queue_buf Xq_buf, Yq_buf, Zq_buf, Pq_buf;
 
 static inline void init_queues(void)
 {
-    Xq.q_buf = &Xq_buf;
-    Yq.q_buf = &Yq_buf;
-    Zq.q_buf = &Zq_buf;
-    Pq.q_buf = &Pq_buf;
+    Xq.q_buf = Xq_buf;
+    Yq.q_buf = Yq_buf;
+    Zq.q_buf = Zq_buf;
+    Pq.q_buf = Pq_buf;
 }
 
 static inline bool queue_is_empty_NONATOMIC(const queue *q)

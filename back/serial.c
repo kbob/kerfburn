@@ -2,6 +2,7 @@
 
 #include <util/atomic.h>
 
+#include "bufs.h"
 #include "e-stop.h"
 #include "fw_assert.h"
 
@@ -18,13 +19,14 @@
 #define ASCII_XON  '\021'
 #define ASCII_XOFF '\023'
 
-static uint8_t tx_buf[TX_BUF_SIZE] __attribute__((aligned(256)));
+// tx_buf and rx_buf are actually defined in bufs.c.
+//static uint8_t tx_buf[TX_BUF_SIZE] __attribute__((aligned(256)));
 static uint8_t tx_head;
 static uint8_t tx_tail;
 static uint8_t tx_errs;
 static uint8_t tx_oob_char;
 
-static uint8_t rx_buf[RX_BUF_SIZE] __attribute__((aligned(256)));
+//static uint8_t rx_buf[RX_BUF_SIZE] __attribute__((aligned(256)));
 static uint8_t rx_head;
 static uint8_t rx_tail;
 static uint8_t rx_errs;

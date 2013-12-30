@@ -5,8 +5,6 @@ Is this a bug database?
 
 ## Next!
 
-* Force 256 byte buffers to be allocated contiguously.
-
 * Find a way to keep laser pulse trains running through multiple
   movements.
   
