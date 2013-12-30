@@ -11,18 +11,14 @@ Is this a bug database?
   movements.
   
 * I need to move the engine to the soft interrupt.  That is probably
-* not next.
+  not next.
 
 
 ## Design
 
-
-* What are x0 and y0?  Do we really have all the right parameters to
-  start a movement or cut?
-
 * Need a list of fault  states.  In particular, need fault states when
   we  fail to move  off the  limit switches.   If you  move 1  cm, and
-  you're still on the switch, the switch must be disconnected.
+  you're still on the switch, the switch must be disconnected/broken.
 
   Also need to think about how faults are stored and reported.
 
