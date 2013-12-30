@@ -51,6 +51,7 @@ Is this a bug database?
 
 * Write a curses-based status report tool.
 
+
 ### Back End
 
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near

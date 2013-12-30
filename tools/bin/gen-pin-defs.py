@@ -22,7 +22,6 @@ files = {
 def resolve_files(mcu, output):
     if output:
         basename, ext = os.path.splitext(output)
-        print basename, ext
     for k, v in files.items()[:]:
         try:
             files[k] = v % locals()
