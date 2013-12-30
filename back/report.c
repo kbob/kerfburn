@@ -12,6 +12,7 @@
 #include "limit-switches.h"
 #include "low-voltage.h"
 #include "memory.h"
+#include "motors.h"
 #include "queues.h"
 #include "relays.h"
 #include "serial.h"
@@ -97,7 +98,17 @@ static void report_limit_switches(void)
            xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-DEFINE_UNIMPLEMENTED_REPORT(M, motors);
+static void report_motors(void)
+{
+    char xe = x_step_is_enabled()       ? 'e' : 'd';
+    char xd = x_direction_is_positive() ? '+' : '-';
+    char ye = y_step_is_enabled()       ? 'e' : 'd';
+    char yd = y_direction_is_positive() ? '+' : '-';
+    char ze = z_step_is_enabled()       ? 'e' : 'd';
+    char zd = z_direction_is_positive() ? '+' : '-';
+
+    printf_P(PSL("M x=%c%c y=%c%c z=%c%c\n"), xe, xd, ye, yd, ze, zd);
+}
 
 static void report_power(void)
 {
