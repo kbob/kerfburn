@@ -5,49 +5,13 @@ Is this a bug database?
 
 ## Next!
 
-* Laser variable renaming:
-   - pd (pulse distance) -> ps (pulse spacing)
-   - pl (pulse length) -> pd (pulse duration)
-   - lm (laser mode) -> pm (pulse mode)
-
-* Different laser variable renaming:
-   - pd (pulse duration) -> pw (pulse width)
-   - ps (pulse spacing) -> pd (pulse distance)
-
-* Implement all the laser modes.
-  - Laser Select: main, visible, none.
-  - Pulse Mode: continuous, timed pulse, distance pulse, off.
-  - for main laser: Laser Power.
-  - for timed pulse mode: Pulse Length (duration), Pulse Interval
-  - for distance pulse mode: Pulse Duration, Pulse Distance
-
-  Laser pulse trains do not align with movement boundaries.  That
-  means the laser will sometimes finish early.
-  
-  For engine start/stop, I think that means that any time start_engine
-  finds the engine in partially running state, it has to quiesce the
-  running queues, then start them all up.  That means the whole engine
-  has an unexpected pause, but it's really no different than any other
-  queue underflow.
-  
-  _No, it's different.  If P is expected to end early, then the newly
-  enqueued atoms for P will have longer duration than the other axes.
-  If they all start at the same time, then P will be delayed._
-  
-  _If `start_engine()` returns a status, then `enqueue_cut()` can call
-  a `fixup_P_delay()` which rewrites P's atoms to remove the delay.
-  This is tricky and ugly, but I don't see a better way._
-
-  _Or, better, P's queue could be emptied, and the P entries generated
-  again with zero initial delay.  That means `enqueue_cut()` needs to
-  keep enough state around to restart the process._
-  
-  We should store the current laser mode in the `laser_timer_state`.
-  Not just "pulse mode" but all the laser mode info.
-  
-* I need to move the engine to the soft interrupt.  That is probably not next.
-
 * Force 256 byte buffers to be allocated contiguously.
+
+* Find a way to keep laser pulse trains running through multiple
+  movements.
+  
+* I need to move the engine to the soft interrupt.  That is probably
+* not next.
 
 
 ## Design
@@ -114,6 +78,8 @@ Is this a bug database?
   Use this terminology in the code.
 
   "Verb" is a silly word.  How about directive?  Special?   
+
+* Add a command to set the laser power.  I don't think it can be enqueued.
 
 
 ### Thruport
