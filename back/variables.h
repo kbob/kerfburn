@@ -102,13 +102,8 @@ static inline int32_t get_signed_variable(uint8_t index)
     return get_variable(index).vv_signed;
 }
 
-#include <stdio.h>
-#include "fw_stdio.h"           // XXX
 static inline uint8_t get_enum_variable(uint8_t index)
 {
-    // if (get_variable_type(index) != VT_ENUM)
-    //     fprintf_P(stderr, PSTR("index %d, type %d\n\n"),
-    //               index, get_variable_type(index));
     fw_assert(get_variable_type(index) == VT_ENUM);
     return get_variable(index).vv_enum;
 }
