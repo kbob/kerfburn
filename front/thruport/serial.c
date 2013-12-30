@@ -28,6 +28,8 @@ static void make_raw(struct termios *tiosp)
     tiosp->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
     tiosp->c_cflag &= ~(CSIZE | PARENB);
     tiosp->c_cflag |=   CS8;
+    tiosp->c_cc[VMIN] = 1;
+    tiosp->c_cc[VTIME] = 0;
 }
 
 
