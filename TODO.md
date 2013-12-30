@@ -47,8 +47,6 @@ Is this a bug database?
 
 * The Makefiles need a lot of refactoring.
 
-* `gen-pin-defs.py` should emit a better autogen disclaimer.
-
 * `make clean` should clean up `tools/bin` and `config` subdirectories.
 
 * Write a curses-based status report tool.
