@@ -21,5 +21,6 @@ void emergency_stop(void)
 
 bool is_emergency_stopped(void)
 {
-    return REG_BIT_IS(EMERGENCY_STOP_PORT, EMERGENCY_STOP_STOPPED);
+    return false;
+    // return REG_BIT_IS(EMERGENCY_STOP_PORT, EMERGENCY_STOP_STOPPED);
 }
