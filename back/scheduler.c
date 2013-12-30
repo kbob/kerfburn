@@ -172,25 +172,24 @@ static inline void prep_motor_state(motor_timer_state *mp,
     uint_fast24 r = mt % distance;
 
     // Base Class
-    mp->ms_ts.ts_is_active    = true;
-    mp->ms_ts.ts_remaining    = 0;
-    mp->ms_ts.ts_enable_atom  = A_ENABLE_STEP;
-    mp->ms_ts.ts_disable_atom = A_DISABLE_STEP;
+    mp->ms_ts.ts_is_active     = true;
+    mp->ms_ts.ts_remaining     = 0;
+    mp->ms_ts.ts_enabled_state = INVALID_ATOM;
 
     // Move Parameters
-    mp->ms_mt                 = mt;
-    mp->ms_md                 = distance;
+    mp->ms_mt                  = mt;
+    mp->ms_md                  = distance;
 
     // Move Constants
-    mp->ms_dir_pending        = dir_pending;
-    mp->ms_q                  = q;
-    mp->ms_err_inc            = r;
-    mp->ms_err_dec            = (int_fast24)r - (int_fast24)distance;
+    mp->ms_dir_pending         = dir_pending;
+    mp->ms_q                   = q;
+    mp->ms_err_inc             = r;
+    mp->ms_err_dec             = (int_fast24)r - (int_fast24)distance;
 
     // Move Variables
-    mp->ms_t                  = 0;
-    mp->ms_d                  = 0;
-    mp->ms_err                = 0;
+    mp->ms_t                   = 0;
+    mp->ms_d                   = 0;
+    mp->ms_err                 = 0;
 }
 
 static inline bool motor_timer_loaded(const motor_timer_state *mp)
@@ -300,8 +299,8 @@ static inline void prep_laser_state(laser_timer_state *lp,
                                     uint8_t            ls,
                                     uint_fast24        md)
 {
-    uint8_t     pm        = get_enum_variable(V_PM);
-    uint32_t    pw        = get_unsigned_variable(V_PW);
+    uint8_t  pm = get_enum_variable(V_PM);
+    uint32_t pw = get_unsigned_variable(V_PW);
 
     uint_fast24 q, r;
 
@@ -309,7 +308,8 @@ static inline void prep_laser_state(laser_timer_state *lp,
         // Keep both lasers off; mark time until move over.
         lp->ls_ts.ts_is_active = false;
         lp->ls_disable_off     = A_LASERS_OFF;
-        lp->ls_disable_on  =     A_LASERS_OFF;
+        lp->ls_disable_on      = A_LASERS_OFF;
+        lp->ls_t               = 0;
         q = mt;
         r = 0;
     } else {
@@ -331,12 +331,14 @@ static inline void prep_laser_state(laser_timer_state *lp,
         if (pm == 'c') {
             // Continuous laser mode.
             lp->ls_ts.ts_is_active = false;
-            lp->ls_disable_off = lp->ls_disable_on;
+            lp->ls_disable_off     = lp->ls_disable_on;
+            lp->ls_t               = 0;
             q = mt;
             r = 0;
         } else if (should_continue_pulse_train(lp, ls, pm)) {
             // XXX write me!
             // remaining = [something];
+            // Add remaining to mt, then set remaining to zero -- that's all.
             q = mt;
             r = 0;
         } else {
@@ -356,20 +358,26 @@ static inline void prep_laser_state(laser_timer_state *lp,
         }
     }
 
+    // Base Class
+    // XXX is this the best place to do this?
+    lp->ls_ts.ts_enabled_state = INVALID_ATOM;
+
     // Move Parameters
-    lp->ls_ls              = ls;
-    lp->ls_pm              = pm;
-    lp->ls_mt              = mt;
-    lp->ls_pw              = pw;
+    lp->ls_ls                  = ls;
+    lp->ls_pm                  = pm;
+    lp->ls_mt                  = mt;
+    lp->ls_pw                  = pw;
 
     // Move Constants
-    lp->ls_q               = q;
-    lp->ls_err_inc         = r;
-    lp->ls_err_dec         = r - md;
+    lp->ls_q                   = q;
+    lp->ls_err_inc             = r;
+    lp->ls_err_dec             = r - md;
 
     // Move Variables
-    lp->ls_p               = 0;
-    lp->ls_err             = 0;
+    lp->ls_p                   = 0;
+    lp->ls_err                 = 0;
+
+    lp->ls_level               = PL_ON;
 }
 
 static inline void prep_laser_inactive(laser_timer_state *lp, uint32_t mt)
@@ -407,7 +415,10 @@ static inline uint32_t subdivide_laser_interval(laser_timer_state *lp,
     lp->ls_ts.ts_enable_atom = lp->ls_enable_off;
     lp->ls_ts.ts_disable_atom = lp->ls_disable_off;
     uint32_t off_ivl = ivl - lp->ls_pw;
-    return subdivide_interval(&lp->ls_ts, off_ivl, availp, qp);
+    uint32_t t = subdivide_interval(&lp->ls_ts, off_ivl, availp, qp);
+    if (*availp)
+        t += resume_laser_interval(lp, availp, qp);
+    return t;
 }
 
 static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
@@ -437,7 +448,7 @@ static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
                 ivl++;
                 delta_err = lp->ls_err_dec;
             }
-            uint32_t t = subdivide_interval(&lp->ls_ts, ivl, &avail, qp);
+            uint32_t t = subdivide_laser_interval(lp, ivl, &avail, qp);
             lp->ls_err += delta_err;
             lp->ls_t += t;
             lp->ls_p++;
@@ -454,8 +465,7 @@ static inline uint_fast24 major_distance(int32_t xd, int32_t yd, int32_t zd)
 
     if (xd < 0)
         xd = -xd;
-    if (md < xd)
-        md = xd;
+    md = xd;
 
     if (yd < 0)
         yd = -yd;
@@ -483,9 +493,6 @@ static inline bool all_timers_loaded(uint32_t mt)
 
 void init_scheduler(void)
 {
-    // // XXX deprecate.
-    // memset(&output_states, '\xFF', sizeof output_states);
-
     init_motor_timer_state(&x_state);
     init_motor_timer_state(&y_state);
     init_motor_timer_state(&z_state);
@@ -495,6 +502,7 @@ void init_scheduler(void)
 void enqueue_dwell(void)
 {
     uint32_t mt = get_unsigned_variable(V_MT);
+
     prep_motor_state(&x_state, mt, 0);
     prep_motor_state(&y_state, mt, 0);
     prep_motor_state(&z_state, mt, 0);
@@ -511,6 +519,7 @@ void enqueue_dwell(void)
 void enqueue_move(void)
 {
     uint32_t mt = get_unsigned_variable(V_MT);
+
     prep_motor_state(&x_state, mt, get_signed_variable(V_XD));
     prep_motor_state(&y_state, mt, get_signed_variable(V_YD));
     prep_motor_state(&z_state, mt, get_signed_variable(V_ZD));
@@ -526,10 +535,10 @@ void enqueue_move(void)
 
 void enqueue_cut(void)
 {
-    uint32_t    mt = get_unsigned_variable(V_MT);
-    int32_t     xd = get_signed_variable(V_XD);
-    int32_t     yd = get_signed_variable(V_YD);
-    int32_t     zd = get_signed_variable(V_ZD);
+    uint32_t mt = get_unsigned_variable(V_MT);
+    int32_t  xd = get_signed_variable(V_XD);
+    int32_t  yd = get_signed_variable(V_YD);
+    int32_t  zd = get_signed_variable(V_ZD);
 
     prep_motor_state(&x_state, mt, xd);
     prep_motor_state(&y_state, mt, yd);
