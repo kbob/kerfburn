@@ -137,6 +137,10 @@ Is this a bug database?
     
 * Globally replace fw\_stdio.h:PSL() with avr/pgm\_space.h:PSTR().
 
+* Keep the config. directory clean.  Put the template files and the
+  generated files somewhere else (probably in back/).  Only
+  user-created config files (and maybe a README) should be in config/.
+
 
 ## Hardware
 
