@@ -13,7 +13,8 @@ $D/pin-defs.h:
 	$(GEN_PIN_DEFS) --mcu=$(BACK_MCU) -o $@
 
 config/geom-defs.d:
-	@$(GEN_GEOM_DEFS) -M -o config/geom-defs.h -t $(GEOM_TEMPLATE) \
+	@$(GEN_GEOM_DEFS) -M -MT $@ -MT config/geom-defs.h \
+                          -t $(GEOM_TEMPLATE) \
                           $(GEOM_CONFIG) > $@
 
 config/pin-defs.d:
