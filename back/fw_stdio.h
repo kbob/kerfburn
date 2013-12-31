@@ -14,6 +14,7 @@ extern void init_stdio(void);
   #define fprintf   is deprecated, please use   fprintf_P
   #define sprintf   is deprecated, please use   sprintf_P
   #define snprintf  is deprecated, please use  snprintf_P
+// AVR-libc is missing vprintf_P.
   #define vfprintf  is deprecated, please use  vfprintf_P
   #define vsprintf  is deprecated, please use  vsprintf_P
   #define vsnprintf is deprecated, please use vsnprintf_P
