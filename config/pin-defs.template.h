@@ -1,7 +1,7 @@
 #ifndef PIN_DEFS_included
 #define PIN_DEFS_included
 
-// %AUTOGEN_DISCLAIMER%
+%AUTOGEN_DISCLAIMER%
 
 #include <stdbool.h>
 

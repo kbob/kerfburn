@@ -56,8 +56,8 @@ def_timer_pin  (OC5B,    'Z Watchdog')
 
 def_input_pin  (PE5,     'X Min Switch',        reached=high, pull_up=True)
 def_input_pin  (PJ1,     'Y Min Switch',        reached=high, pull_up=True)
-def_input_pin  (PD3,     'Z Min Switch',        reached=high, pull_up=True)
-def_input_pin  (PD2,     'Z Max Switch',        reached=high, pull_up=True)
+# def_input_pin  (PD3,     'Z Min Switch',        reached=high, pull_up=True)
+# def_input_pin  (PD2,     'Z Max Switch',        reached=high, pull_up=True)
 
 
 # Misc. switches

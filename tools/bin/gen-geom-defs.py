@@ -11,9 +11,9 @@ disclaimer = '''
     /*
      *  This file was automatically generated from these inputs.
      *
-     *     script:   %(script)s
-     *     config:   %(geometry)s
-     *     template: %(template)s
+     *     script:          %(script)s
+     *     geometry config: %(geometry)s
+     *     template:        %(template)s
      */
      '''
 
