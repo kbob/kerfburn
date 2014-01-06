@@ -24,7 +24,7 @@ void instantiate_sender_service(int sock)
     pthread_mutex_unlock(&sslock);
 
     if (a) {
-        report_sender_error(LOG_ERR, "Another sender is already active.");
+        report_sender_error(LOG_ERR, "another sender is already active");
         close(sock);
         return;
     }
