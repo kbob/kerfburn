@@ -31,19 +31,19 @@ static inline void     enqueue_atom               (uint16_t, queue *);
 
 static inline void     enqueue_atom_X             (uint16_t);
 static inline uint16_t dequeue_atom_X_NONATOMIC   (void);
-static inline void     undequeue_atom_X_NONATOMIC (uint16_t);
+static inline void     rewind_queue_X_NONATOMIC   (uint8_t count);
 
 static inline void     enqueue_atom_Y             (uint16_t);
 static inline uint16_t dequeue_atom_Y_NONATOMIC   (void);
-static inline void     undequeue_atom_Y_NONATOMIC (uint16_t);
+static inline void     rewind_queue_Y_NONATOMIC   (uint8_t count);
 
 static inline void     enqueue_atom_Z             (uint16_t);
 static inline uint16_t dequeue_atom_Z_NONATOMIC   (void);
-static inline void     undequeue_atom_Z_NONATOMIC (uint16_t);
+static inline void     rewind_queue_Z_NONATOMIC   (uint8_t count);
 
 static inline void     enqueue_atom_P             (uint16_t);
 static inline uint16_t dequeue_atom_P_NONATOMIC   (void);
-static inline void     undequeue_atom_P_NONATOMIC (uint16_t);
+static inline void     rewind_queue_P_NONATOMIC   (uint8_t count);
 
 
 // Implementation
@@ -179,18 +179,9 @@ static inline void enqueue_atom(uint16_t a, queue *q)
         return a;                                                       \
     }                                                                   \
                                                                         \
-    static inline void undequeue_atom_##Q##_NONATOMIC(uint16_t a)       \
+    static inline void rewind_queue_##Q##_NONATOMIC(uint8_t count)      \
     {                                                                   \
-        union {                                                         \
-            uint8_t   b[2];                                             \
-            uint16_t *p;                                                \
-        } u;                                                            \
-                                                                        \
-        fw_assert(!queue_is_full_NONATOMIC(&Q##q));                     \
-        u.b[0] = Q##q.q_head - 2;                                       \
-        u.b[1] = (uintptr_t)Q##q_buf >> 8;                              \
-        *u.p = a;                                                       \
-        Q##q.q_head = u.b[0];                                           \
+        Q##q.q_head -= count << 1;                                      \
     }
 
 DEFINE_ENQUEUE_DEQUEUE(X);

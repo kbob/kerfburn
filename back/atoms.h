@@ -16,12 +16,12 @@ typedef enum atom {
     // Atoms for motors
     A_DIR_POSITIVE,
     A_DIR_NEGATIVE,
-    A_LOOP_UNTIL_MIN,
-    A_LOOP_WHILE_MIN,
-    A_LOOP_UNTIL_MAX,
-    A_LOOP_WHILE_MAX,
     A_ENABLE_STEP,
     A_DISABLE_STEP,
+    A_REWIND_IF_MIN,
+    A_REWIND_UNLESS_MIN,
+    A_REWIND_IF_MAX,
+    A_REWIND_UNLESS_MAX,
 
     // Atoms for lasers
     A_LASERS_OFF,

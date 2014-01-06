@@ -98,6 +98,8 @@ void await_engine_stopped(void)
         continue;
 }
 
+// #include <stdio.h>
+
 ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 {
     while (true) {
@@ -118,38 +120,6 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
                 set_x_direction_negative();
                 break;
 
-#ifdef X_MIN_SWITCH
-            case A_LOOP_UNTIL_MIN:
-                if (!x_min_reached()) {
-                    undequeue_atom_X_NONATOMIC(a);
-                    return;
-                }
-                break;
-
-            case A_LOOP_WHILE_MIN:
-                if (x_min_reached()) {
-                    undequeue_atom_X_NONATOMIC(a);
-                    return;
-                }
-                break;
-#endif
-
-#ifdef X_MAX_SWITCH
-            case A_LOOP_UNTIL_MAX:
-                if (!x_max_reached()) {
-                    undequeue_atom_X_NONATOMIC(a);
-                    return;
-                }
-                break;
-
-            case A_LOOP_WHILE_MAX:
-                if (x_max_reached()) {
-                    undequeue_atom_X_NONATOMIC(a);
-                    return;
-                }
-                break;
-#endif
-
             case A_ENABLE_STEP:
                 enable_x_step();
                 break;
@@ -157,6 +127,34 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
             case A_DISABLE_STEP:
                 disable_x_step();
                 break;
+
+#ifdef X_MIN_SWITCH
+            case A_REWIND_IF_MIN:
+                a = dequeue_atom_X_NONATOMIC();
+                if (x_min_reached())
+                    rewind_queue_X_NONATOMIC(a);
+                break;
+
+            case A_REWIND_UNLESS_MIN:
+                a = dequeue_atom_X_NONATOMIC();
+                if (!x_min_reached())
+                    rewind_queue_X_NONATOMIC(a);
+                break;
+#endif
+
+#ifdef X_MAX_SWITCH
+            case A_REWIND_IF_MAX:
+                a = dequeue_atom_X_NONATOMIC();
+                if (x_max_reached())
+                    rewind_queue_X_NONATOMIC(a);
+                break;
+
+            case A_REWIND_UNLESS_MAX:
+                a = dequeue_atom_X_NONATOMIC();
+                if (!x_max_reached())
+                    rewind_queue_X_NONATOMIC(a);
+                break;
+#endif
 
             default:
                 fprintf_P(stderr, PSL("a = %u\n\n"), a);
@@ -190,34 +188,30 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
 #ifdef Y_MIN_SWITCH
-            case A_LOOP_UNTIL_MIN:
-                if (!y_min_reached()) {
-                    undequeue_atom_Y_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_IF_MIN:
+                a = dequeue_atom_Y_NONATOMIC();
+                if (y_min_reached())
+                    rewind_queue_Y_NONATOMIC(a);
                 break;
 
-            case A_LOOP_WHILE_MIN:
-                if (y_min_reached()) {
-                    undequeue_atom_Y_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_UNLESS_MIN:
+                a = dequeue_atom_Y_NONATOMIC();
+                if (!y_min_reached())
+                    rewind_queue_Y_NONATOMIC(a);
                 break;
 #endif
 
 #ifdef Y_MAX_SWITCH
-            case A_LOOP_UNTIL_MAX:
-                if (!y_max_reached()) {
-                    undequeue_atom_Y_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_IF_MAX:
+                a = dequeue_atom_Y_NONATOMIC();
+                if (y_max_reached())
+                    rewind_queue_Y_NONATOMIC(a);
                 break;
 
-            case A_LOOP_WHILE_MAX:
-                if (y_max_reached()) {
-                    undequeue_atom_Y_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_UNLESS_MAX:
+                a = dequeue_atom_Y_NONATOMIC();
+                if (!y_max_reached())
+                    rewind_queue_Y_NONATOMIC(a);
                 break;
 #endif
 
@@ -261,34 +255,30 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
 #ifdef Z_MIN_SWITCH
-            case A_LOOP_UNTIL_MIN:
-                if (!z_min_reached()) {
-                    undequeue_atom_Z_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_IF_MIN:
+                a = dequeue_atom_Z_NONATOMIC();
+                if (z_min_reached())
+                    rewind_queue_Z_NONATOMIC(a);
                 break;
 
-            case A_LOOP_WHILE_MIN:
-                if (z_min_reached()) {
-                    undequeue_atom_Z_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_UNLESS_MIN:
+                a = dequeue_atom_Z_NONATOMIC();
+                if (!z_min_reached())
+                    rewind_queue_Z_NONATOMIC(a);
                 break;
 #endif
 
 #ifdef Z_MAX_SWITCH
-            case A_LOOP_UNTIL_MAX:
-                if (!z_max_reached()) {
-                    undequeue_atom_Z_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_IF_MAX:
+                a = dequeue_atom_Z_NONATOMIC();
+                if (z_max_reached())
+                    rewind_queue_Z_NONATOMIC(a);
                 break;
 
-            case A_LOOP_WHILE_MAX:
-                if (z_max_reached()) {
-                    undequeue_atom_Z_NONATOMIC(a);
-                    return;
-                }
+            case A_REWIND_UNLESS_MAX:
+                a = dequeue_atom_Z_NONATOMIC();
+                if (!z_max_reached())
+                    rewind_queue_Z_NONATOMIC(a);
                 break;
 #endif
 

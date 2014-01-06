@@ -1,5 +1,9 @@
 #include "scheduler.h"
 
+#include <avr/pgmspace.h>
+
+#include "config/geom-defs.h"
+
 #include "engine.h"
 #include "queues.h"
 #include "variables.h"
@@ -149,6 +153,7 @@ static inline void init_motor_timer_state(motor_timer_state *mp)
     mp->ms_dir = INVALID_ATOM;  // chip needs initialization.
 }
 
+// XXX shouldn't md be int_fast24 instead of 32?
 static inline void prep_motor_state(motor_timer_state *mp,
                                     uint32_t           mt,
                                     int32_t            md)
@@ -457,6 +462,126 @@ static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
 }
 
 
+// home_timer_state definitions
+
+// A home timer controls a motor during a homing action.
+//
+// The homing sequence has three strokes:
+//
+//   1. Toward the limit switch at speed 1 until at the limit.
+//   2. Away from the switch at speed 2 until not at the limit.
+//   3. Toward the switch at speed 3 until at the limit again.
+//
+// We load the motor's queue with these atoms.
+//
+//         A_DIR_[toward limit]
+//     label A:
+//         A_DISABLE_STEP            ----+
+//         intervals for 1st stroke      + If interval > MAX_IVL
+//         ...                       ----+
+//         A_ENABLE_STEP
+//         final interval for 1st stroke
+//         A_REWIND_UNLESS_[limit]
+//         number of atoms to rewind: B - A
+//     label B:
+//         A_DIR_[away from limit]
+//     label C:
+//         A_DISABLE_STEP            ----+
+//         intervals for 2nd stroke      + If interval > MAX_IVL
+//         ...                       ----+
+//         A_ENABLE_STEP
+//         final interval for 2nd stroke
+//         A_REWIND_IF_[limit]
+//         number of atoms to rewind: D - C
+//     label D:
+//         A_DIR_[toward limit]
+//     label E:
+//         A_DISABLE_STEP            ----+
+//         intervals for 3rd stroke      + If interval > MAX_IVL
+//         A_ENABLE_STEP             ----+
+//         final interval for 3rd stroke
+//         A_REWIND_UNLESS_[limit]
+//         number of atoms to rewind: F - E
+//     label F:
+//         A_STOP
+//
+// This entire sequence can be created at compile time.
+
+typedef struct home_timer_state {
+
+    const uint16_t *hs_sequence;
+    uint8_t         hs_count;
+    uint8_t         hs_index;
+
+} home_timer_state;
+
+// DEFINE_HOME_SEQUENCES();
+
+// XXX autogenerate this.
+static const uint16_t xy_home_seq[] PROGMEM = {
+    A_DIR_NEGATIVE,             // First stroke
+    A_ENABLE_STEP,
+    HOME_X_INTERVAL_1,
+    A_REWIND_UNLESS_MIN, 3,     // back to INTERVAL_1
+
+    A_DIR_POSITIVE,             // Second stroke
+    HOME_X_INTERVAL_2,
+    A_REWIND_IF_MIN, 3,         // back to INTERVAL_2
+
+    A_DIR_NEGATIVE,             // Third stroke
+    HOME_X_INTERVAL_3,
+    A_REWIND_UNLESS_MIN, 3,     // back to INTERVAL_3
+    A_STOP
+};
+
+#define X_HOME_SEQ       (xy_home_seq)
+#define X_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0]) 
+#define Y_HOME_SEQ       (xy_home_seq)
+#define Y_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0]) 
+
+static home_timer_state x_home_state;
+static home_timer_state y_home_state;
+static home_timer_state z_home_state;
+
+static inline void init_home_timer_state(home_timer_state *hp)
+{
+    // Nothing to do.
+}
+
+static inline void prep_home_timer_state(home_timer_state *hp,
+                                         const uint16_t   *seq,
+                                         const uint8_t     count)
+{
+    hp->hs_sequence = seq;
+    hp->hs_count    = count;
+    hp->hs_index    = 0;
+}
+
+static inline bool home_timer_loaded(const home_timer_state *hp)
+{
+    return hp->hs_index == hp->hs_count;
+}
+
+static inline uint32_t gen_home_atoms(home_timer_state *hp, queue *qp)
+{
+    uint8_t avail = queue_available(qp);
+    uint32_t t = 0;
+
+    // Tricky.  We need to ensure hs_count free space in the queue so
+    // the engine can rewind it.
+    while (avail >= hp->hs_count && hp->hs_index < hp->hs_count) {
+        
+        uint16_t a = pgm_read_word(hp->hs_sequence + hp->hs_index);
+        enqueue_atom(a, qp);
+        if (!is_atom(a))
+            t += a;
+        hp->hs_index++;
+        avail--;
+    }
+    return t;
+}
+
+
 // utility functions
 
 static inline uint_fast24 major_distance(int32_t xd, int32_t yd, int32_t zd)
@@ -488,6 +613,13 @@ static inline bool all_timers_loaded(uint32_t mt)
             laser_timer_loaded(&p_state));
 }
 
+static inline bool home_timers_loaded(void)
+{
+    return (home_timer_loaded(&x_home_state) &&
+            home_timer_loaded(&y_home_state) &&
+            home_timer_loaded(&z_home_state));
+}
+
 
 // public interface
 
@@ -497,6 +629,9 @@ void init_scheduler(void)
     init_motor_timer_state(&y_state);
     init_motor_timer_state(&z_state);
     init_laser_timer_state(&p_state);
+    init_home_timer_state(&x_home_state);
+    init_home_timer_state(&y_home_state);
+    init_home_timer_state(&z_home_state);
 }
 
 void enqueue_dwell(void)
@@ -562,7 +697,34 @@ void enqueue_engrave(void)
 
 void enqueue_home(void)
 {
-    fw_assert(false && "XXX Write me!");
+    // Call init_motor_timer_state() to force reinitialization of
+    // the enable and direction signals on the next move or cut.
+#ifdef X_HOME_SEQ
+    prep_home_timer_state(&x_home_state, X_HOME_SEQ, X_HOME_SEQ_COUNT);
+    init_motor_timer_state(&x_state);
+#endif
+#ifdef Y_HOME_SEQ
+    prep_home_timer_state(&y_home_state, Y_HOME_SEQ, Y_HOME_SEQ_COUNT);
+    init_motor_timer_state(&y_state);
+#endif
+#ifdef Z_HOME_SEQ
+    prep_home_timer_state(&z_home_state, Z_HOME_SEQ, Z_HOME_SEQ_COUNT);
+    init_motor_timer_state(&z_state);
+#endif
+    prep_laser_inactive(&p_state, MIN_IVL);
+
+    do {
+        gen_home_atoms(&x_home_state, &Xq);
+        gen_home_atoms(&y_home_state, &Yq);
+        gen_home_atoms(&z_home_state, &Zq);
+        if (!laser_timer_loaded(&p_state)) {
+            // Tricky.  We must not call start_engine() when the laser
+            // has stopped.  We must call start_engine when the engine
+            // has not started.  (We may call it if neither applies.)
+            gen_laser_atoms(&p_state, &Pq);
+            start_engine();
+        }
+    } while (!home_timers_loaded());
 }
 
 void stop_immediately(void)

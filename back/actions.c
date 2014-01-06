@@ -26,9 +26,9 @@
 DEFINE_UNIMPLEMENTED_ACTION(illuminate);
 // DEFINE_UNIMPLEMENTED_ACTION(enqueue_dwell);
 //DEFINE_UNIMPLEMENTED_ACTION(enqueue_move);
-DEFINE_UNIMPLEMENTED_ACTION(enqueue_cut);
+//DEFINE_UNIMPLEMENTED_ACTION(enqueue_cut);
 DEFINE_UNIMPLEMENTED_ACTION(enqueue_engrave);
-DEFINE_UNIMPLEMENTED_ACTION(enqueue_home);
+//DEFINE_UNIMPLEMENTED_ACTION(enqueue_home);
 // DEFINE_UNIMPLEMENTED_ACTION(enable_low_voltage);
 // DEFINE_UNIMPLEMENTED_ACTION(enable_high_voltage);
 // DEFINE_UNIMPLEMENTED_ACTION(enable_air_pump);
@@ -69,6 +69,18 @@ void action_enqueue_move(void)
 {
     ANNOUNCE_ACTION;
     enqueue_move();
+}
+
+void action_enqueue_cut(void)
+{
+    ANNOUNCE_ACTION;
+    enqueue_cut();
+}
+
+void action_enqueue_home(void)
+{
+    ANNOUNCE_ACTION;
+    enqueue_home();
 }
 
 void action_enable_low_voltage(void)
