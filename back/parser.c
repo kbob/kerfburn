@@ -150,10 +150,12 @@ static inline bool is_digit(uint8_t c)
     return c >= '0' && c <= '9';
 }
 
-static void error(void)
+#define PARSE_ERROR() (parse_error(__LINE__))
+
+static void parse_error(uint16_t line)
 {
     // Send uninformative message, consume current line and continue.
-    printf_P(PSL("Parse error at \""));
+    printf_P(PSL("Parse error %u at \""), line);
     while (true) {
         while (!serial_rx_has_chars())
             continue;
@@ -173,7 +175,7 @@ static bool consume_line(uint8_t pos)
 {
     uint8_t c = serial_rx_peek_char(pos);
     if (!is_eol(c)) {
-        error();
+        PARSE_ERROR();
         return false;
     }
     serial_rx_consume(pos + 1);
@@ -191,7 +193,7 @@ static inline void parse_action(uint8_t c0)
     name[pos] = '\0';
     uint8_t index = lookup_command(name);
     if (index == CMD_NOT_FOUND) {
-        error();
+        PARSE_ERROR();
         return;
     }
     if (consume_line(pos)) {
@@ -204,18 +206,18 @@ static inline void parse_assignment(uint8_t c0)
 {
     uint8_t c1 = serial_rx_peek_char(1);
     if (is_eol(c1)) {
-        error();
+        PARSE_ERROR();
         return;
     }
     uint8_t c2 = serial_rx_peek_char(2);
     if (c2 != '=') {
-        error();
+        PARSE_ERROR();
         return;
     }
     v_name name = { c0, c1, '\0' };;
     uint8_t index = lookup_variable(name);
     if (index == VAR_NOT_FOUND) {
-        error();
+        PARSE_ERROR();
         return;
     }
     v_value value;
@@ -230,7 +232,7 @@ static inline void parse_assignment(uint8_t c0)
             if (c3 == '-')
                 is_negative = true;
             else if (c3 != '+') {
-                error();
+                PARSE_ERROR();
                 return;
             }
         }
@@ -256,7 +258,7 @@ static inline void parse_assignment(uint8_t c0)
             uint8_t c3 = serial_rx_peek_char(3);
             pos++;
             if (!variable_enum_is_OK(index, c3)) {
-                error();
+                PARSE_ERROR();
                 return;
             }
             value.vv_enum = c3;
@@ -290,5 +292,5 @@ void parse_line(void)
     else if (c0_hi_bits == ('a' & hi_mask))
         parse_assignment(c0);
     else
-        error();
+        PARSE_ERROR();
 }
