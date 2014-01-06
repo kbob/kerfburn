@@ -20,7 +20,7 @@
 DEFINE_DESC(ia, ENUM, "ncswa"); // illumination animation
 DEFINE_DESC(il, UNSIGNED);      // illumination level
 DEFINE_DESC(lp, UNSIGNED);      // laser power
-DEFINE_DESC(ls, ENUM, "mnv");   // laser select
+DEFINE_DESC(ls, ENUM, "nmv");   // laser select
 DEFINE_DESC(mt, UNSIGNED);      // move time
 DEFINE_DESC(oc, ENUM, "ny");    // override lid closed
 DEFINE_DESC(oo, ENUM, "ny");    // override lid open
