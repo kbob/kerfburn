@@ -30,6 +30,6 @@ z_axis = Axis(
     max_speed  = 10,
     )
 
-home = Position(x=min, y=max)
+home = Position(x=min, y=min, speed=[100, 10, 5])
 origin = Position(x=min, y=min)
 

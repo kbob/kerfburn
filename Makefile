@@ -4,6 +4,7 @@
 .DEFAULT_GOAL := help
 
      BACK_MCU := atmega2560
+BACK_MCU_FREQ := 16000000
 
 help:
 	@echo 'Common Targets'

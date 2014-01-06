@@ -1,6 +1,6 @@
 #!/usr/bin/make # -*- makefile-gmake -*-
 
-.DEFAULT_GOAL := config/pin-defs.h
+.DEFAULT_GOAL := build-config
 
 .DEFAULT:
 	$(MAKE) -C .. $@

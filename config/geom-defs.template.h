@@ -1,7 +1,7 @@
 #ifndef GEOM_DEFS_included
 #define GEOM_DEFS_included
 
-%DISCLAIMER%
+%AUTOGEN-DISCLAIMER%
 
 %DEFINITIONS%
 

@@ -18,7 +18,7 @@
  BACK_SUSPEND := $(THRUPORT) suspend
  BACK_AVRDUDE := avrdude
 
-BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=16000000L -I. -Iback
+BACK_CPPFLAGS := -mmcu=$(BACK_MCU) -DF_CPU=$(BACK_MCU_FREQ)L -I. -Iback
   BACK_CFLAGS := -g -O3 -std=c99 -Wall -Werror -fshort-enums
  BACK_LDFLAGS := -Wl,--gc-sections,--relax -mmcu=$(BACK_MCU)
          JUNK += *.hex
@@ -40,9 +40,9 @@ back-programs: back/fw $(test_programs:%=back/%)
 back-tests: $(subdirs:%:back/%-tests)
 
 back/fw: $(fw_ofiles)
-	@( \
-	echo '#include "version.h"'; \
-	echo 'const char version[] PROGMEM =' \
+	@(								   \
+	echo '#include "version.h"';					   \
+	echo 'const char version[] PROGMEM ='				   \
 	     "\"Kerfburn Back End, built $$(date +%Y-%m-%dT%H:%M:%S%z)\";" \
         ) > back/version.c
 	$(BACK_LD) $(BACK_LDFLAGS) $^ back/version.c $(fw_ldlibs) -o $@
