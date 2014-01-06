@@ -261,6 +261,11 @@ Move the cutting position to the home position.
 The home position is at minimum X, minimum Y, and minimum Z.
 The laser does not fire.
 
+Because this operations has an unpredictible duration, the real time
+engine must be shut down (with a W command) before enqueueing any more
+commands.
+
+
 Implicit Parameters: *none*
 
 
