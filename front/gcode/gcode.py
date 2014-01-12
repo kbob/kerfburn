@@ -228,8 +228,9 @@ def scan_line(line):
                 lenum.next()
             yield Token(pos, CommentToken, comment)
         elif c == ';':          # Semicolon Comment.
-            while True:
-                lenum.next()    # eventually raise StopIteration.
+            with lenum.catch_whitespace():
+                comment = lenum.collect_while(lambda prec, c: True)
+            yield Token(pos, CommentToken, comment)
         elif cup == 'N':        # Line Number
             def collect_line_number(pred, c):
                 return c.isdigit() and len(pred + c) <= 5
@@ -295,6 +296,14 @@ class LineParser(object):
         self.line = line
         self.scanner = Peekable(scan_line(line), Token(None, EOLToken))
         self.result = ParsedLine()
+
+    # The parse_foo() methods form a recursive descent parser.  Each
+    # method starts with a comment showing the production that method
+    # parses in Wirth Syntax Notation.  The productions are from
+    # Appendix E of the NIST RS274/NGC document, with exceptions
+    # explained in a comment in parse_expression().
+    #
+    # parse_line() is the top level production.
 
     def parse_line(self):
 
@@ -396,6 +405,8 @@ class LineParser(object):
         # where the add operations are +, -, OR, XOR, AND,
         # the mul operations are *, /,
         # and the exp operation is **.
+        #
+        # Each operation group is left-associative.
         
         def get_add_op(tok):
 
@@ -426,6 +437,8 @@ class LineParser(object):
 
     def parse_term(self):
 
+        # term = factor + { mul_operation + factor }
+
         def get_mul_op(tok):
 
             if tok.type == '*':
@@ -444,6 +457,8 @@ class LineParser(object):
         return left
         
     def parse_factor(self):
+
+        # factor = real_value + { exp_operation + real_value }
 
         def get_exp_op(tok):
 
