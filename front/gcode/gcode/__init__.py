@@ -2,28 +2,15 @@
 
 """G-Code Interpreter"""
 
+import core
+import interpreter
 import parser
-from parser import GCodeException, GCodeSyntaxError, SourceLine
+
+from core import GCodeException
+from interpreter import Interpreter
+from parser import GCodeSyntaxError
 
 __all__ = ['GCodeException',
            'GCodeSyntaxError'
            'Interpreter',
-           'SourceLine',
            ]
-
-
-class Interpreter(object):
-
-    """G-Code Interpreter"""
-
-    def __init__(self):
-
-        pass
-
-    def interpret_line(self, line, source=None, line_number=None):
-
-        pass
-
-    def interpret_file(self, file, source=None):
-
-        pass

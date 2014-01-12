@@ -4,6 +4,7 @@ import math
 import operator
 import string
 
+from gcode.core import GCodeException
 
 # Parsing G-Code.
 #
@@ -57,22 +58,17 @@ binary_mul_op_table = {         # ops with multiplicative precedence
 
 # Define several sets of reserved words.
 
-word_letters = frozenset('DFGMPSTXYZ')
-
 unary_operators = frozenset(unary_op_table)
 binary_add_operators = frozenset(binary_add_op_table)
 binary_mul_operators = frozenset(binary_mul_op_table)
 binary_operators = binary_add_operators | binary_mul_operators
 operators = unary_operators | binary_operators
 valid_prefices = frozenset((op[:i+1]
-                            for op in operators | word_letters
+                            for op in operators
                             for i in range(len(op))))
 
 
-# Exception hierarchy
-
-class GCodeException(Exception):
-    pass
+# Parser Exception
 
 class GCodeSyntaxError(GCodeException):
     def __init__(self, pos, msg):
@@ -559,6 +555,7 @@ class LineParser(object):
     def parse_parameter_value(self):
 
         # parameter_value = parameter_sign + parameter_index
+
         psign = self.scanner.next()
         assert psign.type == '#'
         pindex = self.parse_real_value()
