@@ -7,7 +7,7 @@ The very simplest use case would be something like this.
     import gcode
     
     my_interp = gcode.Interpreter()
-    my_interp.process_file(open('MYFILE.GCO'))
+    my_interp.interpret_file(open('MYFILE.GCO'))
 
 The interpreter should be able to execute a single command from a
 string or a sequence of commands from a file-like object.
@@ -118,6 +118,6 @@ How about this package structure?
     gcode.core   # defs to register codes, drivers
     gcode.laser  # laser-specific code
 
-Put the overall directory in front/lib?
+Put all this in front/gcode/gcode/.
 
 

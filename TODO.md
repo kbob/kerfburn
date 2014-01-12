@@ -52,6 +52,9 @@ What's next now?
 
 ### Back End
 
+* Severe bug: if the laser is in in continuous firing mode, when the
+  engine stops, the laser turns on.
+  
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
   line 1122 (in the Linux kernel source tree).  Also see
   http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
@@ -153,15 +156,14 @@ What's next now?
 
 ## Hardware
 
-* Make a temporary top panel.  Install E-Stop switch in it.
-
 * Wire up E-Stop switch.
 
 * Wire up lid switch.
 
 * Make a temporary back panel.  Install power plug+switch in it.
 
-* Order relays.  Wire up relays to Azteeg.
+* Order relays.  Wire up relays to Azteeg and wire up power lines to
+  back panel.
 
 * Replace wrong-size screws on limit switches and cable carrier with
   right-size.
@@ -175,5 +177,3 @@ What's next now?
 * Add a limit switch for Y max.
 
 * Drill out carriage plate to pass air fitting through.
-
-* Replace the 1.8&deg; stepper motors on X and Y with 0.9&deg; motors.
