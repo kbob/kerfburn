@@ -5,11 +5,7 @@ Is this a bug database?
 
 ## Next!
 
-* Find a way to keep laser pulse trains running through multiple
-  movements.
-  
-* I need to move the engine to the soft interrupt.  That is probably
-  not next.
+What's next now?
 
 
 ## Design
@@ -19,9 +15,6 @@ Is this a bug database?
   you're still on the switch, the switch must be disconnected/broken.
 
   Also need to think about how faults are stored and reported.
-
-* What is the frequency response of the D2A + laser?  Do I need
-  to schedule changes ahead of time?
 
 
 ## Testing
@@ -52,6 +45,11 @@ Is this a bug database?
 * Write a curses-based status report tool.
 
 
+### Configuration
+
+* Should auto-generate the home sequence from the geometry config.
+
+
 ### Back End
 
 * Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
@@ -63,7 +61,7 @@ Is this a bug database?
 * Define pin mapping function for PCINTn pins.  Define e-stop and lid
   as PCINT pins.  Write driver/interrupt handler for them.
 
-* Define some terminology.  An "atom" is a 16 bit item that the motor
+* Redefine some terminology.  An "atom" is a 16 bit item that the motor
   ISRs consume.  An "interval" is an atom that describe how long to
   wait.  A "verb" is an atom that says to do something other than wait
   for an interval.
@@ -74,12 +72,17 @@ Is this a bug database?
 
 * Add a command to set the laser power.  I don't think it can be enqueued.
 
+* I need to move the engine to the soft interrupt.  That is probably
+  not next.
+
 
 ### Thruport
 
 * See double fork comments in `front/thruport/daemon.c`.
 
 * Make the client commands auto-start the daemon if it is not running.
+
+* Redesign the error reporting/logging facility.
 
 * I don't know whether the daemon shuts itself down cleanly on errors.
   It uses `atexit()` but I haven't seen that work.
@@ -101,14 +104,17 @@ Is this a bug database?
 
 * Implement highlighting in `*_repr()`.
 
-* Implement suspend mode.
-
 * Implement control mode.  What controls do we need?
 
 * Implement a `send --force` mode to replace the current sender.
 
 * In `receiver_service.c`, the receiver array needs locking.  There is
   a race condition and probable crash waiting to happen there.
+
+
+### GCode Interpreter
+
+* Write it.
 
 
 ## Cleanup
@@ -118,10 +124,13 @@ Is this a bug database?
 * Standardize filenames on "\_" or "-" separators.  I think I prefer
   "-" for C, but Python requires "\_".
 
-* GCC allows enums with attribute packed.  That shrinks the enum to
-  just the size it needs.
-  I should declare all my enumerated types with the packed attribute,
-  then use named types to store them instead of uint8_t.
+* GCC allows enums with attribute `packed`.  That shrinks the enum to
+  just the size it needs.  I should declare all my enumerated types
+  with the packed attribute, then use named types to store them
+  instead of `uint8_t`.
+
+  Actually, the `-fshort-enums` compiler flag obviates the `packed`
+  attribute.
 
   There are currently 9 enumerated types:
 
