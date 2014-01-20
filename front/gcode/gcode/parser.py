@@ -21,7 +21,8 @@ from gcode.core import GCodeException
 #      source line.  (Whitespace is not significant in G-Code outside
 #      comments.)  (It "enumerates" in the sense of the enumerate
 #      built-in: it generates a sequence of (position, char) pairs.)
-
+#
+# Each line is parsed separately.  There is no syntax that spans lines.
 
 # Define unary and binary operators.
 # N.B., G-Code trig functions use degrees; Python uses radians.
@@ -70,10 +71,12 @@ valid_prefices = frozenset((op[:i+1]
 
 # Parser Exception
 
-class GCodeSyntaxError(GCodeException):
+class GCodeSyntaxError(GCodeException, SyntaxError):
+
     def __init__(self, pos, msg):
-        message = '%s: %s' % (repr(pos), msg)
-        super(GCodeSyntaxError, self).__init__(message)
+        # message = '%s: %s' % (repr(pos), msg)
+        message = msg
+        super(GCodeSyntaxError, self).__init__(message, pos)
         self.pos = pos
         
 
@@ -191,7 +194,7 @@ class SourceLine(str):
     """a string with extra attributes for source information.
 
     source - a string describing the file, stream, or program it came from
-    number - a line number
+    lineno - the source line number
 
     If either attribute is unspecified, it is inherited from the
     source string.  If the source string does not have the attribute,
@@ -199,21 +202,23 @@ class SourceLine(str):
 
     """
 
-    def __new__(cls, old_str, source=None, number=None):
+    def __new__(cls, old_str, source=None, lineno=None):
 
         new_str = super(SourceLine, cls).__new__(cls, old_str)
         new_str.source = source
-        new_str.number = number
+        new_str.lineno = lineno
         if source is None:
             new_str.source = getattr(old_str, 'source', None)
-        if number is None:
-            new_str.number = getattr(old_str, 'number', None)
+        if lineno is None:
+            new_str.lineno = getattr(old_str, 'lineno', None)
         return new_str
 
 
-class SourcePosition( namedtuple('SourcePosition', 'line col')):
-    def __repr__(self):
-        return '%s:%s.%s' % (self.line.source, self.line.number, self.col)
+class SourcePosition(namedtuple('SourcePosition', 'src lineno offset badline')):
+    # This is defined so it can be passed to SyntaxError's constructor
+    # def __repr__(self):
+    #     return '%s:%s.%s' % (self.line.source, self.line.lineno, self.col)
+    pass
 
         
 class Peekable(object):
@@ -234,7 +239,9 @@ class Peekable(object):
     def next(self):
 
         if self.exc:
-            raise self.exc
+            exc = self.exc
+            self.exc = None
+            raise exc
         if self.saved:
             saved = self.saved
             self.saved = None
@@ -270,14 +277,14 @@ class Peekable(object):
 # Note that a number does not have a leading +/- sign.  The sign is a
 # separate token.
 
-def scan_line(line):
+def scan_line(line, code_letters):
 
     def collect_digits(prefix, c):
         return c.isdigit()
 
     lenum = LineEnumerator(line)
     for (col, c) in lenum:
-        pos = SourcePosition(line, col)
+        pos = SourcePosition(line.source, line.lineno, col, line)
         cup = c.upper()
         if c == '(':            # Parenthesized Comment/Message
             with lenum.catch_whitespace():
@@ -309,6 +316,8 @@ def scan_line(line):
                     raise GCodeSyntaxError(pos, 'unknown operator')
                 yield Token(pos, OperatorToken, letters)
             else:
+                if cup not in code_letters:
+                    raise GCodeSyntaxError(pos, 'unknown code letter')
                 yield Token(pos, WordLetterToken, cup)
         elif c in '[]#+-/=':
             yield Token(pos, c)
@@ -357,11 +366,13 @@ class ParsedLine(object):
 
 class LineParser(object):
 
-    def __init__(self, line, parameters):
+    def __init__(self, line, parameters, code_letters):
 
         self.line = line
         self.parameters = parameters
-        self.scanner = Peekable(scan_line(line), Token(None, EOLToken))
+        chargen = scan_line(line, code_letters)
+        eol = Token(None, EOLToken)
+        self.scanner = Peekable(chargen, eol)
         self.result = ParsedLine(line)
 
     # The parse_foo() methods form a recursive descent parser.  Each
@@ -559,19 +570,33 @@ class LineParser(object):
         psign = self.scanner.next()
         assert psign.type == '#'
         pindex = self.parse_real_value()
-        return self.parameters[pindex]
+        try:
+            return self.parameters[pindex]
+        except GCodeException as exc:
+            pos = SourcePosition(self.line.source,
+                                 self.line.lineno,
+                                 None, self.line)
+            raise GCodeSyntaxError(pos, exc.message)
         
 
 class Parser(object):
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, dialect):
         self.parameters = parameters
+        self.dialect = dialect
+        self.code_letters = frozenset((dialect.code_letters))
 
-    def parse_line(self, line, source=None, line_number=None):
+    def parse_line(self, line, source=None, lineno=None):
 
-        line = SourceLine(line, source, line_number)
-        parser = LineParser(line, self.parameters)
+        line = SourceLine(line, source, lineno)
+        parser = LineParser(line, self.parameters, self.code_letters)
         parser.parse_line()
+        for (pindex, pvalue) in parser.result.settings:
+            try:
+                self.parameters[pindex] = pvalue
+            except GCodeException as exc:
+                pos = SourcePosition(line.source, line.lineno, None, line)
+                raise GCodeSyntaxError(pos, exc.message)
         return parser.result
         
 
@@ -580,7 +605,7 @@ class Parser(object):
         if source is None:
             source = getattr(file, 'name', None)
         nonblank_seen = False
-        for line_number, line in enumerate(file, 1):
+        for lineno, line in enumerate(file, 1):
             line = line.rstrip('\r\n')
             stripped = line.strip()
             if stripped == '%':
@@ -593,14 +618,4 @@ class Parser(object):
                 nonblank_seen = True
                 yield self.parse_line(line,
                                       source=source,
-                                      line_number=line_number)
-
-
-
-if __name__ == '__main__':
-    import fileinput, pprint
-    for (no, line) in enumerate(fileinput.input(), 1):
-        src_line = SourceLine(line.rstrip(), source='input', number=no)
-        lp = LineParser(src_line)
-        lp.parse_line()
-        pprint.pprint(lp.result.__dict__)
+                                      lineno=lineno)

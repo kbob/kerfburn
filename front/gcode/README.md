@@ -14,7 +14,7 @@ string or a sequence of commands from a file-like object.
 
 For error reporting, either one can have an optional name.
 
-    class GCodeInterpreter:
+    class Interpreter:
     
         def interpret_line(self, line, name=None, number=1):
             # ...
@@ -31,6 +31,11 @@ If an exception is raised, interpretation of the line or the file is
 stopped.  I can't think of any exceptions where execution should
 continue after an exception.  I should see what the NIST RF274/NCG
 spec says about error handling.
+
+Need a way to do a "simulation" run or a dry run (syntax check).
+Override a default argument to the Interpreter's constructor.
+
+
 
 ## State
 
@@ -49,22 +54,25 @@ doubt it's so.
 The HW state is maintained inside the CNC machine.  The CNC machine
 is always authoritative. (-:
 
-Other state, e.g., units, current feed rate, is less well defined.
-The two most important things are that the user knows when they
-persist and when they don't, and that we're more or less consistent
-with other G-Code implementations.
+Other state, e.g., units, current tool, is defined by Modal Groups.
+Each Modal Group has a fixed set of G/M codes that affect it, and
+whichever was issued last sets the current mode.  The modes are
+reinitialized to default values "when the machining center is turned
+on or otherwise re-initialized".
 
 LinuxCNC explicitly states which parameters are persistent and which
 are volatile.  They don't appear to encourage users to access
 parameter files directly.  Parameters 31-5000 are volatile.
 Parameters 5001-5390 are persistent, and many have defined meanings.
-Parameters 5400-infinity are volatile.
+Parameters 5400-infinity are volatile.  Parameters 0-30 are
+subroutine-local.
 
-LinuxCNC also has named parameters and subroutines.  I am ignoring
-that.  They seem to be a LinuxCNC extension.
+LinuxCNC also has subroutines and named parameters.  I am ignoring
+those.  They seem to be a LinuxCNC extension.
 
 
 ## Extensibility.
+
 
 ### Adding Codes
 
@@ -79,7 +87,7 @@ I'm thinking that there will be a bunch of classes, and they
 will each define some codes.  Then they will be explicitly registered
 with the interpreter.
 
-Each code will be a function with a decorated
+Each code will be a method with a decorator.
 
     class MyCodes(GCodeSet):
     
@@ -119,5 +127,32 @@ How about this package structure?
     gcode.laser  # laser-specific code
 
 Put all this in front/gcode/gcode/.
+
+
+## Dialects and Decorators
+
+After a G-Code line is parsed, the execution process has three phases.
+
+  1. Check that the line is legal -- no repeated modal group members.
+     Interpreter + dialect
+  
+  2. Update all the non-G/M words' values into a code dict
+     Interpreter + executor
+  
+  3. Iterate through the order of execution.  For settings, values
+     from the code dict are copied to executor variables.  For
+     actions, S-code commands are generated.
+     Executor
+ 
+For a "passive" code word such as feed rate, the executor just needs
+to declare the word.
+
+For an "active" code word such as M3 (Enable Laser), 
+
+ 
+
+
+
+  
 
 

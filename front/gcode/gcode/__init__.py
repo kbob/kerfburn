@@ -1,16 +1,14 @@
 # This is __init__.py.
 
-"""G-Code Interpreter"""
+"""Kerfburn G-Code Interpreter"""
 
-import core
-import interpreter
-import parser
-
-from core import GCodeException
-from interpreter import Interpreter
-from parser import GCodeSyntaxError
+from gcode.core import GCodeException
+from gcode.interpreter import Interpreter
+from gcode.laser import LaserExecutor
+from gcode.parser import GCodeSyntaxError
 
 __all__ = ['GCodeException',
-           'GCodeSyntaxError'
+           'GCodeSyntaxError',
            'Interpreter',
+           'LaserExecutor',
            ]

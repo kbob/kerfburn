@@ -121,7 +121,7 @@ Laser pulse duration in CPU clock ticks.
 #### il &mdash; Illumination Level
 *unsigned integer*  
 The bed illumination level.  Legal values are 0, off, to 127, full brightness.
-il applies when an illumination animation is not in progress.
+`il` applies when an illumination animation is not in progress.
 
 
 #### ia &mdash; Illumination Animation
