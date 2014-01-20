@@ -5,6 +5,7 @@ import operator
 import string
 
 from gcode.core import GCodeException
+from gcode.core import SourceLine
 
 # Parsing G-Code.
 #
@@ -175,9 +176,11 @@ class Token(namedtuple('Token', 'pos type value')):
     # optional value.
 
     def __new__(cls, pos, type, value=None):
+
         return super(Token, cls).__new__(cls, pos, type, value)
 
     def __repr__(self):
+
         try:
             type_str = self.type.__name__
         except AttributeError:
@@ -189,38 +192,6 @@ class Token(namedtuple('Token', 'pos type value')):
         return '%s:Token(type=%s%s)' % (self.pos, type_str, value_str)
 
 
-class SourceLine(str):
-
-    """a string with extra attributes for source information.
-
-    source - a string describing the file, stream, or program it came from
-    lineno - the source line number
-
-    If either attribute is unspecified, it is inherited from the
-    source string.  If the source string does not have the attribute,
-    it defaults to None.
-
-    """
-
-    def __new__(cls, old_str, source=None, lineno=None):
-
-        new_str = super(SourceLine, cls).__new__(cls, old_str)
-        new_str.source = source
-        new_str.lineno = lineno
-        if source is None:
-            new_str.source = getattr(old_str, 'source', None)
-        if lineno is None:
-            new_str.lineno = getattr(old_str, 'lineno', None)
-        return new_str
-
-
-class SourcePosition(namedtuple('SourcePosition', 'src lineno offset badline')):
-    # This is defined so it can be passed to SyntaxError's constructor
-    # def __repr__(self):
-    #     return '%s:%s.%s' % (self.line.source, self.line.lineno, self.col)
-    pass
-
-        
 class Peekable(object):
 
     # Add a peek() method to any iterable.
@@ -280,11 +251,12 @@ class Peekable(object):
 def scan_line(line, code_letters):
 
     def collect_digits(prefix, c):
+
         return c.isdigit()
 
     lenum = LineEnumerator(line)
     for (col, c) in lenum:
-        pos = SourcePosition(line.source, line.lineno, col, line)
+        pos = line.pos_at_column(col)
         cup = c.upper()
         if c == '(':            # Parenthesized Comment/Message
             with lenum.catch_whitespace():
@@ -349,9 +321,9 @@ class ParsedLine(object):
 
     # A container for the source line's side effects.
 
-    def __init__(self, src):
+    def __init__(self, source):
 
-        self.src = src
+        self.source = source
         self.block_delete = False
         self.line_number = None
         self.settings = []
@@ -359,6 +331,7 @@ class ParsedLine(object):
         self.words = []
 
     def __repr__(self):
+
         attrs = 'src block_delete line_number settings comment words'.split()
         return 'ParsedLine(%s)' % ', '.join('%s=%r' % (a, getattr(self, a))
                                             for a in attrs)
@@ -458,7 +431,7 @@ class LineParser(object):
         pindex = self.parse_real_value()
         eq = self.scanner.next()
         if eq.type != '=':
-            raise GCodeException(eq.pos, "can't parse parameter setting")
+            raise GCodeSyntaxError(eq.pos, "can't parse parameter setting")
         pvalue = self.parse_real_value()
         self.result.settings.append([pindex, pvalue])
 
@@ -573,15 +546,13 @@ class LineParser(object):
         try:
             return self.parameters[pindex]
         except GCodeException as exc:
-            pos = SourcePosition(self.line.source,
-                                 self.line.lineno,
-                                 None, self.line)
-            raise GCodeSyntaxError(pos, exc.message)
+            raise GCodeSyntaxError(self.line.pos, exc.message)
         
 
 class Parser(object):
 
     def __init__(self, parameters, dialect):
+
         self.parameters = parameters
         self.dialect = dialect
         self.code_letters = frozenset((dialect.code_letters))
@@ -595,8 +566,7 @@ class Parser(object):
             try:
                 self.parameters[pindex] = pvalue
             except GCodeException as exc:
-                pos = SourcePosition(line.source, line.lineno, None, line)
-                raise GCodeSyntaxError(pos, exc.message)
+                raise GCodeSyntaxError(line.pos, exc.message)
         return parser.result
         
 

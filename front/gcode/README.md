@@ -133,8 +133,11 @@ Put all this in front/gcode/gcode/.
 
 After a G-Code line is parsed, the execution process has three phases.
 
-  1. Check that the line is legal -- no repeated modal group members.
-     Interpreter + dialect
+  1. Check that the line is legal
+      - multi-char codes are valid
+      - each modal group has 0-1 code
+      - each multi-char code has all required args
+      - no two multis use the same args
   
   2. Update all the non-G/M words' values into a code dict
      Interpreter + executor
@@ -143,16 +146,3 @@ After a G-Code line is parsed, the execution process has three phases.
      from the code dict are copied to executor variables.  For
      actions, S-code commands are generated.
      Executor
- 
-For a "passive" code word such as feed rate, the executor just needs
-to declare the word.
-
-For an "active" code word such as M3 (Enable Laser), 
-
- 
-
-
-
-  
-
-

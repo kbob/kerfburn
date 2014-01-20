@@ -5,30 +5,14 @@ from gcode.core import code, modal_group
 
 DEFAULT_FEED_RATE = 100         # mm/sec
 
+class UnitsMode:
+    mm = 0
+    inch = 1
+
 class DistanceMode:
     absolute = 0
     relative = 1
 
-
-# class LaserDialect(core.Dialect):
-
-#     """G-Code Machine Protocol for laser cutter"""
-
-#     @property
-#     def code_letters(self):
-#         return 'DFGMPSTXYZ'
-
-#     @property
-#     def modal_groups(self):
-#         return (
-#             ('motion', 'G0 G1'),
-#             ('units', 'G20 G21'),
-#             ('nonmodal', 'G4 G28'),
-#             ('stopping', 'M0 M1 M2'),
-#             ('spindle', 'M3 M4 M5'),
-#             ('tool change', 'M6'),
-#             ('motors', 'M17 M18'),
-#             )
 
 class LaserExecutor(core.Executor):
 
@@ -36,48 +20,66 @@ class LaserExecutor(core.Executor):
         self.message = ''
         self.feed_rate = DEFAULT_FEED_RATE
         self.spindle_speed = 0
-        self.current_tool = 'n'
-        self.next_tool = 'n'
-        self.spindle_on = False
+        self.current_tool = None
+        self.next_tool = None
+        self.laser_select = None
         self.coolant_on = [False, False]
-        self.length_units = 1
+        self.length_units = UnitsMode.mm
         self.distance_mode = DistanceMode.absolute
 
-    
     def initial_modes(self):
         return {
+            'F': 25,
+            'P': None,
+            'S': None,
+            'T': None,
             'X': None,
             'Y': None,
             'Z': None,
             }
 
+    # def order_of_execution(self):
+    #     return ()
+    #     # return (
+    #     #         self.exec_comment,
+    #     #         self.exec_set_feed_rate,
+    #     #         self.exec_set_spindle_speed,
+    #     #         self.exec_select_tool,
+    #     #         self.exec_change_tool,
+    #     #         self.exec_spindle_on_off,
+    #     #         self.exec_coolant_on_off,
+    #     #         self.exec_dwell,
+    #     #         self.exec_set_length_units,
+    #     #         self.exec_set_distance_mode,
+    #     #         self.exec_home,
+    #     #         self.exec_motion,
+    #     #         self.exec_stop,
+    #     #         )
 
+    def execute(self, modes, pline):
+        #  1. comment (do nothing)
+        #  2. set feed rate
+        #  3. set spindle speed
+        #  4. select tool
+        #  5. change tool
+        #  6. spindle on off
+        #  7. coolant on off
+        #  8. dwell
+        #  9. set length units
+        # 10. set distance mode
+        # 11. home
+        # 12. motion
+        # 13. stop
+        pass
 
-    def order_of_execution(self):
-        return ()
-        # return (
-        #         self.exec_comment,
-        #         self.exec_set_feed_rate,
-        #         self.exec_set_spindle_speed,
-        #         self.exec_select_tool,
-        #         self.exec_change_tool,
-        #         self.exec_spindle_on_off,
-        #         self.exec_coolant_on_off,
-        #         self.exec_dwell,
-        #         self.exec_set_length_units,
-        #         self.exec_set_distance_mode,
-        #         self.exec_home,
-        #         self.exec_motion,
-        #         self.exec_stop,
-        #         )
 
     with modal_group('motion'):
 
-        @code
+        @code(require_any='XYZ')
         def G0(self, X, Y, Z):
             pass
 
-        @code
+        @code(require_any='XYZ')
         def G1(self, X, Y, Z, F):
             pass
 
@@ -89,11 +91,13 @@ class LaserExecutor(core.Executor):
 
         @code
         def G20(self):
-            pass
+            self.length_units = UnitsMode.inch
+            # XXX correct all positions/speeds
 
         @code
         def G21(self):
-            pass
+            self.length_units = UnitsMode.mm
+            # XXX correct all positions/speeds
 
     @code(modal=False)
     def G28(self):
@@ -108,10 +112,6 @@ class LaserExecutor(core.Executor):
         @code
         def G91(self):
             pass
-
-    @code(modal=False)
-    def G92(self):
-        pass
 
     with modal_group('stopping'):
 
@@ -166,11 +166,11 @@ class LaserExecutor(core.Executor):
             pass
 
     @code
-    def M100(self):
+    def M100(self, P):
         pass
 
     @code
-    def M101(self):
+    def M101(self, P):
         pass
 
     with modal_group('high voltage'):

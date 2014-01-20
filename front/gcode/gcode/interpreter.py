@@ -1,3 +1,5 @@
+import operator
+
 from gcode import core
 from gcode import laser
 from gcode import parser
@@ -93,6 +95,7 @@ class Interpreter(object):
     """G-Code Interpreter"""
 
     def __init__(self, executor=laser.LaserExecutor()):
+
         self.executor = executor
         self.parameters = core.ParameterSet()
         self.modes = executor.initial_modes()
@@ -115,14 +118,53 @@ class Interpreter(object):
             self.execute(pline)
 
     def prep_words(self, pline):
-        # create dictionary.  Check for dups and for modal group dups.
-        pass
-        return {}
+
+        active_groups = {}
+        active_args = {}
+        dialect = self.executor.dialect
+        new_modes = {}
+        modal_groups = {}
+        codes = []
+        for (letter, number) in pline.words:
+            if letter in dialect.passive_code_letters:
+                new_modes[letter] = number
+            else:
+                code = dialect.find_active_code(letter, number)
+                if code is None:
+                    msg = 'unknown code %s%s' % (letter, number)
+                    raise parser.GCodeSyntaxError(pline.source.pos, msg)
+                codes.append(code)
+        for code in codes:
+            group = code.modal_group
+            if group:
+                if group in active_groups:
+                    prev = active_groups[group]
+                    msg = '%s conflicts with %s' % (code, prev)
+                    raise parser.GCodeSyntaxError(pline.source.pos, msg)
+                active_groups[group] = code
+            for arg in code.arg_letters:
+                if arg in new_modes:
+                    if arg in active_args:
+                        msg = '%s%s ambiguous between %s and %s'
+                        msg %= (arg, new_modes[arg], active_args[arg], code)
+                        raise parser.GCodeSyntaxError(pline.source.pos, msg)
+                    active_args[arg] = code
+            r_any = code.require_any
+            if r_any and not any(a in new_modes for a in r_any):
+                msg = 'code %s requires at least one of %s'
+                msg %= (code, ', '.join(r_any))
+                raise parser.GCodeSyntaxError(pline.source.pos, msg)
+                
+        return new_modes
 
     def execute(self, pline):
+
         new_modes = self.prep_words(pline)
         self.modes.update(new_modes)
+        self.executor.execute(self.modes, pline)
 
-        ooe = self.executor.order_of_execution()
-        for action in ooe:
-            action(pline)
+def modes_repr(modes):
+
+    return '{%s}' % ' '.join('%s=%s' % (k, modes[k])
+                             for k in sorted(modes)
+                             if modes[k] is not None)

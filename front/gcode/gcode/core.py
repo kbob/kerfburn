@@ -8,7 +8,7 @@ import math
 import numbers
 from collections import namedtuple
 import cPickle as pickle
-# import string
+import string
 
 
 current_modal_group = None
@@ -22,77 +22,125 @@ class GCodeException(Exception):
 # The G-Code spec states that an expression equals a code number
 # if it is within +/- 0.0001.
 
-class ApproximateFloat(float):
+class ApproximateNumber(float):
 
     def __eq__(self, other):
+
+        # return self.low <= other <= self.high
         return self - 0.0001 <= other <= self + 0.0001
 
-    def __ne__(self, other):
-        return not self == other
 
+# memoized instance method
+def instmemo(meth):
 
-class ApproximateInt(int):
-
-    def __init__(self, value):
-        self.low = value - 0.0001
-        self.high = value + 0.0001
-
-    def __eq__(self, other):
-        if isinstance(other, numbers.Integral):
-            return super(ApproximateInt, self).__cmp__(other) == 0
-        if isinstance(other, numbers.Real):
-            return self.low <= other <= self.high
-        elif isinstance(other, numbers.Complex):
-            return complex(self) == complex(other)
-        return NotImplemented
-
-    def __ne__(self, other):
-        return not self == other
-
-
-def ApproximateNumber(x):
-    if isinstance(x, numbers.Integral):
-        return ApproximateInt(x)
-    if isinstance(x, numbers.Real):
-        return ApproximateFloat(x)
-    raise TypeError('not approximable')
-
-
-# memoized classmethod
-def classmemo(meth):
     def lookup(self, *args):
+
+        key = (id(self),) + args
+        if key in saved:
+            return saved[key]
+        saved[key] = result = meth(self, *args)
+        return result
+
+    lookup.func_name = meth.func_name
+    lookup.func_doc = meth.func_doc
+    saved = {}
+    return lookup
+
+# memoized class method
+def classmemo(meth):
+
+    def lookup(self, *args):
+
         cls = self.__class__
         key = (cls,) + args
         if key in saved:
             return saved[key]
         saved[key] = result = meth(cls, *args)
         return result
+
+    lookup.func_name = meth.func_name
+    lookup.func_doc = meth.func_doc
     saved = {}
     return lookup
 
 
-class LanguageCode(object):
+# SourcePosition is defined so it can be passed to SyntaxError's constructor
+SourcePosition = namedtuple('SourcePosition', 'source lineno offset badline')
 
-    def __init__(self, func, modal_group=None):
+class SourceLine(str):
+
+    """a string with extra attributes for source information.
+
+    source - a string describing the file, stream, or program it came from
+    lineno - the source line number
+
+    If either attribute is unspecified, it is inherited from the
+    source string.  If the source string does not have the attribute,
+    it defaults to None.
+
+    """
+
+    def __new__(cls, old_str, source=None, lineno=None):
+
+        if source is None:
+            source = getattr(old_str, 'source', None)
+        if lineno is None:
+            lineno = getattr(old_str, 'lineno', None)
+        new_line = super(SourceLine, cls).__new__(cls, old_str)
+        new_line.pos = SourcePosition(source, lineno, None, new_line)
+        return new_line
+
+    def pos_at_column(self, col):
+
+        return SourcePosition(self.pos.source, self.pos.lineno, col, self)
+
+
+class LanguageCode(str):
+
+    def __new__(cls, func, modal_group=None, require_any=None):
+
         assert inspect.isfunction(func)
-        self.func = func
-        self.modal_group = modal_group
+        instance = super(LanguageCode, cls).__new__(cls, func.func_name)
+        instance.func = func
+        instance.modal_group = modal_group
+        instance.require_any = require_any
+        f_name = func.func_name
+        (instance.letter, rest) = (f_name[0], f_name[1:])
+        instance.number = ApproximateNumber(rest.replace('_', '.'))
+        return instance
 
-    def __call__(self, *args):
-        return self.func(*args)
+    def __repr__(self):
+
+        return '<code %s>' % (self.func.func_name)
+
+    def __call__(self, modes, new_modes):
+
+        args = {a: modes[a] for a in self.arg_letters}
+        return self.func(self, **args)
     
+    def matches(self, letter, number):
+
+        return self.letter == letter and self.number == number
+
     @property
     def code_letters(self):
-        code = self.func_name[0]
-        argspec = inspect.getargspec(self.func)
-        return [self.func_name[0]] + argspec[0][1:]
+
+        return {self.letter} | self.arg_letters
+
+    @property
+    def arg_letters(self):
+
+        args = inspect.getargspec(self.func).args
+        return tuple(a for a in args if len(a) == 1 and a in string.uppercase)
 
     @property
     def func_name(self):
+
         return self.func.__name__
 
     @property
     def func_doc(self):
+
         return self.func.__doc__
 
 
@@ -115,7 +163,7 @@ class LanguageCode(object):
 # >>> @code(modal_group='frobbing')
 # >>> def G125(self): ...
 
-def code(modal=None, modal_group=None):
+def code(modal=None, modal_group=None, require_any=None):
 
     def decorate(func, modal_group=modal_group):
 
@@ -123,7 +171,9 @@ def code(modal=None, modal_group=None):
             modal_group = current_modal_group or func.func_name
         if modal is False:
             modal_group = None
-        return LanguageCode(func, modal_group=modal_group)
+        return LanguageCode(func,
+                            modal_group=modal_group,
+                            require_any=require_any)
 
     # if called as @code...
     if inspect.isfunction(modal) and modal_group is None:
@@ -149,6 +199,7 @@ def code(modal=None, modal_group=None):
 
 @contextmanager
 def modal_group(name):
+
     global current_modal_group
     saved = current_modal_group
     current_modal_group = name
@@ -156,7 +207,42 @@ def modal_group(name):
     current_modal_group = saved
 
 
-Dialect = namedtuple('Dialect', 'code_letters modal_groups nonmodals')
+class Dialect(namedtuple('Dialect', 'modal_groups nonmodals')):
+
+    @instmemo
+    def find_active_code(self, letter, number):
+
+        for code in self.active_codes:
+            if code.matches(letter, number):
+                return code
+
+    @property
+    @instmemo
+    def arg_letters(self):
+
+        return {a
+                for c in self.active_codes
+                for a in c.arg_letters}
+
+    @property
+    @instmemo
+    def code_letters(self):
+
+        return {w[0] for w in self.active_codes} | self.arg_letters
+
+    @property
+    @instmemo
+    def active_codes(self):
+
+        return [code
+                for group in self.modal_groups.values() + [self.nonmodals]
+                for code in group]
+
+    @property
+    @instmemo
+    def passive_code_letters(self):
+
+        return self.arg_letters
 
 
 class Executor(object):
@@ -168,7 +254,7 @@ class Executor(object):
     @property
     @classmemo
     def dialect(cls):
-        code_letters = set()
+
         modal_groups = defaultdict(set)
         nonmodals = set()
         for attr in dir(cls):
@@ -176,22 +262,22 @@ class Executor(object):
                 continue        # prevent infinite recursion
             value = getattr(cls, attr, None)
             if isinstance(value, LanguageCode):
-                code_letters.update(value.code_letters)
                 if value.modal_group:
-                    # modal_groups.setdefault(value.modal_group, set()).add(attr)
-                    modal_groups[value.modal_group].add(attr)
+                    modal_groups[value.modal_group].add(value)
                 else:
-                    nonmodals.add(attr)
-        return Dialect(code_letters, modal_groups, nonmodals)
+                    nonmodals.add(value)
+        return Dialect(modal_groups, nonmodals)
 
 
     @abstractproperty
     def initial_modes(self):
+
         return ()
 
     @abstractproperty
-    def order_of_execution(self):
-        return ()
+    def execute(self, modes, pline):
+
+        pass
 
 
 class ParameterSet(object):
@@ -222,7 +308,7 @@ class ParameterSet(object):
     def check_index(self, index):
 
         if isinstance(index, float):
-            key = ApproximateInt(math.floor(index + 0.0002))
+            key = ApproximateNumber(math.floor(index + 0.0002))
             if key != index:
                 m = 'parameter index %r is not close to an integer' % index
                 raise GCodeException(m)
