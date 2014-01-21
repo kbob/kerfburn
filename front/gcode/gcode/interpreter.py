@@ -168,4 +168,7 @@ class Interpreter(object):
             else:
                 active_code = active_groups.get(op)
                 if active_code:
-                    active_code(self.settings, new_settings)
+                    # XXX This is ugly.
+                    meth = active_code.func.__get__(self.executor,
+                                                    self.executor.__class__)
+                    active_code(meth, self.settings, new_settings)

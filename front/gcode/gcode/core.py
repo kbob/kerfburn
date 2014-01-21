@@ -114,13 +114,9 @@ class LanguageCode(str):
 
         return '<code %s>' % (self.func.func_name)
 
-    def __call__(self, settings, new_settings):
-
+    def __call__(self, method, settings, new_settings):
         args = {a: settings[a] for a in self.arg_letters}
-        print 'calling %s(%s)' % (self.func.func_name,
-                                  ', '.join('%s=%s' % (k, args[k])
-                                            for k in args))
-        return self.func(self, **args)
+        return method(**args)
     
     def matches(self, letter, number):
 

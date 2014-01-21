@@ -1,6 +1,8 @@
 """G-Code Machine Protocol for laser cutter"""
 
-from gcode import core
+import sys
+
+from gcode.core import ApproximateNumber, Executor, GCodeException
 from gcode.core import code, modal_group, nonmodal_group
 from gcode.parser import parse_comment
 
@@ -16,12 +18,12 @@ class DistanceMode:
     relative = 1
 
 
-class LaserExecutor(core.Executor):
+class LaserExecutor(Executor):
 
     def __init__(self):
         self.message = ''
         self.feed_rate = DEFAULT_FEED_RATE
-        self.spindle_speed = 0
+        self.spindle_speed = None
         self.current_tool = None
         self.next_tool = None
         self.laser_select = None
@@ -67,7 +69,7 @@ class LaserExecutor(core.Executor):
         if pline.comment:
             hdr, rest = parse_comment(pline.source.pos, pline.comment)
             if hdr == 'MSG':
-                print 'MSG', rest
+                print >>sys.stderr, 'MSG', rest
     
     # #  #    #    #     #      #       #      #     #    #   #  # #
 
@@ -75,30 +77,33 @@ class LaserExecutor(core.Executor):
 
         @code(require_any='XYZ')
         def G0(self, X, Y, Z):
-            pass
+            "traverse move"
 
         @code(require_any='XYZ')
         def G1(self, X, Y, Z, F):
-            pass
+            """linear motion"""
 
     @code(nonmodal_group='dwell')
     def G4(self, P):
-        pass
+        "dwell"
 
     with modal_group('units'):
 
         @code
         def G20(self):
+            """distances are in inches"""
             self.length_units = UnitsMode.inch
             # XXX correct all positions/speeds
 
         @code
         def G21(self):
+            """distances are in millimeters"""
             self.length_units = UnitsMode.mm
             # XXX correct all positions/speeds
 
     @code(nonmodal_group='home')
     def G28(self):
+        """home carriage"""
         # pp 20-21:
         #
         #    "If an axis word-using G-code from group 1 is implicitly
@@ -107,49 +112,67 @@ class LaserExecutor(core.Executor):
         #    appears on the line, the activity of the group 1 G-code
         #    is suspended for that line. The axis word-using G-codes
         #    from group 0 are G10, G28, G30, and G92."
-        pass
+        self.emit('Qh', 'W')
 
     with modal_group('distance mode'):
 
         @code
         def G90(self):
-            pass
+            """distances are absolute positions"""
+            self.distance_mode = DistanceMode.absolute
 
         @code
         def G91(self):
-            pass
+            """distances are relative positions"""
+            self.distance_mode = DistanceMode.relative
 
     with nonmodal_group('stop'):
 
         @code
         def M0(self):
-            pass
+            """stop program"""
+            return 'pause program'
 
         @code
         def M1(self):
-            pass
+            """optional stop program"""
+            return 'pause program'
 
         @code
         def M2(self):
-            pass
+            """program end"""
+            return 'end program'
 
     with modal_group('spindle'):
 
         @code
         def M3(self, S):
-            pass
+            """enable the current laser"""
+            self.laser_enabled = True
 
         @code
         def M4(self, S):
-            pass
+            """enable the current laser"""
+            self.laser_enabled = True
 
         @code
         def M5(self):
-            pass
+            """disable the laser"""
+            self.laser_enabled = False
 
     @code(modal_group='tool change')
     def M6(self, T):
-        pass
+        """select the laser"""
+        if ApproximateNumber(0) == T:
+            ls = 'n'
+        elif ApproximateNumber(1) == T:
+            ls = 'm'
+        elif ApproximateNumber(2) == T:
+            ls = 'v'
+        else:
+            msg = 'M6: T must be 0=off, 1=main laser, or 2=visible laser'
+            raise GCodeException(msg)
+        self.emit('ls=%s' % ls)
 
     with modal_group('motors'):
 
@@ -241,4 +264,8 @@ class LaserExecutor(core.Executor):
         def M114(self, P):
             pass
 
-    
+    # #  #    #    #     #      #       #      #     #    #   #  # #
+
+    def emit(self, *cmds):
+        for cmd in cmds:
+            print cmd
