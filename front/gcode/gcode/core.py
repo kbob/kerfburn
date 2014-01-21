@@ -114,9 +114,9 @@ class LanguageCode(str):
 
         return '<code %s>' % (self.func.func_name)
 
-    def __call__(self, modes, new_modes):
+    def __call__(self, settings, new_settings):
 
-        args = {a: modes[a] for a in self.arg_letters}
+        args = {a: settings[a] for a in self.arg_letters}
         print 'calling %s(%s)' % (self.func.func_name,
                                   ', '.join('%s=%s' % (k, args[k])
                                             for k in args))
@@ -305,7 +305,7 @@ class Executor(object):
         assert s_ooe == s_grps
         
     @abstractproperty
-    def initial_modes(self):
+    def initial_settings(self):
         return ()
 
 

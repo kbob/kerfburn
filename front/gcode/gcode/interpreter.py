@@ -99,7 +99,7 @@ class Interpreter(object):
 
         self.executor = executor
         self.parameters = core.ParameterSet()
-        self.modes = executor.initial_modes()
+        self.settings = executor.initial_settings()
         self.parser = parser.Parser(self.parameters, executor.dialect)
 
     def interpret_line(self, line, source=None, lineno=None):
@@ -123,12 +123,12 @@ class Interpreter(object):
         active_groups = {}
         active_args = {}
         dialect = self.executor.dialect
-        new_modes = {}
+        new_settings = {}
         modal_groups = {}
         codes = []
         for (letter, number) in pline.words:
             if letter in dialect.passive_code_letters:
-                new_modes[letter] = number
+                new_settings[letter] = number
             else:
                 code = dialect.find_active_code(letter, number)
                 if code is None:
@@ -144,31 +144,28 @@ class Interpreter(object):
                     raise parser.GCodeSyntaxError(pline.source.pos, msg)
                 active_groups[group] = code
             for arg in code.arg_letters:
-                if arg in new_modes:
+                if arg in new_settings:
                     if arg in active_args:
                         msg = '%s%s ambiguous between %s and %s'
-                        msg %= (arg, new_modes[arg], active_args[arg], code)
+                        msg %= (arg, new_settings[arg], active_args[arg], code)
                         raise parser.GCodeSyntaxError(pline.source.pos, msg)
                     active_args[arg] = code
             r_any = code.require_any
-            if r_any and not any(a in new_modes for a in r_any):
+            if r_any and not any(a in new_settings for a in r_any):
                 msg = 'code %s requires at least one of %s'
                 msg %= (code, ', '.join(r_any))
                 raise parser.GCodeSyntaxError(pline.source.pos, msg)
                 
-        return active_groups, new_modes
+        return active_groups, new_settings
 
     def execute(self, pline):
 
-        active_groups, new_modes = self.prep_words(pline)
-        self.modes.update(new_modes)
+        active_groups, new_settings = self.prep_words(pline)
+        self.settings.update(new_settings)
         for op in self.executor.order_of_execution:
             if inspect.ismethod(op):
-                op(self.modes, new_modes, pline)
+                op(self.settings, new_settings, pline)
             else:
-                g = self.executor.dialect.groups[op]
-                c = active_groups.get(op)
-                if c:
-                    c(self.modes, new_modes)
-                elif iter(g).next().modal:
-                    print 'modal'
+                active_code = active_groups.get(op)
+                if active_code:
+                    active_code(self.settings, new_settings)

@@ -29,7 +29,7 @@ class LaserExecutor(core.Executor):
         self.length_units = UnitsMode.mm
         self.distance_mode = DistanceMode.absolute
 
-    def initial_modes(self):
+    def initial_settings(self):
         return {
             'F': 25,
             'P': None,
@@ -63,7 +63,7 @@ class LaserExecutor(core.Executor):
             'stop',
             )
 
-    def exec_comment(self, modes, new_modes, pline):
+    def exec_comment(self, settings, new_settings, pline):
         if pline.comment:
             hdr, rest = parse_comment(pline.source.pos, pline.comment)
             if hdr == 'MSG':
@@ -119,7 +119,7 @@ class LaserExecutor(core.Executor):
         def G91(self):
             pass
 
-    with modal_group('stop'):
+    with nonmodal_group('stop'):
 
         @code
         def M0(self):
@@ -227,7 +227,7 @@ class LaserExecutor(core.Executor):
         def M111(self):
             pass
 
-    @code(modal_group='stop')
+    @code(nonmodal_group='stop')
     def M112(self):
         pass
 

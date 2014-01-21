@@ -3,6 +3,7 @@
 
 from gcode.core import code, modal_group
 
+
 class ArcMixin(object):
 
     with modal_group('motion'):
@@ -26,11 +27,12 @@ if __name__ == '__main__':
         def G0(self, X, Y, Z):
             pass
 
-        def initial_modes(self):
-            pass
+        def initial_settings(self):
+            return {}
 
+        @property
         def order_of_execution(self):
-            pass
+            return ('motion',)
 
     mex = MyExecutor()
     print mex.dialect
