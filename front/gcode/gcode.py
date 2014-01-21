@@ -286,7 +286,10 @@ class ParsedLine(object):
     def __repr__(self):
         return ("ParsedLine(block_delete=%r, line_number=%r, "
                 "comment=%r, words=%r)" %
-                (self.block_delete, self.line_number, self.comment, self.words))
+                (self.block_delete,
+                 self.line_number,
+                 self.comment,
+                 self.words))
 
 
 class LineParser(object):

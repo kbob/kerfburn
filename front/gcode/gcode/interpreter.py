@@ -1,3 +1,4 @@
+import inspect
 import operator
 
 from gcode import core
@@ -135,7 +136,7 @@ class Interpreter(object):
                     raise parser.GCodeSyntaxError(pline.source.pos, msg)
                 codes.append(code)
         for code in codes:
-            group = code.modal_group
+            group = code.group
             if group:
                 if group in active_groups:
                     prev = active_groups[group]
@@ -155,16 +156,19 @@ class Interpreter(object):
                 msg %= (code, ', '.join(r_any))
                 raise parser.GCodeSyntaxError(pline.source.pos, msg)
                 
-        return new_modes
+        return active_groups, new_modes
 
     def execute(self, pline):
 
-        new_modes = self.prep_words(pline)
+        active_groups, new_modes = self.prep_words(pline)
         self.modes.update(new_modes)
-        self.executor.execute(self.modes, pline)
-
-def modes_repr(modes):
-
-    return '{%s}' % ' '.join('%s=%s' % (k, modes[k])
-                             for k in sorted(modes)
-                             if modes[k] is not None)
+        for op in self.executor.order_of_execution:
+            if inspect.ismethod(op):
+                op(self.modes, new_modes, pline)
+            else:
+                g = self.executor.dialect.groups[op]
+                c = active_groups.get(op)
+                if c:
+                    c(self.modes, new_modes)
+                elif iter(g).next().modal:
+                    print 'modal'

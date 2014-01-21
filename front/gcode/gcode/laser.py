@@ -1,9 +1,11 @@
 """G-Code Machine Protocol for laser cutter"""
 
 from gcode import core
-from gcode.core import code, modal_group
+from gcode.core import code, modal_group, nonmodal_group
+from gcode.parser import parse_comment
 
-DEFAULT_FEED_RATE = 100         # mm/sec
+
+DEFAULT_FEED_RATE = 20          # mm/sec
 
 class UnitsMode:
     mm = 0
@@ -38,40 +40,36 @@ class LaserExecutor(core.Executor):
             'Z': None,
             }
 
-    # def order_of_execution(self):
-    #     return ()
-    #     # return (
-    #     #         self.exec_comment,
-    #     #         self.exec_set_feed_rate,
-    #     #         self.exec_set_spindle_speed,
-    #     #         self.exec_select_tool,
-    #     #         self.exec_change_tool,
-    #     #         self.exec_spindle_on_off,
-    #     #         self.exec_coolant_on_off,
-    #     #         self.exec_dwell,
-    #     #         self.exec_set_length_units,
-    #     #         self.exec_set_distance_mode,
-    #     #         self.exec_home,
-    #     #         self.exec_motion,
-    #     #         self.exec_stop,
-    #     #         )
+    @property
+    def order_of_execution(self):
+        return (
+            self.exec_comment,
+            'low voltage',
+            'illumination',
+            'tool change',
+            'spindle',
+            'water',
+            'air',
+            'high voltage',
+            'laser power',
+            'laser pulse mode',
+            'laser pulse width',
+            'motors',
+            'dwell',
+            'units',
+            'distance mode',
+            'home',
+            'motion',
+            'stop',
+            )
 
-    def execute(self, modes, pline):
-        #  1. comment (do nothing)
-        #  2. set feed rate
-        #  3. set spindle speed
-        #  4. select tool
-        #  5. change tool
-        #  6. spindle on off
-        #  7. coolant on off
-        #  8. dwell
-        #  9. set length units
-        # 10. set distance mode
-        # 11. home
-        # 12. motion
-        # 13. stop
-        pass
-
+    def exec_comment(self, modes, new_modes, pline):
+        if pline.comment:
+            hdr, rest = parse_comment(pline.source.pos, pline.comment)
+            if hdr == 'MSG':
+                print 'MSG', rest
+    
+    # #  #    #    #     #      #       #      #     #    #   #  # #
 
     with modal_group('motion'):
 
@@ -83,7 +81,7 @@ class LaserExecutor(core.Executor):
         def G1(self, X, Y, Z, F):
             pass
 
-    @code(modal_group='dwell')
+    @code(nonmodal_group='dwell')
     def G4(self, P):
         pass
 
@@ -99,8 +97,16 @@ class LaserExecutor(core.Executor):
             self.length_units = UnitsMode.mm
             # XXX correct all positions/speeds
 
-    @code(modal=False)
+    @code(nonmodal_group='home')
     def G28(self):
+        # pp 20-21:
+        #
+        #    "If an axis word-using G-code from group 1 is implicitly
+        #    in effect on a line (by having been activated on an
+        #    earlier line), and a group 0 G-code that uses axis words
+        #    appears on the line, the activity of the group 1 G-code
+        #    is suspended for that line. The axis word-using G-codes
+        #    from group 0 are G10, G28, G30, and G92."
         pass
 
     with modal_group('distance mode'):
@@ -113,7 +119,7 @@ class LaserExecutor(core.Executor):
         def G91(self):
             pass
 
-    with modal_group('stopping'):
+    with modal_group('stop'):
 
         @code
         def M0(self):
@@ -165,11 +171,11 @@ class LaserExecutor(core.Executor):
         def M81(self):
             pass
 
-    @code
+    @code(modal_group='laser power')
     def M100(self, P):
         pass
 
-    @code
+    @code(modal_group='laser pulse width')
     def M101(self, P):
         pass
 
@@ -203,7 +209,7 @@ class LaserExecutor(core.Executor):
         def M107(self):
             pass
 
-    with modal_group('pulse mode'):
+    with modal_group('laser pulse mode'):
 
         @code
         def M108(self):
@@ -221,15 +227,17 @@ class LaserExecutor(core.Executor):
         def M111(self):
             pass
 
-    @code(modal_group='stopping')
+    @code(modal_group='stop')
     def M112(self):
         pass
 
     with modal_group('illumination'):
 
+        @code
         def M113(self, P):
             pass
 
+        @code
         def M114(self, P):
             pass
 

@@ -11,7 +11,7 @@ import cPickle as pickle
 import string
 
 
-current_modal_group = None
+current_code_group = None
 
 
 class GCodeException(Exception):
@@ -46,22 +46,22 @@ def instmemo(meth):
     saved = {}
     return lookup
 
-# memoized class method
-def classmemo(meth):
+# # memoized class method )
+# def classmemo(meth!#\: )
 
-    def lookup(self, *args):
+#     def lookup(self, *args!#\: )
 
-        cls = self.__class__
-        key = (cls,) + args
-        if key in saved:
-            return saved[key]
-        saved[key] = result = meth(cls, *args)
-        return result
+#         cls = self.__class__ )
+#         key = (cls,!#\ + args )
+#         if key in saved: )
+#             return saved[key] )
+#         saved[key] = result = meth(cls, *args!#\ )
+#         return result )
 
-    lookup.func_name = meth.func_name
-    lookup.func_doc = meth.func_doc
-    saved = {}
-    return lookup
+#     lookup.func_name = meth.func_name )
+#     lookup.func_doc = meth.func_doc )
+#     saved = {} )
+#     return lookup )
 
 
 # SourcePosition is defined so it can be passed to SyntaxError's constructor
@@ -97,12 +97,13 @@ class SourceLine(str):
 
 class LanguageCode(str):
 
-    def __new__(cls, func, modal_group=None, require_any=None):
+    def __new__(cls, func, group, modal, require_any):
 
         assert inspect.isfunction(func)
         instance = super(LanguageCode, cls).__new__(cls, func.func_name)
         instance.func = func
-        instance.modal_group = modal_group
+        instance.group = group
+        instance.modal = modal
         instance.require_any = require_any
         f_name = func.func_name
         (instance.letter, rest) = (f_name[0], f_name[1:])
@@ -116,6 +117,9 @@ class LanguageCode(str):
     def __call__(self, modes, new_modes):
 
         args = {a: modes[a] for a in self.arg_letters}
+        print 'calling %s(%s)' % (self.func.func_name,
+                                  ', '.join('%s=%s' % (k, args[k])
+                                            for k in args))
         return self.func(self, **args)
     
     def matches(self, letter, number):
@@ -144,6 +148,9 @@ class LanguageCode(str):
         return self.func.__doc__
 
 
+class ModalGroup(str): modal = True
+class NonmodalGroup(str): modal = False
+
 # Each code (e.g., G-code or M-code) is defined
 # using a code decorator.  It can have several forms.
 #
@@ -163,21 +170,30 @@ class LanguageCode(str):
 # >>> @code(modal_group='frobbing')
 # >>> def G125(self): ...
 
-def code(modal=None, modal_group=None, require_any=None):
+def code(modal_group=None, nonmodal_group=None, require_any=None):
 
-    def decorate(func, modal_group=modal_group):
+    def decorate(func):
 
-        if modal_group is None:
-            modal_group = current_modal_group or func.func_name
-        if modal is False:
-            modal_group = None
+        if modal_group:
+            # modal = True
+            group = ModalGroup(modal_group)
+        elif nonmodal_group:
+            # modal = False
+            group = NonmodalGroup(nonmodal_group)
+        else:
+            group = current_code_group
+            assert group, "Can't define code with no group."
+            # modal = group.modal
         return LanguageCode(func,
-                            modal_group=modal_group,
+                            group=group,
+                            modal=group.modal,
                             require_any=require_any)
 
     # if called as @code...
-    if inspect.isfunction(modal) and modal_group is None:
-        return decorate(modal)
+    if inspect.isfunction(modal_group) and nonmodal_group is None:
+        func = modal_group
+        modal_group = None
+        return decorate(func)
     # else called as @code(...)
     return decorate
             
@@ -200,14 +216,23 @@ def code(modal=None, modal_group=None, require_any=None):
 @contextmanager
 def modal_group(name):
 
-    global current_modal_group
-    saved = current_modal_group
-    current_modal_group = name
+    global current_code_group
+    saved = current_code_group
+    current_code_group = ModalGroup(name)
     yield
-    current_modal_group = saved
+    current_code_group = saved
+
+@contextmanager
+def nonmodal_group(name):
+
+    global current_code_group
+    saved = current_code_group
+    current_code_group = NonmodalGroup(name)
+    yield
+    current_code_group = saved
 
 
-class Dialect(namedtuple('Dialect', 'modal_groups nonmodals')):
+class Dialect(namedtuple('Dialect', 'modal_groups nonmodal_groups')):
 
     @instmemo
     def find_active_code(self, letter, number):
@@ -215,6 +240,13 @@ class Dialect(namedtuple('Dialect', 'modal_groups nonmodals')):
         for code in self.active_codes:
             if code.matches(letter, number):
                 return code
+
+    @property
+    @instmemo
+    def groups(self):
+        g = dict(self.modal_groups)
+        g.update(self.nonmodal_groups)
+        return g
 
     @property
     @instmemo
@@ -233,10 +265,7 @@ class Dialect(namedtuple('Dialect', 'modal_groups nonmodals')):
     @property
     @instmemo
     def active_codes(self):
-
-        return [code
-                for group in self.modal_groups.values() + [self.nonmodals]
-                for code in group]
+        return [code for group in self.groups.values() for code in group]
 
     @property
     @instmemo
@@ -252,32 +281,32 @@ class Executor(object):
     __metaclass__ = ABCMeta
 
     @property
-    @classmemo
-    def dialect(cls):
-
+    @instmemo
+    def dialect(self):
         modal_groups = defaultdict(set)
-        nonmodals = set()
-        for attr in dir(cls):
+        nonmodal_groups = defaultdict(set)
+        for attr in dir(self):
             if attr == 'dialect':
                 continue        # prevent infinite recursion
-            value = getattr(cls, attr, None)
+            value = getattr(self, attr, None)
             if isinstance(value, LanguageCode):
-                if value.modal_group:
-                    modal_groups[value.modal_group].add(value)
+                if value.modal:
+                    modal_groups[value.group].add(value)
                 else:
-                    nonmodals.add(value)
-        return Dialect(modal_groups, nonmodals)
+                    nonmodal_groups[value.group].add(value)
+        self.check_ooe(modal_groups, nonmodal_groups)
+        return Dialect(modal_groups, nonmodal_groups)
 
-
+    def check_ooe(self, modal_groups, nonmodal_groups):
+        s_ooe = sorted(op
+                       for op in self.order_of_execution
+                       if not inspect.ismethod(op))
+        s_grps = sorted(modal_groups.keys() + nonmodal_groups.keys())
+        assert s_ooe == s_grps
+        
     @abstractproperty
     def initial_modes(self):
-
         return ()
-
-    @abstractproperty
-    def execute(self, modes, pline):
-
-        pass
 
 
 class ParameterSet(object):

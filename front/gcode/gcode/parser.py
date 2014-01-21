@@ -589,3 +589,17 @@ class Parser(object):
                 yield self.parse_line(line,
                                       source=source,
                                       lineno=lineno)
+
+def parse_comment(pos, comment):
+    def collect_hdr(prefix, c):
+        return c.isalpha()
+    def collect_rest(prefix, c):
+        return True
+    lenum = LineEnumerator(comment)
+    hdr = lenum.collect_while(collect_hdr)
+    if hdr and lenum.peek() == ',':
+        lenum.next()            # eat the comma
+        with lenum.catch_whitespace():
+            rest = lenum.collect_while(collect_rest)
+            return hdr.upper(), rest
+    return None, comment
