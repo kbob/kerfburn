@@ -73,13 +73,9 @@ valid_prefices = frozenset((op[:i+1]
 # Parser Exception
 
 class GCodeSyntaxError(GCodeException, SyntaxError):
-
-    def __init__(self, pos, msg):
-        # message = '%s: %s' % (repr(pos), msg)
-        message = msg
+    def __init__(self, pos, message):
         super(GCodeSyntaxError, self).__init__(message, pos)
-        self.pos = pos
-        
+
 
 class LineEnumerator(object):
 
@@ -127,7 +123,7 @@ class LineEnumerator(object):
         except StopIteration as exc:
             self.exc = exc
             return None
-            
+
     def collect_while(self, pred):
 
         # Collect characters while the predicate function evaluates true.
@@ -315,7 +311,7 @@ def scan_line(line, code_letters):
             yield Token(pos, NumberToken, float(number))
         else:
             raise GCodeSyntaxError(pos, 'unknown character')
-                
+
 
 class ParsedLine(object):
 
@@ -423,7 +419,7 @@ class LineParser(object):
 
     def parse_parameter_setting(self):
 
-        # parameter_setting = parameter_sign + parameter_index + 
+        # parameter_setting = parameter_sign + parameter_index +
         #                     equal_sign + real_value
 
         psign = self.scanner.next()
@@ -458,7 +454,7 @@ class LineParser(object):
         # and the exp operation is **.
         #
         # Each operation group is left-associative.
-        
+
         def get_add_op(tok):
 
             if tok.type == '+':
@@ -501,7 +497,7 @@ class LineParser(object):
             right = self.parse_factor()
             left = get_mul_op(op)(left, right)
         return left
-        
+
     def parse_factor(self):
 
         # factor = real_value + { exp_operation + real_value }
@@ -547,7 +543,7 @@ class LineParser(object):
             return self.parameters[pindex]
         except GCodeException as exc:
             raise GCodeSyntaxError(self.line.pos, exc.message)
-        
+
 
 class Parser(object):
 
@@ -568,7 +564,7 @@ class Parser(object):
             except GCodeException as exc:
                 raise GCodeSyntaxError(line.pos, exc.message)
         return parser.result
-        
+
 
     def parse_file(self, file, source=None, process_percents=True):
 

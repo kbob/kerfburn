@@ -29,6 +29,15 @@ class ApproximateNumber(float):
         # return self.low <= other <= self.high
         return self - 0.0001 <= other <= self + 0.0001
 
+    @classmethod
+    def getitem(cls, map, key, not_found=None):
+        value = map.get(key, not_found)
+        if value is not_found:
+            for k in map:
+                if cls(k) == key:
+                    return map[k]
+        return value
+
 
 # memoized instance method
 def instmemo(meth):
@@ -45,23 +54,6 @@ def instmemo(meth):
     lookup.func_doc = meth.func_doc
     saved = {}
     return lookup
-
-# # memoized class method )
-# def classmemo(meth!#\: )
-
-#     def lookup(self, *args!#\: )
-
-#         cls = self.__class__ )
-#         key = (cls,!#\ + args )
-#         if key in saved: )
-#             return saved[key] )
-#         saved[key] = result = meth(cls, *args!#\ )
-#         return result )
-
-#     lookup.func_name = meth.func_name )
-#     lookup.func_doc = meth.func_doc )
-#     saved = {} )
-#     return lookup )
 
 
 # SourcePosition is defined so it can be passed to SyntaxError's constructor
@@ -85,7 +77,7 @@ class SourceLine(str):
         if source is None:
             source = getattr(old_str, 'source', None)
         if lineno is None:
-            lineno = getattr(old_str, 'lineno', None)
+            lineno = getattr(old_str, 'lineno', 0)
         new_line = super(SourceLine, cls).__new__(cls, old_str)
         new_line.pos = SourcePosition(source, lineno, None, new_line)
         return new_line
@@ -108,16 +100,17 @@ class LanguageCode(str):
         f_name = func.func_name
         (instance.letter, rest) = (f_name[0], f_name[1:])
         instance.number = ApproximateNumber(rest.replace('_', '.'))
+        instance.default_args = {}
+        s = inspect.getargspec(func)
+        ds = s.defaults
+        if ds:
+            instance.default_args.update(zip(s.args[-len(ds):], ds))
         return instance
 
     def __repr__(self):
 
         return '<code %s>' % (self.func.func_name)
 
-    def __call__(self, method, settings, new_settings):
-        args = {a: settings[a] for a in self.arg_letters}
-        return method(**args)
-    
     def matches(self, letter, number):
 
         return self.letter == letter and self.number == number
@@ -150,21 +143,23 @@ class NonmodalGroup(str): modal = False
 # Each code (e.g., G-code or M-code) is defined
 # using a code decorator.  It can have several forms.
 #
-# This is the simplest.  This adds the code to the current
-# modal group (or declares it nonmodal if no group is current).
+# This is the simplest.  This adds the code to the current code group
 #
-# >>> @code
-# >>> def G123(self, X, Y, Z): ...
-#
-# This form declares a nonmodal code.
-#
-# >>> @code(modal=False)
-# >>> def G124(self): ...
+#   >>> @code
+#   >>> def G123(self, X, Y, Z): ...
 #
 # This form declares code as a member of a modal group.
 #
-# >>> @code(modal_group='frobbing')
-# >>> def G125(self): ...
+#   >>> @code(modal_group='frobbing')
+#   >>> def G125(self): ...
+#
+# This form declares a code a member of a nonmodal group.
+#
+#   >>> @code(modal_group='my group')
+#   >>> def G124(self): ...
+#
+# If require_any is set, it is a syntax error to call the code without
+# also coding any one of the required arguments.
 
 def code(modal_group=None, nonmodal_group=None, require_any=None):
 
@@ -180,10 +175,12 @@ def code(modal_group=None, nonmodal_group=None, require_any=None):
             group = current_code_group
             assert group, "Can't define code with no group."
             # modal = group.modal
-        return LanguageCode(func,
+        code = LanguageCode(func,
                             group=group,
                             modal=group.modal,
                             require_any=require_any)
+        func.language_code = code
+        return func
 
     # if called as @code...
     if inspect.isfunction(modal_group) and nonmodal_group is None:
@@ -192,22 +189,22 @@ def code(modal_group=None, nonmodal_group=None, require_any=None):
         return decorate(func)
     # else called as @code(...)
     return decorate
-            
+
 
 # Open a modal group to add codes to.  Use modal_group in a with
 # statement.  Define codes in the with statement.
 #
 # Example.
 #
-# >>> class MyExecutor(Executor):
-# ...     with modal_group('my group'):
-# ...         @code
-# ...         def G126(self):
-# ...             pass
-# ...         @code
-# ...         def G127(self):
-# ...             pass
-# ...
+#   >>> class MyExecutor(Executor):
+#   ...     with modal_group('my group'):
+#   ...         @code
+#   ...         def G126(self):
+#   ...             pass
+#   ...         @code
+#   ...         def G127(self):
+#   ...             pass
+#   ...
 
 @contextmanager
 def modal_group(name):
@@ -284,7 +281,8 @@ class Executor(object):
         for attr in dir(self):
             if attr == 'dialect':
                 continue        # prevent infinite recursion
-            value = getattr(self, attr, None)
+            meth = getattr(self, attr, None)
+            value = getattr(meth, 'language_code', None)
             if isinstance(value, LanguageCode):
                 if value.modal:
                     modal_groups[value.group].add(value)
@@ -299,7 +297,7 @@ class Executor(object):
                        if not inspect.ismethod(op))
         s_grps = sorted(modal_groups.keys() + nonmodal_groups.keys())
         assert s_ooe == s_grps
-        
+
     @abstractproperty
     def initial_settings(self):
         return ()
@@ -326,7 +324,7 @@ class ParameterSet(object):
         return self.dict.get(index, 0)
 
     def __setitem__(self, index, value):
-        
+
         index = self.check_index(index)
         self.dict[index] = value
 
@@ -341,7 +339,7 @@ class ParameterSet(object):
         elif not isinstance(index, int):
             m = 'parameter index %r is not numeric' % index
             raise GCodeException(m)
-                        
+
         if not 1 <= index <= 5399:
             m = 'parameter index %r is not in range 0..5399' % index
             raise GCodeException(m)

@@ -1,5 +1,6 @@
 """G-Code Machine Protocol for laser cutter"""
 
+from math import sqrt
 import sys
 
 from gcode.core import ApproximateNumber, Executor, GCodeException
@@ -7,33 +8,110 @@ from gcode.core import code, modal_group, nonmodal_group
 from gcode.parser import parse_comment
 
 
+F_CPU = 16000000                # CPU frequency - should come from config.
+TRAVERSE_RATE = 100             # mm/sec
 DEFAULT_FEED_RATE = 20          # mm/sec
+X_USTEPS_PER_INCH = 2000
+Y_USTEPS_PER_INCH = 2000
+Z_USTEPS_PER_INCH = 20825
 
-class UnitsMode:
-    mm = 0
-    inch = 1
+
+class CheapEnum(object):
+
+    @classmethod
+    def get_name(cls, value):
+        for name in dir(cls):
+            if name.startswith('_'):
+                continue
+            if getattr(cls, name) == value:
+                return name
+
+class Animation(CheapEnum):
+    startup = 's'
+    complete = 'c'
+    warning = 'w'
+    alert = 'a'
+    none = 'n'
+    _map = {
+        0: none,
+        1: startup,
+        2: complete,
+        3: warning,
+        4: alert,
+        }
 
 class DistanceMode:
     absolute = 0
     relative = 1
 
+class DistanceUnits:
+    mm = 0
+    inch = 1
+
+class LaserSelect(CheapEnum):
+    none = 'n'
+    main = 'm'
+    visible = 'v'
+    _map = {
+        0: none,
+        1: main,
+        2: visible,
+        }
+
+class MotionMode:
+    none = None
+    move = 1
+    cut = 2
+
+class PulseMode(CheapEnum):
+    continuous = 'c'
+    timed = 't'
+    distance = 'd'
+    off = 'o'
+
+
+class AxisPosition(object):
+
+    def __init__(self, usteps_per_inch):
+        self.ustep_conv_map = {
+            DistanceUnits.inch: usteps_per_inch,
+            DistanceUnits.mm: usteps_per_inch / 25.4,
+            }
+        self.reset()
+
+    def reset(self):
+        self.pos_units = 0
+        self.pos_usteps = 0
+
+    def update_pos_usteps(self, units):
+        self.pos_usteps = usteps = self.units_to_usteps(self.pos_units, units)
+        return usteps
+
+    def units_to_usteps(self, pos, units, integer=True):
+        C = self.ustep_conv_map[units]
+        usteps = pos * C
+        if (integer):
+            usteps = int(round(usteps))
+        return usteps
+
 
 class LaserExecutor(Executor):
 
     def __init__(self):
-        self.message = ''
-        self.feed_rate = DEFAULT_FEED_RATE
-        self.spindle_speed = None
-        self.current_tool = None
-        self.next_tool = None
-        self.laser_select = None
-        self.coolant_on = [False, False]
-        self.length_units = UnitsMode.mm
+        self.distance_units = DistanceUnits.mm
         self.distance_mode = DistanceMode.absolute
+        self.motion_mode = MotionMode.move
+        self.abs_position_known = False
+        self.x_pos = AxisPosition(X_USTEPS_PER_INCH)
+        self.y_pos = AxisPosition(Y_USTEPS_PER_INCH)
+        self.z_pos = AxisPosition(Z_USTEPS_PER_INCH)
+        self.traverse_ivl_native = self.native_ivl(TRAVERSE_RATE)
+        self.feed_ivl_native = self.native_ivl(DEFAULT_FEED_RATE)
+        self.pulse_mode = PulseMode.off
 
     def initial_settings(self):
         return {
-            'F': 25,
+            'F': DEFAULT_FEED_RATE,
             'P': None,
             'S': None,
             'T': None,
@@ -45,11 +123,12 @@ class LaserExecutor(Executor):
     @property
     def order_of_execution(self):
         return (
+            self.exec_begin_line,
+            'emergency stop',
             self.exec_comment,
             'low voltage',
             'illumination',
             'tool change',
-            'spindle',
             'water',
             'air',
             'high voltage',
@@ -62,48 +141,33 @@ class LaserExecutor(Executor):
             'distance mode',
             'home',
             'motion',
+            self.exec_implicit_motion,
             'stop',
             )
+
+    def exec_begin_line(self, settings, new_settings, pline):
+        self.line_uses_axes_for_nonmodal = False
 
     def exec_comment(self, settings, new_settings, pline):
         if pline.comment:
             hdr, rest = parse_comment(pline.source.pos, pline.comment)
             if hdr == 'MSG':
                 print >>sys.stderr, 'MSG', rest
-    
-    # #  #    #    #     #      #       #      #     #    #   #  # #
 
-    with modal_group('motion'):
+    def exec_implicit_motion(self, settings, new_settings, pline):
 
-        @code(require_any='XYZ')
-        def G0(self, X, Y, Z):
-            "traverse move"
+        # if X, Y, or Z is coded on this line, do an implicit motion.
+        X = settings['X']
+        Y = settings['Y']
+        Z = settings['Z']
+        if all(axis is None for axis in (X, Y, Z)):
+            return
 
-        @code(require_any='XYZ')
-        def G1(self, X, Y, Z, F):
-            """linear motion"""
+        # Clear settings so next line won't use them.
+        settings['X'] = None
+        settings['Y'] = None
+        settings['Z'] = None
 
-    @code(nonmodal_group='dwell')
-    def G4(self, P):
-        "dwell"
-
-    with modal_group('units'):
-
-        @code
-        def G20(self):
-            """distances are in inches"""
-            self.length_units = UnitsMode.inch
-            # XXX correct all positions/speeds
-
-        @code
-        def G21(self):
-            """distances are in millimeters"""
-            self.length_units = UnitsMode.mm
-            # XXX correct all positions/speeds
-
-    @code(nonmodal_group='home')
-    def G28(self):
-        """home carriage"""
         # pp 20-21:
         #
         #    "If an axis word-using G-code from group 1 is implicitly
@@ -112,6 +176,75 @@ class LaserExecutor(Executor):
         #    appears on the line, the activity of the group 1 G-code
         #    is suspended for that line. The axis word-using G-codes
         #    from group 0 are G10, G28, G30, and G92."
+        #
+        # G28 sets this.
+        if self.line_uses_axes_for_nonmodal:
+            return
+
+        mm = self.motion_mode
+        if mm == MotionMode.move:
+            return self.G0(X, Y, Z)
+        elif mm == MotionMode.cut:
+            return self.G1(X, Y, Z, settings['F'])
+
+    # #  #    #    #     #      #       #      #     #    #   #  # #
+
+    with modal_group('motion'):
+
+        @code(require_any='XYZ')
+        def G0(self, X=None, Y=None, Z=None):
+            """traverse move, laser off"""
+            self.motion_mode = MotionMode.move
+            self.do_motion(X, Y, Z, self.traverse_ivl_native)
+            self.emit('Qm')
+
+        @code(require_any='XYZ')
+        def G1(self, X=None, Y=None, Z=None, F=None):
+            """linear move"""
+            self.motion_mode = MotionMode.cut
+            if F is not None:
+                self.feed_ivl_native = self.native_ivl(F, self.distance_units)
+            # d, major_d = self.do_motion(X, Y, Z, self.feed_ivl_native)
+            d = self.do_motion(X, Y, Z, self.feed_ivl_native)
+            if self.pulse_mode == PulseMode.distance:
+                pd = int(round(d / self.pulse_distance_usteps))
+                self.emit('pd=%d' % pd)
+            self.emit('Qc')
+
+    @code(nonmodal_group='dwell')
+    def G4(self, P):
+        """dwell"""
+        dt = self.secs_to_ticks(P)
+        self.emit('dt=%d' % dt, 'Qd')
+
+    with modal_group('units'):
+
+        @code
+        def G20(self):
+            """distances are in inches"""
+            if self.distance_units == DistanceUnits.mm:
+                self.x_pos.pos_units /= 25.4
+                self.y_pos.pos_units /= 25.4
+                self.z_pos.pos_units /= 25.4
+            self.distance_units = DistanceUnits.inch
+
+        @code
+        def G21(self):
+            """distances are in millimeters"""
+            if self.distance_units == DistanceUnits.inch:
+                self.x_pos.pos_units *= 25.4
+                self.y_pos.pos_units *= 25.4
+                self.z_pos.pos_units *= 25.4
+            self.distance_units = DistanceUnits.mm
+
+    @code(nonmodal_group='home')
+    def G28(self):
+        """home carriage"""
+        self.line_uses_axes_for_nonmodal = True
+        self.abs_position_known = True
+        self.x_pos.reset()
+        self.y_pos.reset()
+        self.z_pos.reset()
         self.emit('Qh', 'W')
 
     with modal_group('distance mode'):
@@ -136,135 +269,202 @@ class LaserExecutor(Executor):
         @code
         def M1(self):
             """optional stop program"""
-            return 'pause program'
+            return 'optional pause program'
 
         @code
         def M2(self):
             """program end"""
             return 'end program'
 
-    with modal_group('spindle'):
-
-        @code
-        def M3(self, S):
-            """enable the current laser"""
-            self.laser_enabled = True
-
-        @code
-        def M4(self, S):
-            """enable the current laser"""
-            self.laser_enabled = True
-
-        @code
-        def M5(self):
-            """disable the laser"""
-            self.laser_enabled = False
-
     @code(modal_group='tool change')
     def M6(self, T):
         """select the laser"""
-        if ApproximateNumber(0) == T:
-            ls = 'n'
-        elif ApproximateNumber(1) == T:
-            ls = 'm'
-        elif ApproximateNumber(2) == T:
-            ls = 'v'
-        else:
-            msg = 'M6: T must be 0=off, 1=main laser, or 2=visible laser'
-            raise GCodeException(msg)
-        self.emit('ls=%s' % ls)
+        ls = self.get_enum('M6', 'T', LaserSelect, T)
+        if ls is not None:
+            self.laser_select = ls
+            self.emit('ls=%s' % ls)
 
     with modal_group('motors'):
 
         @code
         def M17(self):
-            pass
+            """enable stepper motors"""
+            self.emit('Ex', 'Ey', 'Ez')
 
         @code
         def M18(self):
-            pass
+            """disable stepper motors"""
+            self.emit('Dx', 'Dy', 'Dz')
 
     with modal_group('low voltage'):
 
         @code
         def M80(self):
-            pass
+            """enable low voltage power"""
+            self.emit('El')
 
         @code
         def M81(self):
-            pass
+            """disable low voltage power"""
+            self.emit('Dl')
 
     @code(modal_group='laser power')
     def M100(self, P):
-        pass
+        """set laser power level, P=0(off) to 1"""
+        self.laser_power = P
+        lp = max(0, min(4095, int(4095 * P)))
+        self.emit('lp=%d' % lp)
 
     @code(modal_group='laser pulse width')
     def M101(self, P):
-        pass
+        pw = self.secs_to_ticks(P)
+        self.emit('pw=%d' % pw)
 
     with modal_group('high voltage'):
 
         @code
         def M102(self):
-            pass
+            """enable high voltage power"""
+            self.emit('Eh')
 
         @code
         def M103(self):
-            pass
+            """disable high voltage power"""
+            self.emit('Dh')
 
     with modal_group('water'):
 
         @code
         def M104(self):
-            pass
+            """enable water cooling"""
+            self.emit('Ew')
 
         @code
         def M105(self):
-            pass
+            """disable water cooling"""
+            self.emit('Dw')
 
     with modal_group('air'):
 
         @code
         def M106(self):
-            pass
+            """enable air assist"""
+            self.emit('Ea')
 
         @code
         def M107(self):
-            pass
+            """disable air assist"""
+            self.emit('Da')
 
     with modal_group('laser pulse mode'):
 
         @code
         def M108(self):
-            pass
+            """set laser pulse mode to continuous fire"""
+            self.emit('pm=c')
+            self.pulse_mode = PulseMode.continuous
 
         @code
-        def M109(self):
-            pass
+        def M109(self, S):
+            """set laser pulse mode to timed"""
+            self.pulse_mode = PulseMode.timed
+            pi = self.secs_to_ticks(S)
+            self.emit('pm=t', 'pi=%d' % pi)
 
         @code
-        def M110(self):
-            pass
+        def M110(self, S):
+            """set laser pulsed mode to distance"""
+            self.pulse_mode = PulseMode.distance
+            self.pulse_distance = S
+            self.pulse_distance_usteps = (
+                 self.x_pos.units_to_usteps(S,
+                                            self.distance_units,
+                                            integer=False))
+            self.emit('pm=d')
 
         @code
         def M111(self):
-            pass
+            """set laser pulse mode to off"""
+            self.emit('pm=o')
+            self.pulse_mode = PulseMode.off
 
-    @code(nonmodal_group='stop')
+    @code(nonmodal_group='emergency stop')
     def M112(self):
-        pass
+        """emergency stop"""
+        return 'emergency stop'
 
     with modal_group('illumination'):
 
         @code
         def M113(self, P):
-            pass
+            """set illumination level"""
+            il = max(0, min(127, int(P * 127)))
+            self.emit('il=%d' % il)
 
         @code
         def M114(self, P):
-            pass
+            ia = self.get_enum('M114', 'P', Animation, P)
+            if ia is not None:
+                self.animation = ia
+                self.emit('ia=%s' % ia)
 
     # #  #    #    #     #      #       #      #     #    #   #  # #
+
+    def do_motion(self, X, Y, Z, ivl):
+
+        xd = self.update_pos(self.x_pos, X)
+        yd = self.update_pos(self.y_pos, Y)
+        zd = self.update_pos(self.z_pos, Z)
+
+        # I thought I needed major_d?
+        # major_d = max((abs(xd), abs(yd), abs(zd)))
+        d = sqrt(xd**2 + yd**2 + zd**2)
+        mt = d * ivl
+
+        self.emit('xd=%+d' % xd,
+                  'yd=%+d' % yd,
+                  'zd=%+d' % zd,
+                  'mt=%d' % mt)
+
+        # return d, major_d
+        return d
+
+    def update_pos(self, pos, amount):
+        if amount is None:
+            return 0
+        if self.distance_mode == DistanceMode.absolute:
+            if not self.abs_position_known:
+                msg = "can't use absolute position; current position unknown."
+                raise GCodeException(msg)
+            pos.pos_units = amount
+        else:
+            pos.pos_units += amount
+        prev_usteps = pos.pos_usteps
+        new_usteps = pos.update_pos_usteps(self.distance_units)
+        return new_usteps - prev_usteps
+
+    def get_enum(self, code, sub_code, enum, number):
+        value = ApproximateNumber.getitem(enum._map, number)
+        if value is None:
+            msg = '%s: %s must be ' % (code, sub_code)
+            msg += ', '.join('%s=%s' % (n, enum.get_name(enum._map[n]))
+                             for n in enum._map)
+            raise GCodeException(msg)
+        return value
+
+    def secs_to_ticks(self, secs, integer=True):
+        ticks = secs * F_CPU
+        if integer:
+            ticks = int(round(ticks))
+        return ticks
+
+    def native_ivl(self, rate, units=DistanceUnits.mm):
+        # An "ivl," or interval, is inverse velocity: CPU ticks per
+        # microstep.  It is a float.
+        ivl = F_CPU / (rate * X_USTEPS_PER_INCH)
+        if units == DistanceUnits.mm:
+            ivl *= 25.4
+        return ivl
 
     def emit(self, *cmds):
         for cmd in cmds:
