@@ -78,7 +78,7 @@ class LineEnumerator(object):
         except StopIteration as exc:
             self.exc = exc
             return None
-            
+
     def collect_while(self, pred):
 
         chars = ''
@@ -164,7 +164,7 @@ class SourcePosition( namedtuple('SourcePosition', 'line col')):
     def __repr__(self):
         return '%s:%s.%s' % (self.line.src, self.line.no, self.col)
 
-        
+
 class GCodeException(Exception):
     pass
 
@@ -173,7 +173,7 @@ class GCodeSyntaxError(GCodeException):
         message = '%s: %s' % (repr(pos), msg)
         super(GCodeSyntaxError, self).__init__(message)
         self.pos = pos
-        
+
 class Peekable(object):
 
     def __init__(self, iter, end_value=None):
@@ -271,7 +271,7 @@ def scan_line(line):
             yield Token(pos, NumberToken, float(number))
         else:
             raise GCodeSyntaxError(pos, 'unknown character')
-                
+
 
 class ParsedLine(object):
 
@@ -375,7 +375,7 @@ class LineParser(object):
 
     def parse_parameter_setting(self):
 
-        # parameter_setting = parameter_sign + parameter_index + 
+        # parameter_setting = parameter_sign + parameter_index +
         #                     equal_sign + real_value
 
         psign = self.scanner.next()
@@ -410,7 +410,7 @@ class LineParser(object):
         # and the exp operation is **.
         #
         # Each operation group is left-associative.
-        
+
         def get_add_op(tok):
 
             if tok.type == '+':
@@ -458,7 +458,7 @@ class LineParser(object):
             right = self.parse_factor()
             left = get_mul_op(op)(left, right)
         return left
-        
+
     def parse_factor(self):
 
         # factor = real_value + { exp_operation + real_value }
@@ -508,7 +508,7 @@ class LineParser(object):
 
     def parse_parameter_value(self):
         raise NotImplementedError()
-        
+
 
 if __name__ == '__main__':
     import fileinput, pprint
