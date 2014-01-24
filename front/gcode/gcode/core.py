@@ -3,6 +3,7 @@ from abc import abstractmethod
 from abc import abstractproperty
 from contextlib import contextmanager
 from collections import defaultdict
+from functools import wraps
 import inspect
 import math
 import numbers
@@ -42,6 +43,7 @@ class ApproximateNumber(float):
 # memoized instance method
 def instmemo(meth):
 
+    @wraps(meth)
     def lookup(self, *args):
 
         key = (id(self),) + args
@@ -50,8 +52,6 @@ def instmemo(meth):
         saved[key] = result = meth(self, *args)
         return result
 
-    lookup.func_name = meth.func_name
-    lookup.func_doc = meth.func_doc
     saved = {}
     return lookup
 
