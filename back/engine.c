@@ -20,6 +20,12 @@ typedef enum queue_mask {
     qm_all = qm_x | qm_y | qm_z | qm_p
 } queue_mask;
 
+typedef enum engine_state {     // XXX move this to engine.c.
+    ES_STOPPED,
+    ES_RUNNING,
+    ES_STOPPING
+} engine_state;
+
 static volatile uint8_t running_queues;
 
 void init_engine(void)
