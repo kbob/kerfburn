@@ -75,6 +75,24 @@ static inline void put_dec(unsigned int n)
         put_char(b[--i]);
 }
 
+static inline void stop_motors(void)
+{
+    X_MOTOR_STEP_TCCRA = 0;
+    X_MOTOR_STEP_TCCRB = 0;
+    Y_MOTOR_STEP_TCCRA = 0;
+    Y_MOTOR_STEP_TCCRB = 0;
+    Z_MOTOR_STEP_TCCRA = 0;
+    Z_MOTOR_STEP_TCCRB = 0;
+}
+
+static inline void stop_lasers(void)
+{
+    LASER_PULSE_TCCRA = 0;
+    LASER_PULSE_TCCRB = 0;
+    SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
+    SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
+}
+
 static inline void init_LED(void)
 {
     INIT_OUTPUT_PIN(LED, LED_OFF);
@@ -111,7 +129,9 @@ __attribute__((noreturn))
 extern void fw_assertion_failed(unsigned int line_no)
 {
     cli();
-    init_serial();
+    // init_serial();
+    stop_lasers();
+    stop_motors();
     init_LED();
     bool do_print = true;
     for (uint8_t i = 0;; i++) {
