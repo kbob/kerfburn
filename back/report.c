@@ -221,7 +221,7 @@ void report_all(void)
 extern void enable_reporting(void)
 {
     uint32_t interval = get_unsigned_variable(V_RI);
-    fw_assert(interval > 10);
+    fw_assert(interval >= 10);
     report_timeout.to_interval = interval;
     report_timeout.to_func = report_all;
     enqueue_timeout(&report_timeout, millisecond_time() + interval);
