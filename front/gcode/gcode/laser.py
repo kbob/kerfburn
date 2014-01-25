@@ -10,7 +10,7 @@ from gcode.parser import parse_comment
 
 F_CPU = 16000000                # CPU frequency - should come from config.
 TRAVERSE_RATE = 100             # mm/sec
-DEFAULT_FEED_RATE = 20          # mm/sec
+DEFAULT_FEED_RATE = 25          # mm/sec
 X_USTEPS_PER_INCH = 2000
 Y_USTEPS_PER_INCH = 2000
 Z_USTEPS_PER_INCH = 20825
@@ -111,7 +111,7 @@ class LaserExecutor(Executor):
 
     def initial_settings(self):
         return {
-            'F': DEFAULT_FEED_RATE,
+            'F': DEFAULT_FEED_RATE * 60, # mm/sec -> mm/min)
             'P': None,
             'S': None,
             'T': None,
@@ -146,7 +146,7 @@ class LaserExecutor(Executor):
             )
 
     def exec_begin_line(self, settings, new_settings, pline):
-        self.line_uses_axes_for_nonmodal = False
+        self.line_already_used_axes = False
 
     def exec_comment(self, settings, new_settings, pline):
         if pline.comment:
@@ -155,14 +155,6 @@ class LaserExecutor(Executor):
                 print >>sys.stderr, 'MSG', rest
 
     def exec_implicit_motion(self, settings, new_settings, pline):
-
-        # if X, Y, or Z is coded on this line, do an implicit motion.
-        X = settings['X']
-        Y = settings['Y']
-        Z = settings['Z']
-        if all(axis is None for axis in (X, Y, Z)):
-            return
-
         # Clear settings so next line won't use them.
         settings['X'] = None
         settings['Y'] = None
@@ -177,8 +169,15 @@ class LaserExecutor(Executor):
         #    is suspended for that line. The axis word-using G-codes
         #    from group 0 are G10, G28, G30, and G92."
         #
-        # G28 sets this.
-        if self.line_uses_axes_for_nonmodal:
+        # G0, G1, and G28 set this.
+        if self.line_already_used_axes:
+            return
+
+        # if X, Y, or Z is coded on this line, do an implicit motion.
+        X = new_settings.get('X')
+        Y = new_settings.get('Y')
+        Z = new_settings.get('Z')
+        if all(axis is None for axis in (X, Y, Z)):
             return
 
         mm = self.motion_mode
@@ -194,6 +193,7 @@ class LaserExecutor(Executor):
         @code(require_any='XYZ')
         def G0(self, X=None, Y=None, Z=None):
             """traverse move, laser off"""
+            self.line_already_used_axes = True
             self.motion_mode = MotionMode.move
             self.do_motion(X, Y, Z, self.traverse_ivl_native)
             self.emit('Qm')
@@ -201,9 +201,12 @@ class LaserExecutor(Executor):
         @code(require_any='XYZ')
         def G1(self, X=None, Y=None, Z=None, F=None):
             """linear move"""
+            self.line_already_used_axes = True
             self.motion_mode = MotionMode.cut
             if F is not None:
-                self.feed_ivl_native = self.native_ivl(F, self.distance_units)
+                # N.B., F is units per MINUTE.
+                ivl = self.native_ivl(float(F) / 60, self.distance_units)
+                self.feed_ivl_native = ivl
             # d, major_d = self.do_motion(X, Y, Z, self.feed_ivl_native)
             d = self.do_motion(X, Y, Z, self.feed_ivl_native)
             if self.pulse_mode == PulseMode.distance:
@@ -214,8 +217,8 @@ class LaserExecutor(Executor):
     @code(nonmodal_group='dwell')
     def G4(self, P):
         """dwell"""
-        dt = self.secs_to_ticks(P)
-        self.emit('dt=%d' % dt, 'Qd')
+        mt = self.secs_to_ticks(P)
+        self.emit('mt=%d' % mt, 'Qd')
 
     with modal_group('units'):
 
@@ -240,7 +243,7 @@ class LaserExecutor(Executor):
     @code(nonmodal_group='home')
     def G28(self):
         """home carriage"""
-        self.line_uses_axes_for_nonmodal = True
+        self.line_already_used_axes = True
         self.abs_position_known = True
         self.x_pos.reset()
         self.y_pos.reset()
