@@ -16,8 +16,8 @@
 //  Integer ranges.
 //
 //  Assume the CPU clock speed is 16 MHz, and that the motors move
-//  78.75 microsteps/millimeter.  What are the maximum sizes that can
-//  be stored in each integral type?
+//  78.75 microsteps/millimeter (2000 microsteps/inch).  What are the
+//  maximum sizes that can be stored in each integral type?
 //
 //    Type         S 16     U 16     S 24     U 24     S 32     U 32
 //
@@ -295,8 +295,7 @@ static inline bool should_continue_pulse_train(laser_timer_state *lp,
                                                uint8_t            ls,
                                                uint8_t            pm)
 {
-    return false;        // XXX cheating
-    // return ls == lp->ls_ls && pm == lp->ls_pm;
+    return ls == lp->ls_ls && pm == lp->ls_pm;
 }
 
 static inline void prep_laser_state(laser_timer_state *lp,
@@ -340,16 +339,13 @@ static inline void prep_laser_state(laser_timer_state *lp,
             lp->ls_t               = 0;
             q = mt;
             r = 0;
-        } else if (should_continue_pulse_train(lp, ls, pm)) {
-            // XXX write me!
-            // remaining = [something];
-            // Add remaining to mt, then set remaining to zero -- that's all.
-            q = mt;
-            r = 0;
-        } else {
-            // Start new pulse train.
+        }
+        else {
+            if (should_continue_pulse_train(lp, ls, pm)) {
+                // Add remaining time to this move.
+                mt += lp->ls_mt - lp->ls_t;
+            }
             lp->ls_t = 0;
-            lp->ls_ts.ts_remaining = 0;
             if (pm == 't') {
                 // Timed pulse mode
                 q = get_unsigned_variable(V_PI);
@@ -359,7 +355,7 @@ static inline void prep_laser_state(laser_timer_state *lp,
                 fw_assert(pm == 'd');
                 q = mt / md;
                 r = mt % md;
-            }                
+            }
         }
     }
 
