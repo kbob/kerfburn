@@ -133,9 +133,8 @@ typedef struct motor_timer_state {
     // XXX rename dir and dir_pending.  Unwieldy.
     uint8_t     ms_dir_pending; // direction to be set
     uint_fast24 ms_q;           // quotient: mt / md
-    int_fast24  ms_err_inc;     // add to error on small steps
-    // XXX negate the sense of err_dec.  (ditto for laser err_dec.)
-    int_fast24  ms_err_dec;     // add to error on large steps (negative)
+    uint_fast24 ms_err_inc;     // add to error on small steps
+    uint_fast24 ms_err_dec;     // subtract from error on large steps
 
     // Move Variables
     uint8_t     ms_dir;         // direction currently set
@@ -189,7 +188,7 @@ static inline void prep_motor_state(motor_timer_state *mp,
     mp->ms_dir_pending         = dir_pending;
     mp->ms_q                   = q;
     mp->ms_err_inc             = r;
-    mp->ms_err_dec             = (int_fast24)r - (int_fast24)distance;
+    mp->ms_err_dec             = distance - r;
 
     // Move Variables
     mp->ms_t                   = 0;
@@ -223,15 +222,13 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
         }
         while (avail && mp->ms_t < mp->ms_mt) {
             uint_fast24 ivl = mp->ms_q;
-            int_fast24 delta_err;
             if (mp->ms_err <= 0)
-                delta_err = mp->ms_err_inc;
+                mp->ms_err += mp->ms_err_inc;
             else {
                 ivl++;
-                delta_err = mp->ms_err_dec;
+                mp->ms_err -= mp->ms_err_dec;
             }
             uint32_t t = subdivide_interval(&mp->ms_ts, ivl, &avail, qp);
-            mp->ms_err += delta_err;
             mp->ms_t += t;
             mp->ms_d++;
         }
@@ -260,8 +257,8 @@ typedef struct laser_timer_state {
     atom        ls_disable_on;
     atom        ls_enable_on;
     uint32_t    ls_q;           // quotient: mt / pi
-    int_fast24  ls_err_inc;     // add to error on small steps
-    int_fast24  ls_err_dec;     // add to error on large steps (negative)
+    uint_fast24 ls_err_inc;     // add to error on small steps
+    uint_fast24 ls_err_dec;     // subtract from error on large steps
 
     // Move Variables
     uint32_t    ls_t;           // time emitted
@@ -372,7 +369,7 @@ static inline void prep_laser_state(laser_timer_state *lp,
     // Move Constants
     lp->ls_q                   = q;
     lp->ls_err_inc             = r;
-    lp->ls_err_dec             = r - md;
+    lp->ls_err_dec             = md - r;
 
     // Move Variables
     lp->ls_p                   = 0;
@@ -442,15 +439,13 @@ static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
         // Generate pulses until queue is full.
         while (avail && !laser_timer_loaded(lp)) {
             uint_fast24 ivl = lp->ls_q;
-            int_fast24 delta_err;
             if (lp->ls_err <= 0)
-                delta_err = lp->ls_err_inc;
+                lp->ls_err += lp->ls_err_inc;
             else {
                 ivl++;
-                delta_err = lp->ls_err_dec;
+                lp->ls_err -= lp->ls_err_dec;
             }
             uint32_t t = subdivide_laser_interval(lp, ivl, &avail, qp);
-            lp->ls_err += delta_err;
             lp->ls_t += t;
             lp->ls_p++;
         }
