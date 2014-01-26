@@ -86,7 +86,7 @@ static int8_t cmp2(const char *a, const char *b)
     return 0;
 }
 
-static PGM_P desc_addr(uint8_t index)
+static PGM_P desc_addr(v_index index)
 {
     fw_assert(index < VARIABLE_COUNT);
     return (PGM_P) pgm_read_word(&variable_descriptors[index]);
@@ -97,12 +97,12 @@ void init_variables(void)
 #ifndef FW_NDEBUG
     v_name name, prev_name;
     size_t max_len = 0;
-    for (uint8_t i = 0; i < VARIABLE_COUNT; i++) {
+    for (v_index i = 0; i < VARIABLE_COUNT; i++) {
         get_variable_name(i, &name);
         if (i)
             fw_assert(cmp2(prev_name, name) < 0);
         strcpy(prev_name, name);
-        
+
         size_t len = strlen_P(desc_addr(i));
         if (max_len < len)
             max_len = len;
@@ -114,7 +114,7 @@ void init_variables(void)
 
 void reset_all_variables(void)
 {
-    for (uint8_t i = 0; i < VARIABLE_COUNT; i++) {
+    for (v_index i = 0; i < VARIABLE_COUNT; i++) {
         v_desc desc;
         v_value value;
         get_variable_desc(i, &desc);
@@ -140,11 +140,11 @@ void reset_all_variables(void)
     }
 }
 
-uint8_t lookup_variable(const char *name)
+v_index lookup_variable(const char *name)
 {
-    uint8_t lo = 0, hi = VARIABLE_COUNT;
+    v_index lo = 0, hi = VARIABLE_COUNT;
     while (lo < hi) {
-        uint8_t mid = (lo + hi) / 2;
+        v_index mid = (lo + hi) / 2;
         v_name mid_name;
         get_variable_name(mid, &mid_name);
         int8_t c = cmp2(name, mid_name);
@@ -152,30 +152,30 @@ uint8_t lookup_variable(const char *name)
             return mid;
         if (c < 0)
             hi = mid;
-        else 
+        else
             lo = mid + 1;
     }
     return VAR_NOT_FOUND;
 }
 
-void get_variable_desc(uint8_t index, v_desc *out)
+void get_variable_desc(v_index index, v_desc *out)
 {
     strncpy_P(*out, desc_addr(index), sizeof *out);
     (*out)[sizeof *out - 1] = '\0';
 }
 
-void get_variable_name(uint8_t index, v_name *out)
+void get_variable_name(v_index index, v_name *out)
 {
     strncpy_P(*out, desc_addr(index) + DESC_NAME_OFFSET, sizeof *out);
     (*out)[sizeof *out - 1] = '\0';
 }
 
-v_type get_variable_type(uint8_t index)
+v_type get_variable_type(v_index index)
 {
     return pgm_read_byte(desc_addr(index) + DESC_TYPE_OFFSET);
 }
 
-bool variable_enum_is_OK(uint8_t index, char e)
+bool variable_enum_is_OK(v_index index, char e)
 {
     v_desc desc;
     get_variable_desc(index, &desc);

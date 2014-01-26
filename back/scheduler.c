@@ -57,8 +57,8 @@ typedef struct timer_state {
 } timer_state;
 
 static inline void init_timer_state(timer_state *tp,
-                                    uint8_t      enable_atom,
-                                    uint8_t      disable_atom)
+                                    atom         enable_atom,
+                                    atom         disable_atom)
 {
     tp->ts_remaining     = 0;
     tp->ts_enabled_state = INVALID_ATOM;
@@ -131,13 +131,13 @@ typedef struct motor_timer_state {
 
     // Move Constants
     // XXX rename dir and dir_pending.  Unwieldy.
-    uint8_t     ms_dir_pending; // direction to be set
+    atom        ms_dir_pending; // direction to be set
     uint_fast24 ms_q;           // quotient: mt / md
     uint_fast24 ms_err_inc;     // add to error on small steps
     uint_fast24 ms_err_dec;     // subtract from error on large steps
 
     // Move Variables
-    uint8_t     ms_dir;         // direction currently set
+    atom        ms_dir;         // direction currently set
     uint32_t    ms_t;           // time emitted
     uint_fast24 ms_d;           // distance emitted
     int_fast24  ms_err;         // error: d * (ideal time - t)
@@ -215,7 +215,7 @@ static inline void gen_motor_atoms(motor_timer_state *mp, queue *qp)
         mp->ms_t += t;
     } else {
         if (mp->ms_dir != mp->ms_dir_pending) {
-            uint8_t dir_atom = mp->ms_dir_pending;
+            atom dir_atom = mp->ms_dir_pending;
             mp->ms_dir = dir_atom;
             enqueue_atom(dir_atom, qp);
             --avail;
@@ -526,9 +526,9 @@ static const uint16_t xy_home_seq[] PROGMEM = {
 };
 
 #define X_HOME_SEQ       (xy_home_seq)
-#define X_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0]) 
+#define X_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0])
 #define Y_HOME_SEQ       (xy_home_seq)
-#define Y_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0]) 
+#define Y_HOME_SEQ_COUNT (sizeof xy_home_seq / sizeof xy_home_seq[0])
 
 static home_timer_state x_home_state;
 static home_timer_state y_home_state;
@@ -561,7 +561,7 @@ static inline uint32_t gen_home_atoms(home_timer_state *hp, queue *qp)
     // Tricky.  We need to ensure hs_count free space in the queue so
     // the engine can rewind it.
     while (avail >= hp->hs_count && hp->hs_index < hp->hs_count) {
-        
+
         uint16_t a = pgm_read_word(hp->hs_sequence + hp->hs_index);
         enqueue_atom(a, qp);
         if (!is_atom(a))

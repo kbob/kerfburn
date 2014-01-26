@@ -97,7 +97,7 @@ void timer_softint(void)
             enqueue_timeout(head, head->to_expiration);
         }
         (*head->to_func)();
-    }        
+    }
 }
 
 ISR_TRIGGERS_SOFTINT(TIMER0_OVF_vect)

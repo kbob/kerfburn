@@ -50,7 +50,7 @@ static inline void init_LEDs(void)
 #else
     #error Bad SPI_DIVIDER
 #endif
-    
+
     // Enable interrupt.
     SPCR |= _BV(SPIE);
 }

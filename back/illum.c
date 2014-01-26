@@ -7,7 +7,13 @@ void init_illumination(void)
     // XXX write me!
 }
 
-void start_animation(uint8_t seq)
+animation_index current_animation(void)
+{
+    // XXX write me!
+    return 0;
+}
+
+void start_animation(animation_index seq)
 {
     // XXX write me
 }

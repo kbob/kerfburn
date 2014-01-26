@@ -109,7 +109,7 @@ bool serial_tx_put_char(uint8_t c)
         } else {
             tx_errs |= SE_DATA_OVERRUN;
             ok = false;
-        }            
+        }
     }
     return ok;
 }
@@ -143,7 +143,7 @@ void serial_rx_start(void)
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         rx_head = rx_tail = 0;
         tx_send_oob_NONATOMIC(-(1 << RX_FLOW_SHIFT));
-    }    
+    }
 }
 
 uint8_t serial_rx_errors(void)
@@ -182,7 +182,7 @@ uint8_t serial_rx_char_count(void)
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         h = rx_head;
         t = rx_tail;
-    }    
+    }
     return t - h;
 }
 

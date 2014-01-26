@@ -7,7 +7,7 @@ struct softint_private softint_private;
 void softint_dispatch(void)
 {
     while (true) {
-        uint8_t tasks;
+        softint_task tasks;
         ATOMIC_BLOCK(ATOMIC_FORCEON) {
             tasks = softint_private.pending_tasks;
             softint_private.pending_tasks = 0;

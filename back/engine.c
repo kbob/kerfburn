@@ -26,7 +26,7 @@ typedef enum engine_state {     // XXX move this to engine.c.
     ES_STOPPING
 } engine_state;
 
-static volatile uint8_t running_queues;
+static volatile queue_mask running_queues;
 
 void init_engine(void)
 {
@@ -34,7 +34,7 @@ void init_engine(void)
 
 static inline engine_state get_engine_state(void)
 {
-    uint8_t tmp = running_queues;
+    queue_mask tmp = running_queues;
     if (tmp == 0)
         return ES_STOPPED;
     if (tmp == qm_all)

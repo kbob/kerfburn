@@ -14,7 +14,7 @@ typedef enum animation_index {
 
 extern void init_illumination(void);
 
-extern uint8_t current_animation(void);
-extern void start_animation(uint8_t anim);
+extern animation_index current_animation(void);
+extern void start_animation(animation_index anim);
 
 #endif /* !ILLUM_included */

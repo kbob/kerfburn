@@ -21,8 +21,8 @@
 typedef void report_func(void);
 
 typedef struct report_descriptor {
-    uint8_t      rd_var;
-    report_func *rd_func;
+    variable_index rd_var;
+    report_func   *rd_func;
 } report_descriptor, r_desc;
 
 static          timeout report_timeout;
@@ -151,7 +151,7 @@ static void report_serial(void)
 static void report_variables(void)
 {
     putchar('V');
-    for (uint8_t i = 0; i < VARIABLE_COUNT; i++) {
+    for (v_index i = 0; i < VARIABLE_COUNT; i++) {
         v_name name;
         get_variable_name(i, &name);
         v_type type = get_variable_type(i);
@@ -208,7 +208,7 @@ void report_all(void)
     reporting_is_active = true;
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
-        const uint8_t var = pgm_read_byte(&rdp->rd_var);
+        const v_index var = pgm_read_byte(&rdp->rd_var);
         if (get_enum_variable(var) == 'y') {
             report_func *func = (report_func *)pgm_read_word(&rdp->rd_func);
             (*func)();

@@ -27,9 +27,9 @@ typedef enum softint_task {
     ST_TIMER   = 1 << 1,
 } softint_task;
 
-static inline void trigger_softint_from_base    (uint8_t task);
-static inline void trigger_softint_from_softint (uint8_t task);
-static inline void trigger_softint_from_hardint (uint8_t task);
+static inline void trigger_softint_from_base    (softint_task task);
+static inline void trigger_softint_from_softint (softint_task task);
+static inline void trigger_softint_from_hardint (softint_task task);
 
 #define ISR_TRIGGERS_SOFTINT(vector)                            \
     void f_##vector(void);                                      \
@@ -80,8 +80,8 @@ static inline void trigger_softint_from_hardint (uint8_t task);
     void f_##vector(void)
 
 extern struct softint_private {
-    bool    is_active;
-    uint8_t pending_tasks;
+    bool         is_active;
+    softint_task pending_tasks;
 } softint_private;
 
 extern void softint_dispatch(void); // private
@@ -92,7 +92,7 @@ extern void softint_dispatch(void); // private
 // level.  Also assume that no soft interrupts are already pending.
 // (Otherwise we would already have serviced them.)
 
-static inline void trigger_softint_from_base(uint8_t task)
+static inline void trigger_softint_from_base(softint_task task)
 {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         softint_private.pending_tasks = task;
@@ -106,7 +106,7 @@ static inline void trigger_softint_from_base(uint8_t task)
 // Simply set the task flag.  The dispatcher will see it next time
 // through.
 
-static inline void trigger_softint_from_softint(uint8_t task)
+static inline void trigger_softint_from_softint(softint_task task)
 {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         softint_private.pending_tasks |= task;
@@ -120,7 +120,7 @@ static inline void trigger_softint_from_softint(uint8_t task)
 // it was declared with ISR_TRIGGERS_SOFTINT, the soft interrupt will
 // be delivered.
 
-static inline void trigger_softint_from_hardint(uint8_t task)
+static inline void trigger_softint_from_hardint(softint_task task)
 {
     softint_private.pending_tasks |= task;
 }

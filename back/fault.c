@@ -58,7 +58,7 @@ static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
 static fault_word            fault_states;
 static fault_word            fault_overrides;
 
-void get_fault_name(uint8_t findex, f_name *name_out)
+void get_fault_name(fault_index findex, f_name *name_out)
 {
     fw_assert(findex < FAULT_COUNT);
     PGM_P addr = (PGM_P)pgm_read_word(&fault_descriptors[findex].fd_name);
@@ -84,19 +84,19 @@ void update_overrides(void)
     }
 }
 
-bool fault_is_set(uint8_t findex)
+bool fault_is_set(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     return (fault_states & 1 << findex) ? true : false;
 }
 
-bool fault_is_overridden(uint8_t findex)
+bool fault_is_overridden(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     return (fault_overrides & 1 << findex) ? true : false;
 }
 
-void set_fault(uint8_t findex)
+void set_fault(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -104,7 +104,7 @@ void set_fault(uint8_t findex)
     }
 }
 
-void clear_fault(uint8_t findex)
+void clear_fault(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -113,7 +113,7 @@ void clear_fault(uint8_t findex)
 }
 
 // N.B.  trigger_fault() is called both from interrupts and from base level.
-void trigger_fault(uint8_t findex)
+void trigger_fault(fault_index findex)
 {
     if (fault_is_set(findex))
         return;

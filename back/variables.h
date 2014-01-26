@@ -62,21 +62,21 @@ extern        void     init_variables        (void);
 extern        void     reset_all_variables   (void);
 
 // Reflection interface
-extern        uint8_t  lookup_variable       (const char *name);
-extern        void     get_variable_desc     (uint8_t index, v_desc *out);
-extern        void     get_variable_name     (uint8_t index, v_name *out);
-extern        v_type   get_variable_type     (uint8_t index);
-extern        bool     variable_enum_is_OK   (uint8_t index, char e);
+extern        v_index  lookup_variable       (const char *name);
+extern        void     get_variable_desc     (v_index index, v_desc *out);
+extern        void     get_variable_name     (v_index index, v_name *out);
+extern        v_type   get_variable_type     (v_index index);
+extern        bool     variable_enum_is_OK   (v_index index, char e);
 
-static inline v_value  get_variable          (uint8_t index);
-static inline uint32_t get_unsigned_variable (uint8_t index);
-static inline int32_t  get_signed_variable   (uint8_t index);
-static inline uint8_t  get_enum_variable     (uint8_t index);
+static inline v_value  get_variable          (v_index index);
+static inline uint32_t get_unsigned_variable (v_index index);
+static inline int32_t  get_signed_variable   (v_index index);
+static inline uint8_t  get_enum_variable     (v_index index);
 
-static inline void     set_variable          (uint8_t, v_value);
-static inline void     set_unsigned_variable (uint8_t index, uint32_t);
-static inline void     set_signed_variable   (uint8_t index, int32_t);
-static inline void     set_enum_variable     (uint8_t index, uint8_t);
+static inline void     set_variable          (v_index, v_value);
+static inline void     set_unsigned_variable (v_index index, uint32_t);
+static inline void     set_signed_variable   (v_index index, int32_t);
+static inline void     set_enum_variable     (v_index index, uint8_t);
 
 // Implementation
 
@@ -84,51 +84,51 @@ extern struct variables_private {
     v_value vp_values[VARIABLE_COUNT];
 } variables_private;
 
-static inline v_value get_variable(uint8_t index)
+static inline v_value get_variable(v_index index)
 {
     fw_assert(index < VARIABLE_COUNT);
     return variables_private.vp_values[index];
 }
 
-static inline uint32_t get_unsigned_variable(uint8_t index)
+static inline uint32_t get_unsigned_variable(v_index index)
 {
     fw_assert(get_variable_type(index) == VT_UNSIGNED);
     return get_variable(index).vv_unsigned;
 }
 
-static inline int32_t get_signed_variable(uint8_t index)
+static inline int32_t get_signed_variable(v_index index)
 {
     fw_assert(get_variable_type(index) == VT_SIGNED);
     return get_variable(index).vv_signed;
 }
 
-static inline uint8_t get_enum_variable(uint8_t index)
+static inline uint8_t get_enum_variable(v_index index)
 {
     fw_assert(get_variable_type(index) == VT_ENUM);
     return get_variable(index).vv_enum;
 }
 
-static inline void set_variable(uint8_t index, v_value value)
+static inline void set_variable(v_index index, v_value value)
 {
     fw_assert(index < VARIABLE_COUNT);
     variables_private.vp_values[index] = value;
 }
 
-static inline void set_unsigned_variable(uint8_t index, uint32_t u)
+static inline void set_unsigned_variable(v_index index, uint32_t u)
 {
     v_value v;
     v.vv_unsigned = u;
     set_variable(index, v);
 }
 
-static inline void set_signed_variable(uint8_t index, int32_t s)
+static inline void set_signed_variable(v_index index, int32_t s)
 {
     v_value v;
     v.vv_signed = s;
     set_variable(index, v);
 }
 
-static inline void set_enum_variable(uint8_t index, uint8_t e)
+static inline void set_enum_variable(v_index index, uint8_t e)
 {
     v_value v;
     v.vv_enum = e;

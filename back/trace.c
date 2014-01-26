@@ -21,7 +21,7 @@ void print_trace(void)
             c = '.';
         putchar(c);
         putchar('\n');
-    }        
+    }
     putchar('\n');
 }
 

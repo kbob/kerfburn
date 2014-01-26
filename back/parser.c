@@ -168,7 +168,7 @@ static void parse_error(uint16_t line)
         if (is_eol(c))
             break;
         putchar(c);
-    }            
+    }
     printf_P(PSTR("\"\n"));
 }
 
@@ -216,7 +216,7 @@ static inline void parse_assignment(uint8_t c0)
         return;
     }
     v_name name = { c0, c1, '\0' };;
-    uint8_t index = lookup_variable(name);
+    v_index index = lookup_variable(name);
     if (index == VAR_NOT_FOUND) {
         PARSE_ERROR();
         return;
