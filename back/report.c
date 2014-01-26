@@ -8,7 +8,6 @@
 
 #include "e-stop.h"
 #include "fault.h"
-#include "fw_stdio.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
 #include "memory.h"
@@ -32,12 +31,12 @@ static volatile bool    reporting_is_active;
 #define DEFINE_UNIMPLEMENTED_REPORT(code, name)                         \
     static void report_##name(void)                                     \
     {                                                                   \
-        printf_P(PSL(#code " (" #name ") report not implemented\n"));   \
+        printf_P(PSTR(#code " (" #name ") report not implemented\n"));   \
     }
 
 static void report_e_stop(void)
 {
-    printf_P(PSL("E e=%c\n"), is_emergency_stopped() ? 'y' : 'n');
+    printf_P(PSTR("E e=%c\n"), is_emergency_stopped() ? 'y' : 'n');
 }
 
 static void report_faults(void)
@@ -50,7 +49,7 @@ static void report_faults(void)
                 putchar('!');
             f_name name;
             get_fault_name(i, &name);
-            printf_P(PSL("%s"), name);
+            printf_P(PSTR("%s"), name);
         }
     }
     putchar('\n');
@@ -94,7 +93,7 @@ static void report_limit_switches(void)
     const char zmax = '_';
 #endif
 
-    printf_P(PSL("L x=%c%c y=%c%c z=%c%c\n"),
+    printf_P(PSTR("L x=%c%c y=%c%c z=%c%c\n"),
            xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
@@ -107,7 +106,7 @@ static void report_motors(void)
     char ze = z_step_is_enabled()       ? 'e' : 'd';
     char zd = z_direction_is_positive() ? '+' : '-';
 
-    printf_P(PSL("M x=%c%c y=%c%c z=%c%c\n"), xe, xd, ye, yd, ze, zd);
+    printf_P(PSTR("M x=%c%c y=%c%c z=%c%c\n"), xe, xd, ye, yd, ze, zd);
 }
 
 static void report_power(void)
@@ -117,13 +116,13 @@ static void report_power(void)
     char high_voltage        = high_voltage_is_enabled() ? 'y' : 'n';
     char air                 = air_pump_is_enabled()     ? 'y' : 'n';
     char water               = water_pump_is_enabled()   ? 'y' : 'n';
-    printf_P(PSL("P le=%c lr=%c he=%c ae=%c we=%c\n"),
+    printf_P(PSTR("P le=%c lr=%c he=%c ae=%c we=%c\n"),
            low_voltage_enabled, low_voltage_ready, high_voltage, air, water);
 }
 
 static void report_queues(void)
 {
-    printf_P(PSL("Q x=%u y=%u z=%u p=%u\n"),
+    printf_P(PSTR("Q x=%u y=%u z=%u p=%u\n"),
              queue_length(&Xq), queue_length(&Yq),
              queue_length(&Zq), queue_length(&Pq));
 }
@@ -133,7 +132,7 @@ static void report_RAM(void)
     // Technically, text is in program memory, not RAM.
     segment_sizes ss;
     get_memory_use(&ss);
-    printf_P(PSL("R t=%u d=%u b=%u f=%u s=%u\n"),
+    printf_P(PSTR("R t=%u d=%u b=%u f=%u s=%u\n"),
              ss.ss_text, ss.ss_data, ss.ss_bss, ss.ss_free, ss.ss_stack);
 }
 
@@ -144,7 +143,7 @@ static void report_serial(void)
     uint8_t re = serial_rx_peek_errors();
     uint8_t tc = serial_tx_char_count();
     uint8_t te = serial_tx_peek_errors();
-    printf_P(PSL("S rx c=%"PRId8" r=%"PRId8" e=%#"PRIx8", "
+    printf_P(PSTR("S rx c=%"PRId8" r=%"PRId8" e=%#"PRIx8", "
                  "tx c=%"PRId8" e=%#"PRIx8"\n"),
              rc, rl, re, tc, te);
 }
@@ -158,18 +157,18 @@ static void report_variables(void)
         v_type type = get_variable_type(i);
         v_value value = get_variable(i);
 
-        printf_P(PSL(" %s="), name);
+        printf_P(PSTR(" %s="), name);
         switch (type) {
         case VT_UNSIGNED:
-            printf_P(PSL("%"PRIu32), value.vv_unsigned);
+            printf_P(PSTR("%"PRIu32), value.vv_unsigned);
             break;
 
         case VT_SIGNED:
-            printf_P(PSL("%+"PRId32), value.vv_signed);
+            printf_P(PSTR("%+"PRId32), value.vv_signed);
 
             break;
         case VT_ENUM:
-            printf_P(PSL("%c"), (int)value.vv_enum);
+            printf_P(PSTR("%c"), (int)value.vv_enum);
             break;
 
         default:

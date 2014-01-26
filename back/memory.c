@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "fw_stdio.h"
+#include <avr/pgmspace.h>
 
 extern const uint8_t _etext;
 extern const uint8_t __data_start;
@@ -60,7 +60,7 @@ void get_memory_use(segment_sizes *ssp)
 void print_backtrace(void)
 {
     auto uint8_t x;
-    printf_P(PSL("STACK\n"));
+    printf_P(PSTR("STACK\n"));
     for (const uint8_t *p = &x; p < &__stack; p++)
         if (*(uint8_t **)p < &_etext)
             printf_P(PSTR("%6p\n"), *(uint8_t **)p);

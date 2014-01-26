@@ -5,7 +5,6 @@
 #include <avr/pgmspace.h>
 
 #include "fw_assert.h"
-#include "fw_stdio.h"
 
 #define DEFINE_ATOM_NAME(A) static const char A##_name[] PROGMEM = #A;
 
@@ -60,8 +59,8 @@ void print_atom(const char *label, uint16_t a)
 {
     if (a < ATOM_COUNT) {
         const char *name = (PGM_P)pgm_read_word(&atom_names[a]);
-        fprintf_P(stderr, PSL("%s %S\n"), label, name);
+        fprintf_P(stderr, PSTR("%s %S\n"), label, name);
     } else
-        fprintf_P(stderr, PSL("%s %"PRIu16"\n"), label, a);
+        fprintf_P(stderr, PSTR("%s %"PRIu16"\n"), label, a);
 }
 

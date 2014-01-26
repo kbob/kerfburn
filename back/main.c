@@ -65,7 +65,7 @@ static void do_background_task(void)
 {
     serial_rx_start();
     printf_P(version);
-    printf_P(PSL("\nReady\n"));
+    printf_P(PSTR("\nReady\n"));
     while (true) {
         while (!serial_rx_has_lines())
             continue;

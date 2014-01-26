@@ -4,10 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <avr/pgmspace.h>
+
 #include "actions.h"
 #include "fault.h"
 #include "fw_assert.h"
-#include "fw_stdio.h"
 #include "serial.h"
 #include "variables.h"
 
@@ -155,7 +156,7 @@ static inline bool is_digit(uint8_t c)
 static void parse_error(uint16_t line)
 {
     // Send uninformative message, consume current line and continue.
-    printf_P(PSL("Parse error %u at \""), line);
+    printf_P(PSTR("Parse error %u at \""), line);
     while (true) {
         while (!serial_rx_has_chars())
             continue;
@@ -168,7 +169,7 @@ static void parse_error(uint16_t line)
             break;
         putchar(c);
     }            
-    printf_P(PSL("\"\n"));
+    printf_P(PSTR("\"\n"));
 }
 
 static bool consume_line(uint8_t pos)
@@ -270,7 +271,7 @@ static inline void parse_assignment(uint8_t c0)
         return;
     }
     if (consume_line(pos)) {
-        // printf_P(PSL("set %s = %"PRId32"\n"), name, value.vv_signed);
+        // printf_P(PSTR("set %s = %"PRId32"\n"), name, value.vv_signed);
         set_variable(index, value);
         if (name[0] == 'o')
             update_overrides();

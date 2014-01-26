@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <avr/pgmspace.h>
 #include <util/atomic.h>
 
 #include "fault.h"
-#include "fw_stdio.h"
 #include "lasers.h"
 #include "limit-switches.h"
 #include "motors.h"
@@ -163,7 +163,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 #endif
 
             default:
-                fprintf_P(stderr, PSL("a = %u\n\n"), a);
+                fprintf_P(stderr, PSTR("a = %u\n\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -230,7 +230,7 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf_P(stderr, PSL("a = %u\n"), a);
+                fprintf_P(stderr, PSTR("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -297,7 +297,7 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf_P(stderr, PSL("a = %u\n"), a);
+                fprintf_P(stderr, PSTR("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -356,7 +356,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf_P(stderr, PSL("a = %u = %u\n"), a, a);
+                fprintf_P(stderr, PSTR("a = %u = %u\n"), a, a);
                 fw_assert(false);
             }
         } else {

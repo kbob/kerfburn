@@ -2,7 +2,8 @@
 
 #include <stdio.h>
 
-#include "fw_stdio.h"
+#include <avr/pgmspace.h>
+
 #include "low-voltage.h"
 #include "motors.h"
 #include "relays.h"
@@ -10,7 +11,7 @@
 #include "scheduler.h"
 
 #if 0
-#define ANNOUNCE_ACTION (printf_P(PSL("ACTION: %s\n"), __func__ + 7))
+#define ANNOUNCE_ACTION (printf_P(PSTR("ACTION: %s\n"), __func__ + 7))
 #else
 #define ANNOUNCE_ACTION ((void)0)
 #endif
@@ -18,7 +19,7 @@
 #define DEFINE_UNIMPLEMENTED_ACTION(name)                       \
     void action_##name(void)                                    \
     {                                                           \
-        printf_P(PSL("ACTION: " #name " not implemented\n"));   \
+        printf_P(PSTR("ACTION: " #name " not implemented\n"));  \
     }
 
 // DEFINE_UNIMPLEMENTED_ACTION(wait);

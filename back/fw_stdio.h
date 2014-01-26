@@ -3,10 +3,6 @@
 
 #include <avr/pgmspace.h>
 
-// PSL: program space string literal
-// #define PSL(s) ({ static const char x[] PROGMEM = (s); x; })
-#define PSL(s) (PSTR((s)))
-
 extern void init_stdio(void);
 
 #ifndef PRINTF_COMPAT
