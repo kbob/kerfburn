@@ -20,6 +20,8 @@ static pthread_mutex_t serial_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  serial_cond = PTHREAD_COND_INITIALIZER;
 static size_t          tx_sent, tx_received, tx_space;
 
+#include <stdio.h>
+
 static void make_raw(struct termios *tiosp)
 {
     tiosp->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP |
@@ -30,6 +32,10 @@ static void make_raw(struct termios *tiosp)
     tiosp->c_cflag |=   CS8;
     tiosp->c_cc[VMIN] = 1;
     tiosp->c_cc[VTIME] = 0;
+    if (cfsetspeed(tiosp, 115200) != 0) {
+        syslog(LOG_ERR, "can't set speed: %m");
+        fprintf(stderr, "can't set speed: %m\n");
+    }
 }
 
 

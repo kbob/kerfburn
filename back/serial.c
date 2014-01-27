@@ -6,7 +6,8 @@
 #include "e-stop.h"
 #include "fw_assert.h"
 
-#define BAUD_RATE   9600
+//#define BAUD_RATE   9600
+#define BAUD_RATE 115200
 
 #define TX_BUF_SIZE  256
 

@@ -55,10 +55,6 @@ Is this a bug database?
 * Severe bug: if the laser is in in continuous firing mode, when the
   engine stops, the laser turns on.
   
-* Use a higher baud rate than 9600.  See comments in `ftdi_sio.c` near
-  line 1122 (in the Linux kernel source tree).  Also see
-  http://stackoverflow.com/questions/3192478/specifying-non-standard-baud-rate-for-ftdi-virtual-serial-port-under-linux
-
 * Change serial driver so most functions are in-line.
 
 * Define pin mapping function for PCINTn pins.  Define e-stop and lid
@@ -114,11 +110,14 @@ Is this a bug database?
   a race condition and probable crash waiting to happen there.
 
 
-### GCode Interpreter
+### G-Code Interpreter
 
 * Add arc support.
 
 * Find out why it is so slow and make it faster.
+
+* Clean up interact.py and shell.py -- make a coherent command-line
+program.  Have it connect itself to thruport.
 
 
 ## Cleanup
