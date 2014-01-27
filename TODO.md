@@ -5,7 +5,7 @@ Is this a bug database?
 
 ## Next!
 
-What's next now?
+* Wire up back panel, power distribution, and relays.
 
 
 ## Design
@@ -75,8 +75,7 @@ What's next now?
 
 * Add a command to set the laser power.  I don't think it can be enqueued.
 
-* I need to move the engine to the soft interrupt.  That is probably
-  not next.
+* I need to move the engine to the soft interrupt.
 
 
 ### Thruport
@@ -117,7 +116,9 @@ What's next now?
 
 ### GCode Interpreter
 
-* Write it.
+* Add arc support.
+
+* Find out why it is so slow and make it faster.
 
 
 ## Cleanup
@@ -126,28 +127,6 @@ What's next now?
 
 * Standardize filenames on "\_" or "-" separators.  I think I prefer
   "-" for C, but Python requires "\_".
-
-* GCC allows enums with attribute `packed`.  That shrinks the enum to
-  just the size it needs.  I should declare all my enumerated types
-  with the packed attribute, then use named types to store them
-  instead of `uint8_t`.
-
-  Actually, the `-fshort-enums` compiler flag obviates the `packed`
-  attribute.
-
-  There are currently 9 enumerated types:
-
-    * atom - convert.
-    * engine\_state - convert.
-    * fault\_index - convert.
-    * animation\_index - convert.
-    * serial\_error\_bit - no.
-    * softint\_task - convert.
-    * variable\_index - convert.
-    * varible\_type - convert.
-    * queue\_mask - convert.
-    
-* Globally replace fw\_stdio.h:PSL() with avr/pgm\_space.h:PSTR().
 
 * Keep the config. directory clean.  Put the template files and the
   generated files somewhere else (probably in back/).  Only
@@ -160,10 +139,9 @@ What's next now?
 
 * Wire up lid switch.
 
-* Make a temporary back panel.  Install power plug+switch in it.
+* Install the temporary back panel.
 
-* Order relays.  Wire up relays to Azteeg and wire up power lines to
-  back panel.
+* Wire up relays to Azteeg and wire up power lines to back panel.
 
 * Replace wrong-size screws on limit switches and cable carrier with
   right-size.
@@ -175,5 +153,9 @@ What's next now?
   before that.)
 
 * Add a limit switch for Y max.
+
+* Wire up Z limit switches.
+
+* Test and connect Z motor.
 
 * Drill out carriage plate to pass air fitting through.
