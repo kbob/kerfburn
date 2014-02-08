@@ -20,22 +20,34 @@ class GCodeException(Exception):
     """Base class for exceptions raised by G-Code interpreter"""
 
 
+# This is a cheap, lazy way to have enumerated types.
+
+class CheapEnum(object):
+
+    @classmethod
+    def get_name(cls, value):
+        for name in dir(cls):
+            if name.startswith('_'):
+                continue
+            if getattr(cls, name) == value:
+                return name
+
+
 # The G-Code spec states that an expression equals a code number
 # if it is within +/- 0.0001.
 
 class ApproximateNumber(float):
 
     def __eq__(self, other):
-
-        # return self.low <= other <= self.high
         return self - 0.0001 <= other <= self + 0.0001
 
     @classmethod
     def getitem(cls, map, key, not_found=None):
         value = map.get(key, not_found)
         if value is not_found:
+            approx_key = cls(key)
             for k in map:
-                if cls(k) == key:
+                if approx_key == k:
                     return map[k]
         return value
 
@@ -45,14 +57,17 @@ def instmemo(meth):
 
     @wraps(meth)
     def lookup(self, *args):
+        cache = getattr(self, cache_name, None)
+        if cache is None:
+            cache = {}
+            setattr(self, cache_name, cache)
+        try:
+            return cache[args]
+        except KeyError:
+            cache[args] = result = meth(self, *args)
+            return result
 
-        key = (id(self),) + args
-        if key in saved:
-            return saved[key]
-        saved[key] = result = meth(self, *args)
-        return result
-
-    saved = {}
+    cache_name = '__cache_%s' % meth.func_name
     return lookup
 
 
@@ -73,11 +88,11 @@ class SourceLine(str):
     """
 
     def __new__(cls, old_str, source=None, lineno=None):
-
-        if source is None:
-            source = getattr(old_str, 'source', None)
-        if lineno is None:
-            lineno = getattr(old_str, 'lineno', 0)
+        if hasattr(old_str, 'pos'):
+            if lineno is None:
+                lineno = old_str.pos.lineno or 0
+            if source is None:
+                source = old_str.pos.source
         new_line = super(SourceLine, cls).__new__(cls, old_str)
         new_line.pos = SourcePosition(source, lineno, None, new_line)
         return new_line
@@ -90,7 +105,6 @@ class SourceLine(str):
 class LanguageCode(str):
 
     def __new__(cls, func, group, modal, require_any):
-
         assert inspect.isfunction(func)
         instance = super(LanguageCode, cls).__new__(cls, func.func_name)
         instance.func = func
@@ -108,37 +122,31 @@ class LanguageCode(str):
         return instance
 
     def __repr__(self):
-
         return '<code %s>' % (self.func.func_name)
 
     def matches(self, letter, number):
-
         return self.letter == letter and self.number == number
 
     @property
-    def code_letters(self):
-
-        return {self.letter} | self.arg_letters
-
-    @property
     def arg_letters(self):
-
         args = inspect.getargspec(self.func).args
         return tuple(a for a in args if len(a) == 1 and a in string.uppercase)
 
-    @property
-    def func_name(self):
 
-        return self.func.__name__
+class ModalGroup(str):
 
-    @property
-    def func_doc(self):
+    modal = True
 
-        return self.func.__doc__
+    def __new__(cls, name):
+        mg = super(ModalGroup, cls).__new__(cls, name)
+        mg.prepare_func = None
+        mg.finish_func = None
+        return mg
 
-
-class ModalGroup(str): modal = True
-class NonmodalGroup(str): modal = False
+class NonmodalGroup(str):
+    modal = False
+    prepare_func = None
+    finish_func = None
 
 # Each code (e.g., G-code or M-code) is defined
 # using a code decorator.  It can have several forms.
@@ -155,16 +163,15 @@ class NonmodalGroup(str): modal = False
 #
 # This form declares a code a member of a nonmodal group.
 #
-#   >>> @code(modal_group='my group')
+#   >>> @code(modal_group='knobbing')
 #   >>> def G124(self): ...
 #
-# If require_any is set, it is a syntax error to call the code without
-# also coding any one of the required arguments.
+# If require_any is set, it is a syntax error to invoke the code
+# without also coding at least one of the required arguments.
 
 def code(modal_group=None, nonmodal_group=None, require_any=None):
 
     def decorate(func):
-
         if modal_group:
             # modal = True
             group = ModalGroup(modal_group)
@@ -208,7 +215,6 @@ def code(modal_group=None, nonmodal_group=None, require_any=None):
 
 @contextmanager
 def modal_group(name):
-
     global current_code_group
     saved = current_code_group
     current_code_group = ModalGroup(name)
@@ -217,7 +223,6 @@ def modal_group(name):
 
 @contextmanager
 def nonmodal_group(name):
-
     global current_code_group
     saved = current_code_group
     current_code_group = NonmodalGroup(name)
@@ -225,14 +230,68 @@ def nonmodal_group(name):
     current_code_group = saved
 
 
+# Decorator defines a modal group preparation function.
+# A group preparation function reads and modifies interpreter state,
+# then returns the code to invoke (or None).
+
+def group_prepare(modal_group=None):
+
+    def decorate(func):
+        if modal_group:
+            group = ModalGroup(modal_group)
+        else:
+            group = current_code_group
+            truth = group and group.modal
+            assert truth, 'group_prepare must be in a modal group'
+        group.prepare_func = func
+        return func
+
+    # if called as @group_prepare
+    if inspect.isfunction(modal_group):
+        func = modal_group
+        modal_group = None
+        return decorate(func)
+    # else called as @group_prepare(...)
+    return decorate
+
+
+# Decorator defines a modal group finish function.
+# A group finish fuction reads and modifies interpreter state.
+
+def group_finish(modal_group=None):
+
+    def decorate(func):
+        if modal_group:
+            group = ModalGroup(modal_group)
+        else:
+            group = current_code_group
+            truth = group and group.modal
+            assert truth, 'group_finish must be in a modal group'
+        group.finish_func = func
+        return func
+
+    # if called as @group_finish
+    if inspect.isfunction(modal_group):
+        func = modal_group
+        modal_group = None
+        return decorate(func)
+    # else called as @group_finish(...)
+    return decorate
+
+
 class Dialect(namedtuple('Dialect', 'modal_groups nonmodal_groups')):
 
     @instmemo
     def find_active_code(self, letter, number):
-
         for code in self.active_codes:
             if code.matches(letter, number):
                 return code
+
+    @instmemo
+    def find_group(self, code):
+        for group in self.groups:
+            if code in group:
+                return group
 
     @property
     @instmemo
@@ -244,7 +303,6 @@ class Dialect(namedtuple('Dialect', 'modal_groups nonmodal_groups')):
     @property
     @instmemo
     def arg_letters(self):
-
         return {a
                 for c in self.active_codes
                 for a in c.arg_letters}
@@ -252,7 +310,6 @@ class Dialect(namedtuple('Dialect', 'modal_groups nonmodal_groups')):
     @property
     @instmemo
     def code_letters(self):
-
         return {w[0] for w in self.active_codes} | self.arg_letters
 
     @property
@@ -263,7 +320,6 @@ class Dialect(namedtuple('Dialect', 'modal_groups nonmodal_groups')):
     @property
     @instmemo
     def passive_code_letters(self):
-
         return self.arg_letters
 
 
@@ -298,38 +354,36 @@ class Executor(object):
         s_grps = sorted(modal_groups.keys() + nonmodal_groups.keys())
         assert s_ooe == s_grps
 
+    # XXX initial settings could be derived from the codes' argument lists.
     @abstractproperty
     def initial_settings(self):
-        return ()
+        try:
+            return super(Executor, self).initial_settings
+        except AttributeError:
+            return {}
 
 
 class ParameterSet(object):
 
     def __init__(self):
-
         self.dict = {}
 
     @staticmethod
     def load(file):
-
         pickle.load(file)
 
     def save(self, file):
-
         pickle.dump(self, file)
 
     def __getitem__(self, index):
-
         index = self.check_index(index)
         return self.dict.get(index, 0)
 
     def __setitem__(self, index, value):
-
         index = self.check_index(index)
         self.dict[index] = value
 
     def check_index(self, index):
-
         if isinstance(index, float):
             key = ApproximateNumber(math.floor(index + 0.0002))
             if key != index:

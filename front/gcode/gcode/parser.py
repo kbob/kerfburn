@@ -84,7 +84,6 @@ class LineEnumerator(object):
     # whitespace chars are not skipped.
 
     def __init__(self, line, eat_whitespace=True):
-
         self.line = line
         self.iter = enumerate(iter(line), 1)
         self.eat_whitespace = eat_whitespace
@@ -92,7 +91,6 @@ class LineEnumerator(object):
         self.exc = None
 
     def __iter__(self):
-
         return self
 
     def next(self):
@@ -172,11 +170,9 @@ class Token(namedtuple('Token', 'pos type value')):
     # optional value.
 
     def __new__(cls, pos, type, value=None):
-
         return super(Token, cls).__new__(cls, pos, type, value)
 
     def __repr__(self):
-
         try:
             type_str = self.type.__name__
         except AttributeError:
@@ -193,18 +189,15 @@ class Peekable(object):
     # Add a peek() method to any iterable.
 
     def __init__(self, iter, end_value=None):
-
         self.iter = iter
         self.end_value = end_value
         self.saved = None
         self.exc = None
 
     def __iter__(self):
-
         return self
 
     def next(self):
-
         if self.exc:
             exc = self.exc
             self.exc = None
@@ -216,7 +209,6 @@ class Peekable(object):
         return self.iter.next()
 
     def peek(self):
-
         try:
             self.saved = self.next()
             return self.saved
@@ -247,7 +239,6 @@ class Peekable(object):
 def scan_line(line, code_letters):
 
     def collect_digits(prefix, c):
-
         return c.isdigit()
 
     lenum = LineEnumerator(line)
@@ -256,10 +247,12 @@ def scan_line(line, code_letters):
         cup = c.upper()
         if c == '(':            # Parenthesized Comment/Message
             with lenum.catch_whitespace():
+
                 def collect_comment(prefix, c):
                     if c == '(':
                         raise GCodeSyntaxError(pos, 'nested comment')
                     return c != ')'
+
                 comment = lenum.collect_while(collect_comment)
                 if lenum.peek() != ')':
                     raise GCodeSyntaxError(pos, 'unterminated comment')
@@ -270,13 +263,17 @@ def scan_line(line, code_letters):
                 comment = lenum.collect_while(lambda prec, c: True)
             yield Token(pos, CommentToken, comment)
         elif cup == 'N':        # Line Number
+
             def collect_line_number(pred, c):
                 return c.isdigit() and len(pred + c) <= 5
+
             num = lenum.collect_while(collect_line_number)
             yield Token(pos, LineNumberToken, int(num))
         elif c.isalpha():       # Operator or Word Letter
+
             def collect_operator(pred, c):
                 return (cup + pred + c).upper() in valid_prefices
+
             letters = c + lenum.collect_while(collect_operator)
             letters = letters.upper()
             if len(letters) > 1:
@@ -318,7 +315,6 @@ class ParsedLine(object):
     # A container for the source line's side effects.
 
     def __init__(self, source):
-
         self.source = source
         self.block_delete = False
         self.line_number = None
@@ -327,8 +323,7 @@ class ParsedLine(object):
         self.words = []
 
     def __repr__(self):
-
-        attrs = 'src block_delete line_number settings comment words'.split()
+        attrs = 'source block_delete line_number settings comment words'.split()
         return 'ParsedLine(%s)' % ', '.join('%s=%r' % (a, getattr(self, a))
                                             for a in attrs)
 
@@ -336,7 +331,6 @@ class ParsedLine(object):
 class LineParser(object):
 
     def __init__(self, line, parameters, code_letters):
-
         self.line = line
         self.parameters = parameters
         chargen = scan_line(line, code_letters)
@@ -456,7 +450,6 @@ class LineParser(object):
         # Each operation group is left-associative.
 
         def get_add_op(tok):
-
             if tok.type == '+':
                 return operator.add
             if tok.type == '-':
@@ -482,7 +475,6 @@ class LineParser(object):
         # term = factor + { mul_operation + factor }
 
         def get_mul_op(tok):
-
             if tok.type == '*':
                 return operator.mul
             if tok.type == '/':
@@ -503,7 +495,6 @@ class LineParser(object):
         # factor = real_value + { exp_operation + real_value }
 
         def get_exp_op(tok):
-
             if tok.type == '**':
                 return operator.pow
             return False
@@ -548,13 +539,11 @@ class LineParser(object):
 class Parser(object):
 
     def __init__(self, parameters, dialect):
-
         self.parameters = parameters
         self.dialect = dialect
         self.code_letters = frozenset((dialect.code_letters))
 
     def parse_line(self, line, source=None, lineno=None):
-
         line = SourceLine(line, source, lineno)
         parser = LineParser(line, self.parameters, self.code_letters)
         parser.parse_line()
@@ -567,7 +556,6 @@ class Parser(object):
 
 
     def parse_file(self, file, source=None, process_percents=True):
-
         if source is None:
             source = getattr(file, 'name', None)
         nonblank_seen = False

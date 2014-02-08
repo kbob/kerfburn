@@ -112,12 +112,15 @@ Is this a bug database?
 
 ### G-Code Interpreter
 
-* Add arc support.
+* Add radius-based arc support.
 
-* Find out why it is so slow and make it faster.
+* Use a better heuristic for arc subdivision.  It should be based on
+  the maximum deviation.
 
-* Clean up interact.py and shell.py -- make a coherent command-line
-program.  Have it connect itself to thruport.
+* Find out why the G-Code interpreter is so slow and make it faster.
+
+* Automatically derive initial_settings from the active codes'
+  argument lists.
 
 
 ## Cleanup

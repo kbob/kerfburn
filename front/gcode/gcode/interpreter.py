@@ -11,11 +11,11 @@ class Interpreter(object):
     """G-Code Interpreter"""
 
     def __init__(self, executor=laser.LaserExecutor()):
-
         self.executor = executor
         self.parameters = core.ParameterSet()
-        self.settings = executor.initial_settings()
+        self.settings = executor.initial_settings
         self.parser = parser.Parser(self.parameters, executor.dialect)
+        self.modes = dict.fromkeys(executor.dialect.modal_groups)
 
     def interpret_line(self, line, source=None, lineno=None):
 
@@ -46,7 +46,6 @@ class Interpreter(object):
                 raise core.GCodeException('unknown action: %r' % (action,))
 
     def prep_words(self, pline):
-
         active_groups = {}
         active_args = {}
         dialect = self.executor.dialect
@@ -86,17 +85,34 @@ class Interpreter(object):
         return active_groups, new_settings
 
     def execute(self, pline):
-
+        dialect = self.executor.dialect
         active_groups, new_settings = self.prep_words(pline)
         self.settings.update(new_settings)
         for op in self.executor.order_of_execution:
+            action = None
             if inspect.ismethod(op):
                 action = op(self.settings, new_settings, pline)
             else:
+                assert isinstance(op, str)
+                group = dialect.find_group(op)
                 active_code = active_groups.get(op)
+                if group.prepare_func:
+                    method = getattr(self.executor,
+                                     group.prepare_func.func_name)
+                    active_code = method(mode=self.modes[group],
+                                         new_mode=active_code,
+                                         settings=self.settings,
+                                         new_settings=new_settings)
                 if active_code:
+                    self.modes[op] = active_code
                     action = self.call_code(active_code)
-            if action:
+                if group.finish_func:
+                    method = getattr(self.executor, group.finish_func.func_name)
+                    method(mode=self.modes[group],
+                           new_mode=active_code,
+                           settings=self.settings,
+                           new_settings=new_settings)
+            if action is not None:
                 return action
 
     def call_code(self, code):
