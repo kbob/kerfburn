@@ -33,6 +33,7 @@ def restart_as_needed():
             print >>sys.stderr, '%s changed, restarting' % file
             argv = [sys.executable] + sys.argv
             sys.exitfunc()
+            sys.exitfunc = None # don't run it again if execv fails.
             os.execv(argv[0], argv)
 
 
@@ -60,6 +61,7 @@ def main_loop():
             z = z.split('\n', 1)[1]   # discard first line
             z = z.rstrip()            # discard trailing newline
             print >>sys.stderr, z
+
 
 if __name__ == '__main__':
     main_loop()
