@@ -20,17 +20,23 @@ typedef enum queue_mask {
     qm_all = qm_x | qm_y | qm_z | qm_p
 } queue_mask;
 
+#if 0
 typedef enum engine_state {     // XXX move this to engine.c.
     ES_STOPPED,
     ES_RUNNING,
     ES_STOPPING
 } engine_state;
+#endif
 
 static volatile queue_mask running_queues;
 
 void init_engine(void)
 {
 }
+
+// XXX This change is not yet tested.
+
+#if 0
 
 static inline engine_state get_engine_state(void)
 {
@@ -47,8 +53,10 @@ void start_engine(void)
     engine_state estate;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         estate = get_engine_state();
-        if (estate == ES_STOPPING)
+        if (estate == ES_STOPPING) {
+            XXX will never finish because interrupts are masked.
             await_engine_stopped();
+        }
         if (estate != ES_RUNNING) {
             running_queues = qm_all;
 
@@ -87,6 +95,63 @@ void start_engine(void)
         trigger_fault(F_SU);
 }
 
+#else
+
+static inline void start_timers(void)
+{
+    // In the asm instruction sequence below, the counters are
+    // started exactly two CPU cycles apart.  So we preload
+    // the overflow value with values exactly two counts
+    // apart, and then the counters will all overflow on the
+    // exact same clock tick, and the timers will be in sync.
+
+    pre_start_x_timer(F_CPU / 1000);
+    pre_start_y_timer(F_CPU / 1000 - 2);
+    pre_start_z_timer(F_CPU / 1000 - 4);
+    pre_start_pulse_timer(F_CPU / 1000 - 6);
+
+    uint8_t xrb = x_timer_starting_tccrb();
+    uint8_t yrb = y_timer_starting_tccrb();
+    uint8_t zrb = z_timer_starting_tccrb();
+    uint8_t prb = pulse_timer_starting_tccrb();
+
+    __asm__ volatile (
+        "sts %0, %1\n\t"
+        "sts %2, %3\n\t"
+        "sts %4, %5\n\t"
+        "sts %6, %7\n\t"
+     :: "i"((uint16_t)&X_MOTOR_STEP_TCCRB),
+        "r"(xrb),
+        "i"((uint16_t)&Y_MOTOR_STEP_TCCRB),
+        "r"(yrb),
+      "i"((uint16_t)&Z_MOTOR_STEP_TCCRB),
+        "r"(zrb),
+        "i"((uint16_t)&LASER_PULSE_TCCRB),
+        "r"(prb)
+    );
+}
+
+void start_engine(void)
+{
+    uint8_t rq;
+    while (true) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            rq = running_queues;
+            if (rq == 0) {
+                running_queues = rq = qm_all;
+                start_timers();
+            }
+        }
+        if (rq == qm_all)
+            break;
+        // Some queues have stopped.  Wait for all queues to stop, then
+        // restart the engine.
+        await_engine_stopped();
+    }
+}
+
+#endif
+
 void stop_engine_immediately(void)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -100,11 +165,14 @@ void stop_engine_immediately(void)
 
 void await_engine_stopped(void)
 {
+#if 0
     while (get_engine_state() != ES_STOPPED)
         continue;
+#else
+    while (running_queues)
+        continue;
+#endif
 }
-
-// #include <stdio.h>
 
 ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 {
