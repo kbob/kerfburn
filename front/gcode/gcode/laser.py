@@ -119,6 +119,7 @@ class LaserExecutor(Executor, XYArcMixin):
             'laser pulse width',
             'motors',
             'dwell',
+            'plane selection',
             'units',
             'distance mode',
             'home',
@@ -203,6 +204,13 @@ class LaserExecutor(Executor, XYArcMixin):
 
         mt = self.secs_to_ticks(P)
         self.emit('mt=%d' % mt, 'Qd')
+
+    @code(modal_group='plane selection')
+    def G17(self):
+
+        """select XY plane"""
+
+        # (No-op.)
 
     with modal_group('units'):
 
