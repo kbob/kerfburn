@@ -1,4 +1,3 @@
-%
 M107                            (disable air assist)
 
 G28                             (home)
@@ -11,4 +10,3 @@ M105                            (stop water cooling)
 M18                             (disable steppers)
 M81                             (disable low voltage power)
 M2                              (program end)
-%
