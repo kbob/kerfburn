@@ -12,7 +12,7 @@
 //
 //     def_input_pin(PA2, 'Frob State', enabled=low)
 //
-// then REG_BIT_IS(FROB_STATE, FROB_STATE_DISABLED) would compile into
+// then REG_BIT_IS(FROB_STATE_PIN, FROB_STATE_DISABLED) would compile into
 // code equivalent to this.
 //
 //     (PINA & (1 << 2))
