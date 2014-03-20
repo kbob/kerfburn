@@ -148,8 +148,6 @@ Is this a bug database?
 * Replace wrong-size screws on limit switches and cable carrier with
   right-size.
 
-* Connect ATX power-ready pin to Azteeg.
-
 * Affix heat sinks to stepper drivers and adjust the current to max.
   (Defer until motor control is debugged.  There will be many crashes
   before that.)
@@ -161,3 +159,5 @@ Is this a bug database?
 * Test and connect Z motor.
 
 * Drill out carriage plate to pass air fitting through.
+
+* Cut out right-side skin for airflow to power supply.
