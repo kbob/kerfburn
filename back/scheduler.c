@@ -288,13 +288,6 @@ static inline bool lasers_are_inactive(uint8_t ls, uint8_t pm, uint_fast24 md)
     return false;
 }
 
-static inline bool should_continue_pulse_train(laser_timer_state *lp,
-                                               uint8_t            ls,
-                                               uint8_t            pm)
-{
-    return ls == lp->ls_ls && pm == lp->ls_pm;
-}
-
 static inline void prep_laser_state(laser_timer_state *lp,
                                     uint32_t           mt,
                                     uint8_t            ls,
@@ -304,6 +297,11 @@ static inline void prep_laser_state(laser_timer_state *lp,
     uint32_t pw = get_unsigned_variable(V_PW);
 
     uint_fast24 q, r;
+
+    // If last stroke finished early, add remaining time to this stroke.
+    // N.B., if in a pulsed mode, this keeps the pulses from jittering
+    // at cut boundaries.
+    mt += lp->ls_mt - lp->ls_t;
 
     if (lasers_are_inactive(ls, pm, md)) {
         // Keep both lasers off; mark time until move over.
@@ -338,10 +336,6 @@ static inline void prep_laser_state(laser_timer_state *lp,
             r = 0;
         }
         else {
-            if (should_continue_pulse_train(lp, ls, pm)) {
-                // Add remaining time to this move.
-                mt += lp->ls_mt - lp->ls_t;
-            }
             lp->ls_t = 0;
             if (pm == 't') {
                 // Timed pulse mode
