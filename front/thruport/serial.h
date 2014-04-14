@@ -1,6 +1,7 @@
 #ifndef SERIAL_included
 #define SERIAL_included
 
+#include <stddef.h>
 #include <unistd.h>
 
 #define TTY_BUFSIZ 256

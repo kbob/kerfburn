@@ -80,14 +80,6 @@ Is this a bug database?
 
 * Make the client commands auto-start the daemon if it is not running.
 
-* Redesign the error reporting/logging facility.
-
-* I don't know whether the daemon shuts itself down cleanly on errors.
-  It uses `atexit()` but I haven't seen that work.
-
-* Make the data paths 8-bit clean.  Currently, NUL characters are not
-  transmitted, as well as characters `'\xF0'` through `'\xFF'`.
-
 * Write some error handling/reporting utilities.  Make sure all client
   errors go to `stderr` and all daemon errors go to syslog.  Make the
   messages more consistent and user-centric.  The utilities should also
@@ -96,11 +88,6 @@ Is this a bug database?
 * In `main.c`, refactor usage messages into fields in the action
   structure.  (And rename `action` since it won't be appropriate any
   more.)
-
-* In `main.c`, decide what the default action should be, and implement
-  that.
-
-* Implement highlighting in `*_repr()`.
 
 * Implement control mode.  What controls do we need?
 

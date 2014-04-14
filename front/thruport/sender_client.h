@@ -6,6 +6,6 @@
 // (E.g., the tail of argv.)
 //
 // Returns process exit status.
-extern int be_sender(const char **files);
+extern int be_sender(const char *const *files);
 
 #endif /* !SENDER_CLIENT_included */

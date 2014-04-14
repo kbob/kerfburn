@@ -14,7 +14,7 @@
 static struct termios  orig_termios, raw_termios;
 static size_t          tty_bufsize;
 static char           *tty_rawbuf;
-static int             ttyfd       = -1;
+static int             ttyfd = -1;
 
 static pthread_mutex_t serial_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  serial_cond = PTHREAD_COND_INITIALIZER;
@@ -32,7 +32,8 @@ static void make_raw(struct termios *tiosp)
     tiosp->c_cflag |=   CS8;
     tiosp->c_cc[VMIN] = 1;
     tiosp->c_cc[VTIME] = 0;
-    if (cfsetspeed(tiosp, 115200) != 0) {
+    // if (cfsetspeed(tiosp, 115200) != 0) {
+    if (cfsetspeed(tiosp, 9600) != 0) {
         syslog(LOG_ERR, "can't set speed: %m");
         fprintf(stderr, "can't set speed: %m\n");
     }
@@ -181,8 +182,9 @@ ssize_t serial_receive(char *buf, size_t max)
         if (nread < 0) {
             syslog(LOG_ERR, "tty read failed: %m");
             return nread;
-        }
-        if (nread > 0) {
+        } else if (nread == 0) {
+            return nread;
+        } else {
             size_t ncanon = cook_chars(buf, tty_rawbuf, nread);
             static size_t raw_tot = 0, can_tot = 0;
             raw_tot += nread; can_tot += ncanon;

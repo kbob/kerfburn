@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <sys/wait.h>
 
@@ -22,10 +23,11 @@
 #include "suspender_service.h"
 #include "serial.h"
 
-// The daemon has three threads.
-//   The main thread listens for new client connections.
+// The daemon has four threads.
+//   The acceptor thread listens for new client connections.
 //   The send thread copies data from the sender to the serial line.
 //   The receive thread broadcasts data from the serial port to the receivers.
+//   The main thread starts and stops the send and receive threads.
 
 typedef void service_instantiation_func(int sock);
 
@@ -43,9 +45,28 @@ static service services[] = {
 };
 static size_t service_count = sizeof services / sizeof services[0];
 
+static struct {
+    pthread_mutex_t ds_lock;
+    pthread_cond_t  ds_control_cond;
+    pthread_cond_t  ds_suspender_cond;
+    unsigned int    ds_suspender_count;
+    enum {
+        SS_CLOSED,
+        SS_OPEN,
+        SS_FAILED
+    }               ds_serial;
+} daemon_state = {
+    PTHREAD_MUTEX_INITIALIZER,
+    PTHREAD_COND_INITIALIZER,
+    PTHREAD_COND_INITIALIZER,
+    0,
+    SS_CLOSED,
+};
+
 static bool      debug_daemon  = false;
 static int       listen_socket = -1;
 static pthread_t main_thread;
+static pthread_t acceptor_thread;
 static pthread_t send_thread;
 static pthread_t receive_thread;
 
@@ -123,6 +144,51 @@ static char *alloc_data_buf(int fd, size_t *size_out)
     return buf;
 }
 
+static void accept_client_connection(void)
+{
+    struct sockaddr_un sun;
+    socklen_t addrlen = sizeof sun;
+    memset(&sun, 0, sizeof sun);
+    int client_sock = accept(listen_socket, (struct sockaddr *)&sun, &addrlen);
+    if (client_sock < 0) {
+        syslog(LOG_WARNING, "client accept failed: %m");
+        return;
+    }
+    char line[100];
+    ssize_t nr = read_line(client_sock, line, sizeof line);
+    if (nr <= 0) {
+        syslog(LOG_WARNING, "could not read client's first message: %m");
+        close(client_sock);
+        return;
+    }
+
+    char c;
+    int ns = sscanf(line, "Client Type %c\n", &c);
+    if (ns != 1) {
+        syslog(LOG_WARNING, "client's first message malformed");
+        close(client_sock);
+        return;
+    }
+
+    for (size_t i = 0; i < service_count; i++) {
+        service *sp = &services[i];
+        if (c == sp->s_client_type) {
+            syslog(LOG_INFO, "New %s client", sp->s_name);
+            (*sp->s_instantiate)(client_sock);
+            return;
+        }
+    }
+    syslog(LOG_WARNING, "client type %d unknown", c & 0xFF);
+    close(client_sock);
+}
+
+static void *acceptor_thread_main(void *p)
+{
+    while (true)
+        accept_client_connection();
+    return NULL;
+}
+
 static void shutdown_service(void)
 {
     const char *sockdir = get_socket_dir();
@@ -134,6 +200,7 @@ static void shutdown_service(void)
 
 static int init_service(void)
 {
+    int r = 0;
     const char *sockdir = get_socket_dir();
     const char *sockpath = get_socket_path();
     struct sockaddr_un sun;
@@ -184,45 +251,20 @@ static int init_service(void)
         return -1;
     }
 
+    // Start acceptor thread.
+    r = pthread_create(&acceptor_thread, NULL, acceptor_thread_main, NULL);
+    if (r) {
+        syslog(LOG_ERR, "can't create acceptor thread: %s", strerror(r));
+        return -1;
+    }    
+
+    r = pthread_detach(acceptor_thread);
+    if (r) {
+        syslog(LOG_ERR, "can't detach acceptor thread: %s", strerror(r));
+        return -1;
+    }
+
     return 0;
-}
-
-static void accept_client_connection(void)
-{
-    struct sockaddr_un sun;
-    socklen_t addrlen = sizeof sun;
-    memset(&sun, 0, sizeof sun);
-    int client_sock = accept(listen_socket, (struct sockaddr *)&sun, &addrlen);
-    if (client_sock < 0) {
-        syslog(LOG_WARNING, "client accept failed: %m");
-        return;
-    }
-    char line[100];
-    ssize_t nr = read_line(client_sock, line, sizeof line);
-    if (nr <= 0) {
-        syslog(LOG_WARNING, "could not read client's first message: %m");
-        close(client_sock);
-        return;
-    }
-
-    char c;
-    int ns = sscanf(line, "Client Type %c\n", &c);
-    if (ns != 1) {
-        syslog(LOG_WARNING, "client's first message malformed");
-        close(client_sock);
-        return;
-    }
-
-    for (size_t i = 0; i < service_count; i++) {
-        service *sp = &services[i];
-        if (c == sp->s_client_type) {
-            syslog(LOG_INFO, "New %s client", sp->s_name);
-            (*sp->s_instantiate)(client_sock);
-            return;
-        }
-    }
-    syslog(LOG_WARNING, "client type %d unknown", c & 0xFF);
-    close(client_sock);
 }
 
 static void *send_thread_main(void *p)
@@ -245,7 +287,7 @@ static void *send_thread_main(void *p)
                 report_sender_error(LOG_ERR, "serial transmit failed");
         }
         free(buf);
-        disconnect_sender();
+        disconnect_sender(NULL);
     }
     return NULL;
 }
@@ -257,11 +299,18 @@ static void *receive_thread_main(void *p)
         ssize_t nr = serial_receive(buf, sizeof buf);
         if (nr > 0)
             broadcast_to_receivers(buf, nr);
+        if (nr == 0) {
+            pthread_mutex_lock(&daemon_state.ds_lock);
+            daemon_state.ds_serial = SS_FAILED;
+            pthread_cond_signal(&daemon_state.ds_control_cond);
+            pthread_mutex_unlock(&daemon_state.ds_lock);
+            break;
+        }
     }
     return NULL;
 }
 
-static int create_daemon_threads(void)
+static int create_IO_threads(void)
 {
     // Create send thread.
     int r = pthread_create(&send_thread, NULL, send_thread_main, NULL);
@@ -270,57 +319,17 @@ static int create_daemon_threads(void)
         return r;
     }    
 
-#ifdef PROVE_THIS_HELPS
-    // Create real-time attrs for receive thread.
-    pthread_attr_t rattr, *rattrp = &rattr;
-    r = pthread_attr_init(&rattr);
-    if (r) {
-        syslog(LOG_ERR, "can't initialize thread attributes: %s", strerror(r));
-        return r;
-    }
-
-    // Receive thread's policy is FIFO.
-    r = pthread_attr_setschedpolicy(&rattr, SCHED_FIFO);
-    if (r) {
-        syslog(LOG_ERR, "can't set thread scheduling policy: %s", strerror(r));
-        return r;
-    }
-
-    // Receive thread's scheduling parameters are (priority = max).
-    struct sched_param rsparam;
-    memset(&rsparam, 0, sizeof rsparam);
-    rsparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
-
-    r = pthread_attr_setschedparam(&rattr, &rsparam);
-    if (r) {
-        syslog(LOG_ERR, "can't set thread scheduling parameter: %s",
-               strerror(r));
-        return r;
-    }
-#else
-    pthread_attr_t *rattrp = NULL;
-#endif
-
     // Create receive thread.
-    r = pthread_create(&receive_thread, rattrp, receive_thread_main, NULL);
+    r = pthread_create(&receive_thread, NULL, receive_thread_main, NULL);
     if (r) {
         syslog(LOG_ERR, "can't create receive thread: %s", strerror(r));
         return r;
     }    
 
-#ifdef PROVE_THIS_HELPS
-    // Done with the real-time attributes.
-    r = pthread_attr_destroy(&rattr);
-    if (r) {
-        syslog(LOG_ERR, "can't destroy thread attributes: %s", strerror(r));
-        return r;
-    }
-#endif
-
     return 0;                   // Yay!
 }
 
-static int destroy_daemon_threads(void)
+static int destroy_IO_threads(void)
 {
     // Any error here will kill the daemon at a higher level;
     // don't worry about keeping state consistent.
@@ -350,6 +359,7 @@ static int destroy_daemon_threads(void)
 
 int suspend_daemon(void)
 {
+#if 0
     assert(pthread_self() == main_thread);
     static char suspend_msg[] = "\n[suspend]\n";
     broadcast_to_receivers(suspend_msg, sizeof suspend_msg - 1);
@@ -358,10 +368,23 @@ int suspend_daemon(void)
         return r;
     close_serial();
     return 0;
+#else
+    pthread_mutex_lock(&daemon_state.ds_lock);
+    ++daemon_state.ds_suspender_count;
+    pthread_cond_signal(&daemon_state.ds_control_cond);
+    while (daemon_state.ds_suspender_count > 1)
+        pthread_cond_wait(&daemon_state.ds_suspender_cond,
+                          &daemon_state.ds_lock);
+    pthread_mutex_unlock(&daemon_state.ds_lock);
+    static const char suspend_msg[] = "\n[suspend]\n";
+    broadcast_to_receivers(suspend_msg, sizeof suspend_msg - 1);
+    return 0;
+#endif
 }
 
 int resume_daemon(void)
 {
+#if 0
     int r = open_serial();
     if (r)
         return r;
@@ -371,6 +394,18 @@ int resume_daemon(void)
     static char resume_msg[] = "[resume]\n";
     broadcast_to_receivers(resume_msg, sizeof resume_msg - 1);
     return 0;
+#else
+    pthread_mutex_lock(&daemon_state.ds_lock);
+    if (--daemon_state.ds_suspender_count)
+        pthread_cond_signal(&daemon_state.ds_suspender_cond);
+    else {
+        static char resume_msg[] = "[resume]\n";
+        broadcast_to_receivers(resume_msg, sizeof resume_msg - 1);
+        pthread_cond_signal(&daemon_state.ds_control_cond);
+    }
+    pthread_mutex_unlock(&daemon_state.ds_lock);
+    return 0;
+#endif
 }
 
 __attribute__((noreturn))
@@ -382,17 +417,62 @@ static void run_daemon(void)
         exit(EXIT_FAILURE);
     if (init_service())
         exit(EXIT_FAILURE);
-    if (open_serial())
-        exit(EXIT_FAILURE);
-    // Serial must be open before starting threads.
-    if (create_daemon_threads())
-        exit(EXIT_FAILURE);
-    syslog(LOG_INFO, "daemon running");
-    while (true)
-        accept_client_connection();
-    // XXX how do we cleanly exit?  We need to remove the tty lock file.
+
+    pthread_mutex_lock(&daemon_state.ds_lock);
+    while (true) {
+        bool use_timeout = false;
+        if (daemon_state.ds_serial == SS_FAILED) {
+            destroy_IO_threads();
+            close_serial();
+            disconnect_sender("serial port failure");
+            const char msg[] = "[serial disconnect]\n";
+            broadcast_to_receivers(msg, sizeof msg - 1);
+            daemon_state.ds_serial = SS_CLOSED;
+        }
+        if (daemon_state.ds_suspender_count) {
+            if (daemon_state.ds_serial != SS_CLOSED) {
+                destroy_IO_threads();
+                close_serial();
+                disconnect_sender("suspended");
+                daemon_state.ds_serial = SS_CLOSED;
+            }
+            pthread_cond_signal(&daemon_state.ds_suspender_cond);
+        } else if (daemon_state.ds_serial == SS_CLOSED) {
+            if (open_serial() == 0) {
+                // succeeded
+                create_IO_threads();
+                daemon_state.ds_serial = SS_OPEN;
+                static bool been_here = false;
+                if (!been_here) {
+                    been_here = true;
+                    syslog(LOG_INFO, "daemon running");
+                } else {
+                    const char msg[] = "[serial reconnect]\n";
+                    broadcast_to_receivers(msg, sizeof msg - 1);
+                }
+            } else {
+                // failed
+                use_timeout = true;
+            }
+        }
+        if (use_timeout) {
+            struct timeval now;
+            struct timespec wake_time;
+            gettimeofday(&now, NULL);
+            wake_time.tv_sec = now.tv_sec + 1;
+            wake_time.tv_nsec = now.tv_usec * 1000;
+            pthread_cond_timedwait(&daemon_state.ds_control_cond, 
+                                   &daemon_state.ds_lock,
+                                   &wake_time);
+        } else {
+            pthread_cond_wait(&daemon_state.ds_control_cond,
+                              &daemon_state.ds_lock);;
+        }
+    }
+    pthread_mutex_unlock(&daemon_state.ds_lock);
 }
 
+// called when daemon explicitly started.
 int start_daemon(bool debug)
 {
     debug_daemon = debug;
@@ -405,6 +485,7 @@ int start_daemon(bool debug)
     run_daemon();
 }
 
+// called when daemon auto-started by client.
 int spawn_daemon(void)
 {
     int r = daemonize();

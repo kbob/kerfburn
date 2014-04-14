@@ -1,21 +1,42 @@
 #include "sender_service.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-
-#include "debug.h"
 
 static pthread_mutex_t sslock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  sscond = PTHREAD_COND_INITIALIZER;
 static bool            sender_active;
 static int             sender_sock;
 static FILE           *sender_fout;
+
+__attribute__((format (printf, 3, 4)))
+static void fail_sender(int sock, int priority, const char *fmt, ...)
+{
+    char *core_msg = NULL;
+    char *client_msg = NULL;
+    int r;
+    va_list ap;
+
+    va_start(ap, fmt);
+    r = vasprintf(&core_msg, fmt, ap);
+    va_end(ap);
+    if (r != -1) {
+        syslog(priority, core_msg);
+        r = asprintf(&client_msg, "thruport: %s\n", core_msg);
+        if (r != -1) {
+            write(sock, client_msg, r);
+            free(client_msg);
+        }
+        free(core_msg);
+    }
+}
 
 void instantiate_sender_service(int sock)
 {
@@ -24,20 +45,20 @@ void instantiate_sender_service(int sock)
     pthread_mutex_unlock(&sslock);
 
     if (a) {
-        report_sender_error(LOG_ERR, "another sender is already active");
+        fail_sender(sock, LOG_ERR, "another sender is already active");
         close(sock);
         return;
     }
     int sock2 = dup(sock);
     if (sock2 < 0) {
-        report_sender_error(LOG_ERR, "failed to dup sender socket");
+        fail_sender(sock, LOG_ERR, "failed to dup sender socket: %m");
         close(sock);
         return;
     }
 
     FILE *fsock_out = fdopen(sock2, "w");
     if (fsock_out == NULL) {
-        report_sender_error(LOG_ERR, "failed to fdopen sender socket");
+        fail_sender(sock, LOG_ERR, "failed to fdopen sender socket: %m");
         close(sock2);
         close(sock);
         return;
@@ -52,15 +73,18 @@ void instantiate_sender_service(int sock)
     pthread_mutex_unlock(&sslock);
 }
 
-void disconnect_sender(void)
+void disconnect_sender(const char *reason)
 {
-    assert(sender_active);
-    fclose(sender_fout);
-    close(sender_sock);
     pthread_mutex_lock(&sslock);
-    sender_sock = -1;
-    sender_fout = NULL;
-    sender_active = false;
+    if (sender_active) {
+        if (reason)
+            fprintf(sender_fout, "thruport: %s\n", reason);
+        fclose(sender_fout);
+        close(sender_sock);
+        sender_sock = -1;
+        sender_fout = NULL;
+        sender_active = false;
+    }
     pthread_mutex_unlock(&sslock);
 }
 
@@ -70,6 +94,9 @@ static void unlock(void *arg)
     pthread_mutex_unlock(mutex);
 }
 
+// Because await_sender_socket() is called from the sender thread, and
+// the sender thread can be cancelled, we must wrap the mutex lock
+// with a pthread_cleanup function.
 int await_sender_socket(void)
 {
     int sock;
@@ -79,7 +106,6 @@ int await_sender_socket(void)
             pthread_cond_wait(&sscond, &sslock);
         sock = sender_sock;
     } pthread_cleanup_pop(1);
-    //pthread_mutex_unlock(&sslock);
     return sock;
 }
 

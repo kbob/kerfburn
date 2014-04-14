@@ -45,7 +45,7 @@ waits to be resumed before reopening it.
 The suspend command looks like this.  `avrdude` is the *AVR
 Downloader/UploaDEr*.
 
-> **$** thruport suspend avrdude args...
+> **$** thruport suspend avrdude *args...*
 
 If the thruport daemon is not already running, this command will just
 exec avrdude (or whatever program is specified).  If thruport ia
@@ -56,8 +56,8 @@ to reopen the descriptor.
 
 ## Control
 
-Control Mode will send command to control the thruport daemon itself.
-I don't know what those command will be.
+Control Mode will send a command to control the thruport daemon itself.
+I don't know what the commands will be.
 
 > **$** thruport control *command args...*
 

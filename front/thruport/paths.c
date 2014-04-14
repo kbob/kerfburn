@@ -53,7 +53,8 @@ const char *get_device(void)
     }
     for (int i = 0; i < 10; i++) {
         char path[16];
-        snprintf(path, sizeof path, "/dev/ttyUSB%d", i);
+        // snprintf(path, sizeof path, "/dev/ttyUSB%d", i);
+        snprintf(path, sizeof path, "/dev/ttyACM%d", i);
         if (stat(path, &s) < 0) {
             if (errno == ENOENT)
                 continue;
