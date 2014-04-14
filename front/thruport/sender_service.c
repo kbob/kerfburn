@@ -28,7 +28,7 @@ static void fail_sender(int sock, int priority, const char *fmt, ...)
     r = vasprintf(&core_msg, fmt, ap);
     va_end(ap);
     if (r != -1) {
-        syslog(priority, core_msg);
+        syslog(priority, "%s", core_msg);
         r = asprintf(&client_msg, "thruport: %s\n", core_msg);
         if (r != -1) {
             write(sock, client_msg, r);
