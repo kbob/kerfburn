@@ -359,16 +359,6 @@ static int destroy_IO_threads(void)
 
 int suspend_daemon(void)
 {
-#if 0
-    assert(pthread_self() == main_thread);
-    static char suspend_msg[] = "\n[suspend]\n";
-    broadcast_to_receivers(suspend_msg, sizeof suspend_msg - 1);
-    int r = destroy_daemon_threads();
-    if (r)
-        return r;
-    close_serial();
-    return 0;
-#else
     pthread_mutex_lock(&daemon_state.ds_lock);
     ++daemon_state.ds_suspender_count;
     pthread_cond_signal(&daemon_state.ds_control_cond);
@@ -379,22 +369,10 @@ int suspend_daemon(void)
     static const char suspend_msg[] = "\n[suspend]\n";
     broadcast_to_receivers(suspend_msg, sizeof suspend_msg - 1);
     return 0;
-#endif
 }
 
 int resume_daemon(void)
 {
-#if 0
-    int r = open_serial();
-    if (r)
-        return r;
-    r = create_daemon_threads();
-    if (r)
-        return r;
-    static char resume_msg[] = "[resume]\n";
-    broadcast_to_receivers(resume_msg, sizeof resume_msg - 1);
-    return 0;
-#else
     pthread_mutex_lock(&daemon_state.ds_lock);
     if (--daemon_state.ds_suspender_count)
         pthread_cond_signal(&daemon_state.ds_suspender_cond);
@@ -405,7 +383,6 @@ int resume_daemon(void)
     }
     pthread_mutex_unlock(&daemon_state.ds_lock);
     return 0;
-#endif
 }
 
 __attribute__((noreturn))
