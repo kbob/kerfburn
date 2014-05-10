@@ -88,6 +88,9 @@ def get_mcu_pins(mcu):
             elif self.is_timer_pin_pattern_assignment(node):
                 timer_pins.update(self.expand_pattern(node.value))
                 return None
+            elif self.is_interrupt_pin_pattern_assignment(node):
+                interrupt_pins.update(self.expand_pattern(node.value))
+                return None
             return node
 
         def is_port_pin_pattern_assignment(self, node):
@@ -104,6 +107,13 @@ def get_mcu_pins(mcu):
             n = t[0]
             return isinstance(n, ast.Name) and n.id == 'timer_pin_pattern'
 
+        def is_interrupt_pin_pattern_assignment(self, node):
+            t = node.targets
+            if len(t) != 1:
+                return False
+            n = t[0]
+            return isinstance(n, ast.Name) and n.id == 'interrupt_pin_pattern'
+
         def expand_pattern(self, rhs):
 
             class PatternSyntax(ast.NodeVisitor):
@@ -117,7 +127,11 @@ def get_mcu_pins(mcu):
                 def visit_Sub(self, node):
 
                     def str_range(l, r):
-                        return [chr(i) for i in range(ord(l), ord(r) + 1)]
+                        try:
+                            a, b = int(l), int(r)
+                            return [str(i) for i in range(a, b + 1)]
+                        except ValueError:
+                            return [chr(i) for i in range(ord(l), ord(r) + 1)]
 
                     return str_range
 
@@ -152,11 +166,12 @@ def get_mcu_pins(mcu):
     t = compile(src, mcu_file, 'exec', ast.PyCF_ONLY_AST)
     port_pins = {}
     timer_pins = set()
+    interrupt_pins = set()
     t1 = McuPatternTransformer().visit(t)
     code = compile(t1, mcu_file, 'exec')
     exec code in port_pins
     del port_pins['__builtins__']
-    return port_pins, timer_pins
+    return port_pins, timer_pins, interrupt_pins
 
 
 def parse_port_pin(pin):
@@ -169,13 +184,19 @@ def parse_timer_pin(pin):
     return m.groups()
 
 
+def parse_pcint_pin(pin):
+    m = re.match(r'PCINT(\d+)', pin)
+    intr = int(m.group(1))
+    grp = intr // 8;
+    return (intr, grp)
+
 def make_identifier(desc):
     i = desc.replace(' ', '_').upper()
     assert re.match(r'\A[A-Za-z_]\w*\Z', i)
     return i
 
 
-def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
+def make_pin_definitions(mcu_port_pins, mcu_timer_pins, mcu_interrupt_pins):
 
     def defined(ident):
         return any((d and d[0] == ident) for d in defns)
@@ -274,14 +295,31 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins):
         add_blank_line()
         return pos
 
+    def def_interrupt_pin(pin, desc, **kwargs):
+
+        port_pin = mcu_port_pins[pin]
+        pos = def_input_pin(port_pin, desc, **kwargs)
+        intr, grp = parse_pcint_pin(pin)
+        ident = make_identifier(desc)
+        reg, bit = parse_port_pin(port_pin)
+        add_def(ident + '_PCIE_reg', 'PCIE%s' % grp)
+        add_def(ident + '_PCMSK_reg', 'PCMSK%s' % grp)
+        add_def(ident + '_PCINT_bit', 'PCINT%d' % intr)
+        add_blank_line()
+        add_def(ident + '_vect', 'PCINT%d_vect' % grp)
+        add_blank_line()
+        return pos
+
     defns = []
     g = {'low': 'LOW', 'high': 'HIGH'}
     g.update(mcu_port_pins)
     g.update((d, d) for d in mcu_timer_pins)
+    g.update((d, d) for d in mcu_interrupt_pins)
     g['def_output_pin'] = def_output_pin
     g['def_input_pin'] = def_input_pin
     g['def_timer'] = def_timer
     g['def_timer_pin'] = def_timer_pin
+    g['def_interrupt_pin'] = def_interrupt_pin
     with get_file('mapping') as f:
         exec f in g
     del g['def_output_pin']
@@ -341,10 +379,10 @@ def emit_file(defns, output):
 def gen_pin_defs(mcu, output):
 
     g = {}
-    mcu_port_pins, mcu_pattern_pins = get_mcu_pins(mcu)
+    mcu_port_pins, mcu_pattern_pins, mcu_interrupt_pins = get_mcu_pins(mcu)
     
     g.update(mcu_port_pins)
-    defns = make_pin_definitions(g, mcu_pattern_pins);
+    defns = make_pin_definitions(g, mcu_pattern_pins, mcu_interrupt_pins);
     emit_file(defns, output)
 
 
