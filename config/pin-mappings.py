@@ -25,9 +25,6 @@ def_output_pin (PD7,     'X Motor Enable',      enabled=low)
 def_output_pin (PF1,     'X Motor Direction',   positive=low)
 def_timer_pin  (OC3B,    'X Motor Step',        on=high)
 def_timer_pin  (OC3A,    'X Watchdog')
-# step_size  =   0.08 * 20 / 200 * 25.4, # mm
-# microsteps =  16,
-# length     = 530        # mm
 
 
 # Y Axis Motor
@@ -36,9 +33,6 @@ def_output_pin (PF2,     'Y Motor Enable',      enabled=low)
 def_output_pin (PF7,     'Y Motor Direction',   positive=high)
 def_timer_pin  (OC1A,    'Y Motor Step',        on=high)
 def_timer_pin  (OC1B,    'Y Watchdog')
-# step_size  =   0.08 * 20 / 200 * 25.4, # mm
-# microsteps =  16,
-# length     = 280        # mm
 
 
 # Z Axis Motor
@@ -47,9 +41,6 @@ def_output_pin (PK0,     'Z Motor Enable',      enabled=low)
 def_output_pin (PL1,     'Z Motor Direction',   positive=low)
 def_timer_pin  (OC5A,    'Z Motor Step',        on=high)
 def_timer_pin  (OC5B,    'Z Watchdog')
-# step_size  =   0.08 * 20 / 200 * 25.4, # mm
-# microsteps =  16,
-# length     = 280        # mm
 
 
 # Limit Switches
@@ -62,8 +53,8 @@ def_input_pin  (PJ1,     'Y Min Switch',        reached=high, pull_up=True)
 
 # Misc. switches
 
-def_input_pin  (PCINT19, 'Emergency Stop',      stopped=low,  pull_up=True)
-def_input_pin  (PCINT20, 'Lid',                 open=low,     pull_up=True)
+def_interrupt_pin(PCINT19, 'Emergency Stop',      stopped=high, pull_up=True)
+def_interrupt_pin(PCINT20, 'Lid',                 open=high,    pull_up=True)
 
 
 # LED (on Azteeg board)

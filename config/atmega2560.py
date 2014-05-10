@@ -5,6 +5,7 @@
 
 port_pin_pattern = P, A-L, 0-7
 timer_pin_pattern = OC, 0-5, A-C
+interrupt_pin_pattern = PCINT, 0-23
 
 # Special pin mappings for AVR ATmega 2560
 
