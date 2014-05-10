@@ -35,7 +35,7 @@ static inline void init_serial(void)
     // Keep mode, baud rate, parity settings.
     UCSR0B &= ~_BV(RXEN0);
     UCSR0B &= ~_BV(TXEN0);
-    UCSR0B |=  _BV(TXEN0);;
+    UCSR0B |=  _BV(TXEN0);
 #else
     const uint16_t baud_setting = F_CPU / 8 / BAUD_RATE - 1;
 
@@ -134,7 +134,7 @@ extern void fw_assertion_failed(unsigned int line_no)
     stop_motors();
     init_LED();
     bool do_print = true;
-    for (uint8_t i = 0;; i++) {
+    for (uint8_t i = 0; ; i++) {
         if (do_print) {
             put_str("Assertion failed on line ");
             put_dec(line_no);

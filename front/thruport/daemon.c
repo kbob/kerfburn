@@ -466,7 +466,7 @@ static void run_daemon(void)
                                    &wake_time);
         } else {
             pthread_cond_wait(&daemon_state.ds_control_cond,
-                              &daemon_state.ds_lock);;
+                              &daemon_state.ds_lock);
         }
     }
     pthread_mutex_unlock(&daemon_state.ds_lock);

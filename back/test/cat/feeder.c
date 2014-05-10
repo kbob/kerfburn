@@ -97,7 +97,7 @@ int main()
         perror("tcsetattr"), exit(EXIT_FAILURE);
 
     while (true) {
-        int nfds = ttyfd + 1;;
+        int nfds = ttyfd + 1;
         fd_set readfds, writefds;
         fd_set *writefdp = NULL;
         FD_ZERO(&readfds);

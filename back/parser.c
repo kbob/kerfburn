@@ -215,7 +215,7 @@ static inline void parse_assignment(uint8_t c0)
         PARSE_ERROR();
         return;
     }
-    v_name name = { c0, c1, '\0' };;
+    v_name name = { c0, c1, '\0' };
     v_index index = lookup_variable(name);
     if (index == VAR_NOT_FOUND) {
         PARSE_ERROR();
