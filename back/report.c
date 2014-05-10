@@ -143,7 +143,7 @@ static void report_serial(void)
     uint8_t re = serial_rx_peek_errors();
     uint8_t tc = serial_tx_char_count();
     uint8_t te = serial_tx_peek_errors();
-    printf_P(PSTR("S rx c=%"PRId8" r=%"PRId8" e=%#"PRIx8", "
+    printf_P(PSTR("S rx c=%"PRId8" l=%"PRId8" e=%#"PRIx8", "
                  "tx c=%"PRId8" e=%#"PRIx8"\n"),
              rc, rl, re, tc, te);
 }
