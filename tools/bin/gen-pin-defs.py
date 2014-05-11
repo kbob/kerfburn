@@ -307,6 +307,7 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins, mcu_interrupt_pins):
         add_def(ident + '_PCINT_bit', 'PCINT%d' % intr)
         add_blank_line()
         add_def(ident + '_vect', 'PCINT%d_vect' % grp)
+        add_def(ident + '_grp', str(grp))
         add_blank_line()
         return pos
 
