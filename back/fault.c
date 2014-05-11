@@ -8,7 +8,6 @@
 #include "fw_assert.h"
 #include "illum.h"
 #include "safety.h"
-#include "safety-policy.h"
 #include "variables.h"
 
 typedef uint16_t fault_word;
@@ -42,18 +41,18 @@ DEFINE_FAULT_NAME(SI);
 //     can easily figure out which switch doesn't work.
 
 static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
-    { fn_ES, emergency_stop }, // Emergency Stop
-    { fn_LO, update_safety  }, // Lid Open
-    { fn_LC, update_safety  }, // Lid Closed
-    { fn_WF, NULL           }, // Water Flow
-    { fn_WT, NULL           }, // Water Temperature
-    { fn_SF, NULL           }, // Serial Frame Error
-    { fn_SO, NULL           }, // Serial Overrun
-    { fn_SP, NULL           }, // Serial Parity Error
-    { fn_SL, NULL           }, // Software Lexical Error
-    { fn_SS, NULL           }, // Software Syntax Error
-    { fn_SU, emergency_stop }, // Software Underflow
-    { fn_SI, NULL           }, // Software Missed Interrupt
+    { fn_ES, update_safety }, // Emergency Stop
+    { fn_LO, update_safety }, // Lid Open
+    { fn_LC, update_safety }, // Lid Closed
+    { fn_WF, NULL          }, // Water Flow
+    { fn_WT, NULL          }, // Water Temperature
+    { fn_SF, NULL          }, // Serial Frame Error
+    { fn_SO, NULL          }, // Serial Overrun
+    { fn_SP, NULL          }, // Serial Parity Error
+    { fn_SL, NULL          }, // Software Lexical Error
+    { fn_SS, NULL          }, // Software Syntax Error
+    { fn_SU, update_safety }, // Software Underflow
+    { fn_SI, NULL          }, // Software Missed Interrupt
 };
 
 static fault_word            fault_states;

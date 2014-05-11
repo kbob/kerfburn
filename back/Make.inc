@@ -4,11 +4,11 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c atoms.c bufs.c engine.c	\
-                 fault.c fw_assert.c fw_stdio.c illum.c lasers.c	\
-                 memory.c motors.c parser.c queues.c report.c		\
-                 safety.c safety-policy.c scheduler.c serial.c		\
-                 softint.c timer.c \ trace.c variables.c
+   fw_sources := main.c abort.c actions.c atoms.c bufs.c engine.c       \
+                 fault.c fw_assert.c fw_stdio.c illum.c lasers.c        \
+                 memory.c motors.c parser.c queues.c report.c           \
+                 safety.c scheduler.c serial.c softint.c timer.c        \
+                 trace.c variables.c
 
      THRUPORT := front/thruport/thruport
       BACK_CC := avr-gcc

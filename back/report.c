@@ -14,7 +14,6 @@
 #include "queues.h"
 #include "relays.h"
 #include "safety.h"
-#include "safety-policy.h"
 #include "serial.h"
 #include "timer.h"
 #include "variables.h"
@@ -35,11 +34,25 @@ static volatile bool    reporting_is_active;
         printf_P(PSTR(#code " (" #name ") report not implemented\n"));   \
     }
 
+static inline char yes_no(bool choice)
+{
+    return choice ? 'y' : 'n';
+}
+
+
+// This is now a misnomer.  It ought to be report_safety, but the S key
+// is taken by report_serial.
 static void report_e_stop(void)
 {
-    printf_P(PSTR("E e=%c b=%c\n"),
-             is_emergency_stopped() ? 'y' : 'n',
-             stop_button_is_down() ? 'y' : 'n');
+    printf_P(PSTR("E l=%c b=%c l=%c v=%c m=%c\n"),
+                  yes_no(lid_is_open()),
+                  yes_no(stop_button_is_down()),
+                  yes_no(main_laser_okay()),
+                  yes_no(visible_laser_okay()),
+                  yes_no(movement_okay()));
+    // printf_P(PSTR("E e=%c b=%c\n"),
+    //          yes_no(is_emergency_stopped()),
+    //          yes_no(stop_button_is_down()));
 }
 
 static void report_faults(void)
@@ -61,37 +74,37 @@ static void report_faults(void)
 static void report_limit_switches(void)
 {
 #ifdef X_MIN_SWITCH
-    const char xmin = x_min_reached() ? 'y' : 'n';
+    const char xmin = yes_no(x_min_reached());
 #else
     const char xmin = '_';
 #endif
 
 #ifdef X_MAX_SWITCH
-    const char xmax = x_max_reached() ? 'y' : 'n';
+    const char xmax = yes_no(x_max_reached());
 #else
     const char xmax = '_';
 #endif
 
 #ifdef Y_MIN_SWITCH
-    const char ymin = y_min_reached() ? 'y' : 'n';
+    const char ymin = yes_no(y_min_reached());
 #else
     const char ymin = '_';
 #endif
 
 #ifdef Y_MAX_SWITCH
-    const char ymax = y_max_reached() ? 'y' : 'n';
+    const char ymax = yes_no(y_max_reached());
 #else
     const char ymax = '_';
 #endif
 
 #ifdef Z_MIN_SWITCH
-    const char zmin = z_min_reached() ? 'y' : 'n';
+    const char zmin = yes_no(z_min_reached());
 #else
     const char zmin = '_';
 #endif
 
 #ifdef Z_MAX_SWITCH
-    const char zmax = z_max_reached() ? 'y' : 'n';
+    const char zmax = yes_no(z_max_reached());
 #else
     const char zmax = '_';
 #endif
@@ -114,11 +127,11 @@ static void report_motors(void)
 
 static void report_power(void)
 {
-    char low_voltage_enabled = low_voltage_is_enabled()  ? 'y' : 'n';
-    char low_voltage_ready   = low_voltage_is_ready()    ? 'y' : 'n';
-    char high_voltage        = high_voltage_is_enabled() ? 'y' : 'n';
-    char air                 = air_pump_is_enabled()     ? 'y' : 'n';
-    char water               = water_pump_is_enabled()   ? 'y' : 'n';
+    char low_voltage_enabled = yes_no(low_voltage_is_enabled());
+    char low_voltage_ready   = yes_no(low_voltage_is_ready());
+    char high_voltage        = yes_no(high_voltage_is_enabled());
+    char air                 = yes_no(air_pump_is_enabled());
+    char water               = yes_no(water_pump_is_enabled());
     printf_P(PSTR("P le=%c lr=%c he=%c ae=%c we=%c\n"),
            low_voltage_enabled, low_voltage_ready, high_voltage, air, water);
 }
