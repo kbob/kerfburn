@@ -32,7 +32,7 @@ test:     test-front test-back
 load:     load-back
 build:    build-front build-back
 clean:    clean-front clean-back
-	rm -f config/pin-defs.h
+	rm -f config/pin-defs.h config/geom-defs.h config/.*.d
 
 programs: front-programs back-programs
 libs:     front-libs

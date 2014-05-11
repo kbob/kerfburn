@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 D := config
 
 GEOM_CONFIG   := config/geometry.py
@@ -17,13 +19,13 @@ $D/geom-defs.h:
 $D/pin-defs.h:
 	$(GEN_PIN_DEFS) --mcu=$(BACK_MCU) -o $@
 
-config/geom-defs.d:
+config/.geom-defs.d:
 	@$(GEN_GEOM_DEFS) -M -MT $@ -MT config/geom-defs.h      \
                           --template=$(GEOM_TEMPLATE)           \
                           $(GEOM_CONFIG) -o $@
 
-config/pin-defs.d:
+config/.pin-defs.d:
 	@$(GEN_PIN_DEFS) --mcu=$(BACK_MCU) -M -o config/pin-defs.h > $@
 
--include config/geom-defs.d
--include config/pin-defs.d
+-include config/.geom-defs.d
+-include config/.pin-defs.d
