@@ -15,5 +15,7 @@ animation_index current_animation(void)
 
 void start_animation(animation_index seq)
 {
+    // N.B., this can be called from interrupt, e.g.,
+    //   USART0_RX_vect -> trigger_fault -> start_animation
     // XXX write me
 }
