@@ -3,7 +3,7 @@
 #include <util/atomic.h>
 
 #include "bufs.h"
-#include "e-stop.h"
+#include "fault.h"
 #include "fw_assert.h"
 
 //#define BAUD_RATE   9600
@@ -225,7 +225,7 @@ ISR(USART0_RX_vect)
     if (bit_is_set(UCSR0A, RXC0)) {
         uint8_t c = UDR0;
         if (c == ASCII_CAN)
-            emergency_stop_NONATOMIC();
+            trigger_fault(F_ES);
         else {
             uint8_t new_tail = rx_tail + 1;
             if (new_tail == rx_head)
