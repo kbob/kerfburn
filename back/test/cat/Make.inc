@@ -1,8 +1,10 @@
 #!/usr/bin/make -*- makefile-gmake -*-
 # This file is included by the toplevel makefile.
 
-cat_sources := back/test/cat/cat.c back/bufs.c back/e-stop.c back/fw_assert.c \
-               back/fw_stdio.c back/serial.c back/softint.c back/timer.c
+cat_sources := back/test/cat/cat.c back/bufs.c back/fault.c	\
+               back/fw_assert.c back/fw_stdio.c back/illum.c	\
+               back/serial.c back/safety.c back/safety-policy.c	\
+               back/softint.c back/timer.c back/variables.c
 
 load-back/test/cat/cat:  back/test/cat/cat.hex
 	$(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<

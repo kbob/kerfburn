@@ -5,9 +5,11 @@
 #include <avr/pgmspace.h>
 #include <util/atomic.h>
 
-#include "e-stop.h"
+//#include "e-stop.h"
 #include "fw_assert.h"
 #include "illum.h"
+#include "safety.h"
+#include "safety-policy.h"
 #include "variables.h"
 
 typedef uint16_t fault_word;
@@ -42,8 +44,8 @@ DEFINE_FAULT_NAME(SI);
 
 static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
     { fn_ES, emergency_stop }, // Emergency Stop
-    { fn_LO, NULL           }, // Lid Open
-    { fn_LC, NULL           }, // Lid Closed
+    { fn_LO, update_safety  }, // Lid Open
+    { fn_LC, update_safety  }, // Lid Closed
     { fn_WF, NULL           }, // Water Flow
     { fn_WT, NULL           }, // Water Temperature
     { fn_SF, NULL           }, // Serial Frame Error

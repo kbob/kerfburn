@@ -1,3 +1,4 @@
+#!/usr/bin/make -*- makefile-gmake -*-
 subdirs := cat # softint
 
 back/test-tests: $(subdirs:%=back/test/%-tests)

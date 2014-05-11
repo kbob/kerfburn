@@ -4,11 +4,11 @@
       subdirs := test
      programs := fw
 
-   fw_sources := main.c abort.c actions.c atoms.c bufs.c e-stop.c	\
-                 engine.c fault.c fw_assert.c fw_stdio.c illum.c	\
-                 lasers.c memory.c motors.c parser.c queues.c		\
-                 report.c scheduler.c serial.c softint.c timer.c	\
-                 trace.c variables.c
+   fw_sources := main.c abort.c actions.c atoms.c bufs.c engine.c	\
+                 fault.c fw_assert.c fw_stdio.c illum.c lasers.c	\
+                 memory.c motors.c parser.c queues.c report.c		\
+                 safety.c safety-policy.c scheduler.c serial.c		\
+                 softint.c timer.c \ trace.c variables.c
 
      THRUPORT := front/thruport/thruport
       BACK_CC := avr-gcc
@@ -34,7 +34,7 @@ load-back:  back/fw.hex $(THRUPORT)
 	$(BACK_SUSPEND) $(BACK_AVRDUDE) -qq -p$(BACK_MCU) -D -Uflash:w:$<
 
 clean-back: $(subdirs:%=clean-back/%)
-	cd back && rm -f fw a.out core *~ *.o *.d TAGS $(JUNK)
+	cd back && rm -f fw a.out core *~ *.o .*.d TAGS $(JUNK)
 
 back-programs: back/fw $(test_programs:%=back/%)
 back-tests: $(subdirs:%:back/%-tests)
@@ -55,7 +55,7 @@ back/%.hex: back/%
 	$(BACK_OBJCOPY) -O ihex -R .eeprom $< $@
 
 # C source dependency generation.
-back/%.d : back/%.c
+back/.%.d : back/%.c
 	@rm -f "$@"
 	@$(BACK_CC) -M -MG -MP -MT 'back/$*.o $@' -MF $@ $(BACK_CPPFLAGS) $< \
             || rm -f "$@"
@@ -63,7 +63,7 @@ back/%.d : back/%.c
 .PHONY: all-back build-back load-back clean-back back-programs
 
 ifeq '$(filter clean% help,$(or $(MAKECMDGOALS),help))' ''
-  -include $(fw_cfiles:back/%.c=back/%.d)
+  -include $(fw_cfiles:back/%.c=back/.%.d)
 endif
 
 include $(subdirs:%=back/%/Make.inc)

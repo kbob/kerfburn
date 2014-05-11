@@ -6,7 +6,7 @@
 
 #include <avr/pgmspace.h>
 
-#include "e-stop.h"
+// #include "e-stop.h"
 #include "fault.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
@@ -14,6 +14,8 @@
 #include "motors.h"
 #include "queues.h"
 #include "relays.h"
+#include "safety.h"
+#include "safety-policy.h"
 #include "serial.h"
 #include "timer.h"
 #include "variables.h"
@@ -36,7 +38,9 @@ static volatile bool    reporting_is_active;
 
 static void report_e_stop(void)
 {
-    printf_P(PSTR("E e=%c\n"), is_emergency_stopped() ? 'y' : 'n');
+    printf_P(PSTR("E e=%c b=%c\n"),
+             is_emergency_stopped() ? 'y' : 'n',
+             stop_button_is_down() ? 'y' : 'n');
 }
 
 static void report_faults(void)

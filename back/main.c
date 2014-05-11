@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "e-stop.h"
+// #include "e-stop.h"
 #include "engine.h"
 #include "fault.h"
 #include "fw_stdio.h"
@@ -16,6 +16,7 @@
 #include "queues.h"
 #include "relays.h"
 #include "report.h"
+#include "safety.h"
 #include "scheduler.h"
 #include "serial.h"
 #include "timer.h"
@@ -28,7 +29,8 @@ static void initialize_devices(void)
     init_timer();
     init_serial();
     init_stdio();
-    init_emergency_stop();
+    init_safety();
+    // init_emergency_stop();
     // init_lid();
     init_limit_switches();
     init_low_voltage_power();
