@@ -6,7 +6,6 @@
 
 #include <avr/pgmspace.h>
 
-// #include "e-stop.h"
 #include "fault.h"
 #include "limit-switches.h"
 #include "low-voltage.h"

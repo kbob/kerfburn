@@ -5,7 +5,6 @@
 #include <avr/pgmspace.h>
 #include <util/atomic.h>
 
-//#include "e-stop.h"
 #include "fw_assert.h"
 #include "illum.h"
 #include "safety.h"

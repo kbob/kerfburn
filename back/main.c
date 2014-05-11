@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// #include "e-stop.h"
 #include "engine.h"
 #include "fault.h"
 #include "fw_stdio.h"
