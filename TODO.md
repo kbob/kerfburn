@@ -7,6 +7,24 @@ Is this a bug database?
 
 * Wire up back panel, power distribution, and relays.
 
+* How are safety and back panel going to work?
+
+  - <s>need an interrupt.  That's the first thing.  (I feel another pun:
+    switch-intr.)</s>
+  
+  - ISR sets a flag, immediately clears (or sets) output.
+
+  - Put the ISR and existing `e-stop.h` code into `safety.h`.
+
+  - `safety-lasers.h` will have functions that enable/disable lasers as
+    safety faults allow.  `safety-lasers` depends on `safety`, `fault`,
+    and `lasers`.
+    
+    `safety-policy` would be a better name, but `safety-lasers` is cuter.
+    The policy affects the motors as well as the lasers.
+
+  - laser ISRs will call functions in safety-lasers.h to set/clear OCnx
+    pins according to safety policy.
 
 ## Design
 
