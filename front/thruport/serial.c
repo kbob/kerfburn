@@ -32,8 +32,8 @@ static void make_raw(struct termios *tiosp)
     tiosp->c_cflag |=   CS8;
     tiosp->c_cc[VMIN] = 1;
     tiosp->c_cc[VTIME] = 0;
-    // if (cfsetspeed(tiosp, 115200) != 0) {
-    if (cfsetspeed(tiosp, 9600) != 0) {
+    // if (cfsetspeed(tiosp, 9600) != 0) {
+    if (cfsetspeed(tiosp, 115200) != 0) {
         syslog(LOG_ERR, "can't set speed: %m");
         fprintf(stderr, "can't set speed: %m\n");
     }
