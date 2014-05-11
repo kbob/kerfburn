@@ -4,8 +4,49 @@
 #include "config/pin-defs.h"
 
 #include "pin-io.h"
+#include "safety.h"
 
-extern void init_lasers(void);
+
+// Interface
+
+// Initialization
+extern        void    init_lasers(void);
+
+// Timer control.
+//
+// Starting the timer is a two-step process.
+// Call pre_start first, then start the timer by assigning the
+// value returned by starting_tccrb to the TCCRnB register.
+//
+static inline void    pre_start_pulse_timer(uint16_t ivl);
+static inline uint8_t pulse_timer_starting_tccrb();
+static inline void    stop_pulse_timer_NONATOMIC(void);
+static inline void    set_laser_pulse_interval(uint16_t interval);
+
+// These "safe" functions control the lasers subject to the safety policy.
+static inline void    safe_set_lasers_off(void);
+static inline void    safe_set_main_laser_on(void);
+static inline void    safe_set_main_laser_off(void);
+static inline void    safe_set_main_laser_start_on_timer(void);
+static inline void    safe_set_main_laser_stop_on_timer(void);
+static inline void    safe_set_visible_laser_on(void);
+static inline void    safe_set_visible_laser_off(void);
+static inline void    safe_set_visible_laser_start_on_timer(void);
+static inline void    safe_set_visible_laser_stop_on_timer(void);
+
+// These functions control the lasers regardless of the safety policy.
+static inline void    unsafe_set_lasers_off(void);
+static inline void    unsafe_set_main_laser_on(void);
+static inline void    unsafe_set_main_laser_off(void);
+static inline void    unsafe_set_main_laser_start_on_timer(void);
+static inline void    unsafe_set_main_laser_stop_on_timer(void);
+static inline void    unsafe_set_visible_laser_on(void);
+static inline void    unsafe_set_visible_laser_off(void);
+static inline void    unsafe_set_visible_laser_start_on_timer(void);
+static inline void    unsafe_set_visible_laser_stop_on_timer(void);
+
+
+// Implementation
 
 static inline void pre_start_pulse_timer(uint16_t ivl)
 {
@@ -77,7 +118,7 @@ static inline void set_laser_pulse_interval(uint16_t interval)
     LASER_PULSE_ICR = interval;
 }
 
-static inline void set_lasers_off(void)
+static inline void unsafe_set_lasers_off(void)
 {
     SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
     SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
@@ -87,19 +128,19 @@ static inline void set_lasers_off(void)
 
 // Main Laser
 
-static inline void set_main_laser_on(void)
+static inline void unsafe_set_main_laser_on(void)
 {
     SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_ON);
     LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_main_laser_off(void)
+static inline void unsafe_set_main_laser_off(void)
 {
     SET_REG_BIT(MAIN_LASER_PULSE_PORT, MAIN_LASER_PULSE_OFF);
     LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_main_laser_start_on_timer(void)
+static inline void unsafe_set_main_laser_start_on_timer(void)
 {
 #if MAIN_LASER_PULSE_ON
     LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
@@ -111,7 +152,7 @@ static inline void set_main_laser_start_on_timer(void)
 #endif
 }
 
-static inline void set_main_laser_stop_on_timer(void)
+static inline void unsafe_set_main_laser_stop_on_timer(void)
 {
 #if MAIN_LASER_PULSE_ON
     LASER_PULSE_TCCRA = (_BV(MAIN_LASER_PULSE_COM1) |
@@ -126,19 +167,19 @@ static inline void set_main_laser_stop_on_timer(void)
 
 // Visible Laser
 
-static inline void set_visible_laser_on(void)
+static inline void unsafe_set_visible_laser_on(void)
 {
     SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_ON);
     LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_visible_laser_off(void)
+static inline void unsafe_set_visible_laser_off(void)
 {
     SET_REG_BIT(VISIBLE_LASER_PULSE_PORT, VISIBLE_LASER_PULSE_OFF);
     LASER_PULSE_TCCRA = _BV(LASER_PULSE_WGM1);
 }
 
-static inline void set_visible_laser_start_on_timer(void)
+static inline void unsafe_set_visible_laser_start_on_timer(void)
 {
 #if VISIBLE_LASER_PULSE_ON
     LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
@@ -150,7 +191,7 @@ static inline void set_visible_laser_start_on_timer(void)
 #endif
 }
 
-static inline void set_visible_laser_stop_on_timer(void)
+static inline void unsafe_set_visible_laser_stop_on_timer(void)
 {
 #if VISIBLE_LASER_PULSE_ON
     LASER_PULSE_TCCRA = (_BV(VISIBLE_LASER_PULSE_COM1) |
@@ -162,5 +203,56 @@ static inline void set_visible_laser_stop_on_timer(void)
 #endif
 }
 
+// "Safe" versions
+static inline void safe_set_lasers_off(void)
+{
+    unsafe_set_lasers_off();
+}
+
+static inline void safe_set_main_laser_on(void)
+{
+    if (main_laser_okay())
+        unsafe_set_main_laser_on();
+}
+
+static inline void safe_set_main_laser_off(void)
+{
+    unsafe_set_main_laser_off();
+}
+
+static inline void safe_set_main_laser_start_on_timer(void)
+{
+    if (main_laser_okay())
+        unsafe_set_main_laser_start_on_timer();
+}
+
+static inline void safe_set_main_laser_stop_on_timer(void)
+{
+    if (main_laser_okay())
+        unsafe_set_main_laser_stop_on_timer();
+}
+
+static inline void safe_set_visible_laser_on(void)
+{
+    if (visible_laser_okay())
+        unsafe_set_visible_laser_on();
+}
+
+static inline void safe_set_visible_laser_off(void)
+{
+    unsafe_set_visible_laser_off();
+}
+
+static inline void safe_set_visible_laser_start_on_timer(void)
+{
+    if (visible_laser_okay())
+        unsafe_set_visible_laser_start_on_timer();
+}
+
+static inline void safe_set_visible_laser_stop_on_timer(void)
+{
+    if (visible_laser_okay())
+        unsafe_set_visible_laser_stop_on_timer();
+}
 
 #endif /* !LASERS_included */

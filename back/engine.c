@@ -388,39 +388,39 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 return;
 
             case A_LASERS_OFF:
-                set_lasers_off();
+                safe_set_lasers_off();
                 break;
 
             case A_MAIN_LASER_OFF:
-                set_main_laser_off();
+                safe_set_main_laser_off();
                 break;
 
             case A_MAIN_LASER_ON:
-                set_main_laser_on();
+                safe_set_main_laser_on();
                 break;
 
             case A_MAIN_LASER_START:
-                set_main_laser_start_on_timer();
+                safe_set_main_laser_start_on_timer();
                 break;
 
             case A_MAIN_LASER_STOP:
-                set_main_laser_stop_on_timer();
+                safe_set_main_laser_stop_on_timer();
                 break;
 
             case A_VISIBLE_LASER_OFF:
-                set_visible_laser_off();
+                safe_set_visible_laser_off();
                 break;
 
             case A_VISIBLE_LASER_ON:
-                set_visible_laser_on();
+                safe_set_visible_laser_on();
                 break;
 
             case A_VISIBLE_LASER_START:
-                set_visible_laser_start_on_timer();
+                safe_set_visible_laser_start_on_timer();
                 break;
 
             case A_VISIBLE_LASER_STOP:
-                set_visible_laser_stop_on_timer();
+                safe_set_visible_laser_stop_on_timer();
                 break;
 
             default:
