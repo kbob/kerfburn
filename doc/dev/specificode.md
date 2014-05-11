@@ -347,7 +347,8 @@ Implicit Parameters
 
 Set the bed illumination.  If an animation is selected by the **ia**
 variable, then that animation runs.  If that animation terminates,
-then the illumination is ramped to the level set by the **il** variable.
+then the illumination is ramped to the level set by the **il**
+variable.
 
 Implicit Parameters
 
@@ -357,7 +358,7 @@ Implicit Parameters
 
 ## Out Of Band Message
 
-The front end may send an out-of-band message to the back end.
-The message is a single byte with value CAN ('\003', ^C).
-The back end responds to that message immediately (from the serial
-interrupt handler) and executes an Emergency Stop of the laser cutter.
+The front end may send an out-of-band message to the back end.  The
+message is a single byte with value ETX ('\003', ^C).  The back end
+responds to that message immediately (from the serial interrupt
+handler) and executes an Emergency Stop of the laser cutter.
