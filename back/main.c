@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "atoms.h"
 #include "engine.h"
 #include "fault.h"
 #include "fw_stdio.h"
@@ -29,8 +30,6 @@ static void initialize_devices(void)
     init_serial();
     init_stdio();
     init_safety();
-    // init_emergency_stop();
-    // init_lid();
     init_limit_switches();
     init_low_voltage_power();
     init_relays();
