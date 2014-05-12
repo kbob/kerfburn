@@ -31,7 +31,7 @@ static volatile bool    reporting_is_active;
 #define DEFINE_UNIMPLEMENTED_REPORT(code, name)                         \
     static void report_##name(void)                                     \
     {                                                                   \
-        printf_P(PSTR(#code " (" #name ") report not implemented\n"));   \
+        printf_P(PSTR(#code " (" #name ") report not implemented\n"));  \
     }
 
 static inline char yes_no(bool choice)
@@ -39,20 +39,16 @@ static inline char yes_no(bool choice)
     return choice ? 'y' : 'n';
 }
 
-
 // This is now a misnomer.  It ought to be report_safety, but the S key
 // is taken by report_serial.
 static void report_e_stop(void)
 {
     printf_P(PSTR("E l=%c b=%c l=%c v=%c m=%c\n"),
-                  yes_no(lid_is_open()),
-                  yes_no(stop_button_is_down()),
-                  yes_no(main_laser_okay()),
-                  yes_no(visible_laser_okay()),
-                  yes_no(movement_okay()));
-    // printf_P(PSTR("E e=%c b=%c\n"),
-    //          yes_no(is_emergency_stopped()),
-    //          yes_no(stop_button_is_down()));
+             yes_no(lid_is_open()),
+             yes_no(stop_button_is_down()),
+             yes_no(main_laser_okay()),
+             yes_no(visible_laser_okay()),
+             yes_no(movement_okay()));
 }
 
 static void report_faults(void)
