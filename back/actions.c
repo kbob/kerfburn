@@ -120,19 +120,19 @@ void action_enable_water_pump(void)
 void action_enable_X_motor(void)
 {
     ANNOUNCE_ACTION;
-    enable_x_motor();
+    safe_enable_x_motor();
 }
 
 void action_enable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
-    enable_y_motor();
+    safe_enable_y_motor();
 }
 
 void action_enable_Z_motor(void)
 {
     ANNOUNCE_ACTION;
-    enable_z_motor();
+    safe_enable_z_motor();
 }
 
 void action_enable_reporting(void)
@@ -168,19 +168,19 @@ void action_disable_water_pump(void)
 void action_disable_X_motor(void)
 {
     ANNOUNCE_ACTION;
-    disable_x_motor();
+    safe_disable_x_motor();
 }
 
 void action_disable_Y_motor(void)
 {
     ANNOUNCE_ACTION;
-    disable_y_motor();
+    safe_disable_y_motor();
 }
 
 void action_disable_Z_motor(void)
 {
     ANNOUNCE_ACTION;
-    disable_z_motor();
+    safe_disable_z_motor();
 }
 
 void action_disable_reporting(void)

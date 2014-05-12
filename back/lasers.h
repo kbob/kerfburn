@@ -10,7 +10,7 @@
 // Interface
 
 // Initialization
-extern        void    init_lasers(void);
+extern        void    init_lasers                        (void);
 
 // Timer control.
 //
@@ -18,32 +18,32 @@ extern        void    init_lasers(void);
 // Call pre_start first, then start the timer by assigning the
 // value returned by starting_tccrb to the TCCRnB register.
 //
-static inline void    pre_start_pulse_timer(uint16_t ivl);
-static inline uint8_t pulse_timer_starting_tccrb();
-static inline void    stop_pulse_timer_NONATOMIC(void);
-static inline void    set_laser_pulse_interval(uint16_t interval);
+static inline void    pre_start_pulse_timer                   (uint16_t ivl);
+static inline uint8_t pulse_timer_starting_tccrb              (void);
+static inline void    stop_pulse_timer_NONATOMIC              (void);
+static inline void    set_laser_pulse_interval                (uint16_t ivl);
 
 // These "safe" functions control the lasers subject to the safety policy.
-static inline void    safe_set_lasers_off(void);
-static inline void    safe_set_main_laser_on(void);
-static inline void    safe_set_main_laser_off(void);
-static inline void    safe_set_main_laser_start_on_timer(void);
-static inline void    safe_set_main_laser_stop_on_timer(void);
-static inline void    safe_set_visible_laser_on(void);
-static inline void    safe_set_visible_laser_off(void);
-static inline void    safe_set_visible_laser_start_on_timer(void);
-static inline void    safe_set_visible_laser_stop_on_timer(void);
+static inline void    safe_set_lasers_off                     (void);
+static inline void    safe_set_main_laser_on                  (void);
+static inline void    safe_set_main_laser_off                 (void);
+static inline void    safe_set_main_laser_start_on_timer      (void);
+static inline void    safe_set_main_laser_stop_on_timer       (void);
+static inline void    safe_set_visible_laser_on               (void);
+static inline void    safe_set_visible_laser_off              (void);
+static inline void    safe_set_visible_laser_start_on_timer   (void);
+static inline void    safe_set_visible_laser_stop_on_timer    (void);
 
 // These functions control the lasers regardless of the safety policy.
-static inline void    unsafe_set_lasers_off(void);
-static inline void    unsafe_set_main_laser_on(void);
-static inline void    unsafe_set_main_laser_off(void);
-static inline void    unsafe_set_main_laser_start_on_timer(void);
-static inline void    unsafe_set_main_laser_stop_on_timer(void);
-static inline void    unsafe_set_visible_laser_on(void);
-static inline void    unsafe_set_visible_laser_off(void);
-static inline void    unsafe_set_visible_laser_start_on_timer(void);
-static inline void    unsafe_set_visible_laser_stop_on_timer(void);
+static inline void    unsafe_set_lasers_off                   (void);
+static inline void    unsafe_set_main_laser_on                (void);
+static inline void    unsafe_set_main_laser_off               (void);
+static inline void    unsafe_set_main_laser_start_on_timer    (void);
+static inline void    unsafe_set_main_laser_stop_on_timer     (void);
+static inline void    unsafe_set_visible_laser_on             (void);
+static inline void    unsafe_set_visible_laser_off            (void);
+static inline void    unsafe_set_visible_laser_start_on_timer (void);
+static inline void    unsafe_set_visible_laser_stop_on_timer  (void);
 
 
 // Implementation
@@ -64,7 +64,7 @@ static inline void pre_start_pulse_timer(uint16_t ivl)
     // TCCRB is set in engine.c:start_engine().
 }
 
-static inline uint8_t pulse_timer_starting_tccrb()
+static inline uint8_t pulse_timer_starting_tccrb(void)
 {
     return (_BV(LASER_PULSE_WGM3) |
             _BV(LASER_PULSE_WGM2) |
@@ -204,6 +204,7 @@ static inline void unsafe_set_visible_laser_stop_on_timer(void)
 }
 
 // "Safe" versions
+
 static inline void safe_set_lasers_off(void)
 {
     unsafe_set_lasers_off();

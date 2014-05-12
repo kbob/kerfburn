@@ -47,7 +47,6 @@ Is this a bug database?
      I can eliminate `F_LC`.
 
 
-
 ## Design
 
 * Need a list of fault  states.  In particular, need fault states when

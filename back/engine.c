@@ -187,19 +187,19 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
                 return;
 
             case A_DIR_POSITIVE:
-                set_x_direction_positive();
+                safe_set_x_direction_positive();
                 break;
 
             case A_DIR_NEGATIVE:
-                set_x_direction_negative();
+                safe_set_x_direction_negative();
                 break;
 
             case A_ENABLE_STEP:
-                enable_x_step();
+                safe_enable_x_step();
                 break;
 
             case A_DISABLE_STEP:
-                disable_x_step();
+                safe_disable_x_step();
                 break;
 
 #ifdef X_MIN_SWITCH
@@ -254,11 +254,11 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
                 return;
 
             case A_DIR_POSITIVE:
-                set_y_direction_positive();
+                safe_set_y_direction_positive();
                 break;
 
             case A_DIR_NEGATIVE:
-                set_y_direction_negative();
+                safe_set_y_direction_negative();
                 break;
 
 #ifdef Y_MIN_SWITCH
@@ -290,11 +290,11 @@ ISR(Y_MOTOR_STEP_TIMER_OVF_vect)
 #endif
 
             case A_ENABLE_STEP:
-                enable_y_step();
+                safe_enable_y_step();
                 break;
 
             case A_DISABLE_STEP:
-                disable_y_step();
+                safe_disable_y_step();
                 break;
 
             default:
@@ -321,11 +321,11 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
                 return;
 
             case A_DIR_POSITIVE:
-                set_z_direction_positive();
+                safe_set_z_direction_positive();
                 break;
 
             case A_DIR_NEGATIVE:
-                set_z_direction_negative();
+                safe_set_z_direction_negative();
                 break;
 
 #ifdef Z_MIN_SWITCH
@@ -357,11 +357,11 @@ ISR(Z_MOTOR_STEP_TIMER_OVF_vect)
 #endif
 
             case A_ENABLE_STEP:
-                enable_z_step();
+                safe_enable_z_step();
                 break;
 
             case A_DISABLE_STEP:
-                disable_z_step();
+                safe_disable_z_step();
                 break;
 
             default:

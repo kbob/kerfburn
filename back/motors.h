@@ -10,8 +10,86 @@
 // Interface
 
 // Initialization
-extern void init_motors(void);
+extern void init_motors                               (void);
 
+// Timer Control
+static inline void    pre_start_x_timer               (uint16_t ivl);
+static inline uint8_t x_timer_starting_tccrb          (void);
+static inline void    stop_x_timer_NONATOMIC          (void);
+static inline void    set_x_step_interval             (uint16_t ticks);
+
+static inline void    pre_start_y_timer               (uint16_t ivl);
+static inline uint8_t y_timer_starting_tccrb          (void);
+static inline void    stop_y_timer_NONATOMIC          (void);
+static inline void    set_y_step_interval             (uint16_t ticks);
+
+static inline void    pre_start_z_timer               (uint16_t ivl);
+static inline uint8_t z_timer_starting_tccrb          (void);
+static inline void    stop_z_timer_NONATOMIC          (void);
+static inline void    set_z_step_interval             (uint16_t ticks);
+
+// Reporting
+static inline bool    x_step_is_enabled               (void);
+static inline bool    x_direction_is_positive         (void);
+
+static inline bool    y_step_is_enabled               (void);
+static inline bool    y_direction_is_positive         (void);
+
+static inline bool    z_step_is_enabled               (void);
+static inline bool    z_direction_is_positive         (void);
+
+// These "safe" functions control the motors subject to the safety policy.
+static inline void    safe_enable_x_motor             (void);
+static inline void    safe_disable_x_motor            (void);
+static inline void    safe_set_x_direction_positive   (void);
+static inline void    safe_set_x_direction_negative   (void);
+static inline void    safe_enable_x_step              (void);
+static inline void    safe_disable_x_step             (void);
+static inline void    safe_clear_x_step               (void);
+
+static inline void    safe_enable_y_motor             (void);
+static inline void    safe_disable_y_motor            (void);
+static inline void    safe_set_y_direction_positive   (void);
+static inline void    safe_set_y_direction_negative   (void);
+static inline void    safe_enable_y_step              (void);
+static inline void    safe_disable_y_step             (void);
+static inline void    safe_clear_y_step               (void);
+
+static inline void    safe_enable_z_motor             (void);
+static inline void    safe_disable_z_motor            (void);
+static inline void    safe_set_z_direction_positive   (void);
+static inline void    safe_set_z_direction_negative   (void);
+static inline void    safe_enable_z_step              (void);
+static inline void    safe_disable_z_step             (void);
+static inline void    safe_clear_z_step               (void);
+
+// These functions control the motors regardless of the safety policy.
+static inline void    unsafe_enable_x_motor           (void);
+static inline void    unsafe_disable_x_motor          (void);
+static inline void    unsafe_set_x_direction_positive (void);
+static inline void    unsafe_set_x_direction_negative (void);
+static inline void    unsafe_enable_x_step            (void);
+static inline void    unsafe_disable_x_step           (void);
+static inline void    unsafe_clear_x_step             (void);
+
+static inline void    unsafe_enable_y_motor           (void);
+static inline void    unsafe_disable_y_motor          (void);
+static inline void    unsafe_set_y_direction_positive (void);
+static inline void    unsafe_set_y_direction_negative (void);
+static inline void    unsafe_enable_y_step            (void);
+static inline void    unsafe_disable_y_step           (void);
+static inline void    unsafe_clear_y_step             (void);
+
+static inline void    unsafe_enable_z_motor           (void);
+static inline void    unsafe_disable_z_motor          (void);
+static inline void    unsafe_set_z_direction_positive (void);
+static inline void    unsafe_set_z_direction_negative (void);
+static inline void    unsafe_enable_z_step            (void);
+static inline void    unsafe_disable_z_step           (void);
+static inline void    unsafe_clear_z_step             (void);
+
+
+// Implementation
 
 // X //
 
@@ -25,32 +103,32 @@ static inline bool x_direction_is_positive(void)
     return REG_BIT_IS(X_MOTOR_DIRECTION_PIN, X_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void enable_x_motor(void)
+static inline void unsafe_enable_x_motor(void)
 {
     SET_REG_BIT(X_MOTOR_ENABLE_PORT, X_MOTOR_ENABLED);
 }
 
-static inline void disable_x_motor(void)
+static inline void unsafe_disable_x_motor(void)
 {
     SET_REG_BIT(X_MOTOR_ENABLE_PORT, X_MOTOR_DISABLED);
 }
 
-static inline void set_x_direction_positive(void)
+static inline void unsafe_set_x_direction_positive(void)
 {
     SET_REG_BIT(X_MOTOR_DIRECTION_PORT, X_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void set_x_direction_negative(void)
+static inline void unsafe_set_x_direction_negative(void)
 {
     SET_REG_BIT(X_MOTOR_DIRECTION_PORT, X_MOTOR_DIRECTION_NEGATIVE);
 }
 
-static inline void enable_x_step(void)
+static inline void unsafe_enable_x_step(void)
 {
     X_MOTOR_STEP_TCCRA |= _BV(X_MOTOR_STEP_COM1);
 }
 
-static inline void disable_x_step(void)
+static inline void unsafe_disable_x_step(void)
 {
     X_MOTOR_STEP_TCCRA &= ~_BV(X_MOTOR_STEP_COM1);
 }
@@ -69,7 +147,7 @@ static inline void pre_start_x_timer(uint16_t ivl)
     // TCCRB is set in engine.c:start_engine().
 }
 
-static inline uint8_t x_timer_starting_tccrb()
+static inline uint8_t x_timer_starting_tccrb(void)
 {
     return (_BV(X_MOTOR_STEP_WGM3) |
             _BV(X_MOTOR_STEP_WGM2) |
@@ -122,7 +200,7 @@ static inline void stop_x_timer_NONATOMIC(void)
     X_MOTOR_STEP_TIFR  = 0;
 }
 
-static inline void clear_x_step(void)
+static inline void unsafe_clear_x_step(void)
 {
     SET_REG_BIT(X_MOTOR_STEP_PORT, X_MOTOR_STEP_OFF);
     X_MOTOR_STEP_TCCRA &= ~_BV(X_MOTOR_STEP_COM1);
@@ -146,32 +224,32 @@ static inline bool y_direction_is_positive(void)
     return REG_BIT_IS(Y_MOTOR_DIRECTION_PIN, Y_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void enable_y_motor(void)
+static inline void unsafe_enable_y_motor(void)
 {
     SET_REG_BIT(Y_MOTOR_ENABLE_PORT, Y_MOTOR_ENABLED);
 }
 
-static inline void disable_y_motor(void)
+static inline void unsafe_disable_y_motor(void)
 {
     SET_REG_BIT(Y_MOTOR_ENABLE_PORT, Y_MOTOR_DISABLED);
 }
 
-static inline void set_y_direction_positive(void)
+static inline void unsafe_set_y_direction_positive(void)
 {
     SET_REG_BIT(Y_MOTOR_DIRECTION_PORT, Y_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void set_y_direction_negative(void)
+static inline void unsafe_set_y_direction_negative(void)
 {
     SET_REG_BIT(Y_MOTOR_DIRECTION_PORT, Y_MOTOR_DIRECTION_NEGATIVE);
 }
 
-static inline void enable_y_step(void)
+static inline void unsafe_enable_y_step(void)
 {
     Y_MOTOR_STEP_TCCRA |= _BV(Y_MOTOR_STEP_COM1);
 }
 
-static inline void disable_y_step(void)
+static inline void unsafe_disable_y_step(void)
 {
     Y_MOTOR_STEP_TCCRA &= ~_BV(Y_MOTOR_STEP_COM1);
 }
@@ -190,7 +268,7 @@ static inline void pre_start_y_timer(uint16_t ivl)
     // TCCRB is set in engine.c:start_engine().
 }
 
-static inline uint8_t y_timer_starting_tccrb()
+static inline uint8_t y_timer_starting_tccrb(void)
 {
     return (_BV(Y_MOTOR_STEP_WGM3) |
             _BV(Y_MOTOR_STEP_WGM2) |
@@ -220,7 +298,7 @@ static inline void stop_y_timer_NONATOMIC(void)
     Y_MOTOR_STEP_TIFR  = 0;
 }
 
-static inline void clear_y_step(void)
+static inline void unsafe_clear_y_step(void)
 {
     SET_REG_BIT(Y_MOTOR_STEP_PORT, Y_MOTOR_STEP_OFF);
     Y_MOTOR_STEP_TCCRA &= ~_BV(Y_MOTOR_STEP_COM1);
@@ -244,32 +322,32 @@ static inline bool z_direction_is_positive(void)
     return REG_BIT_IS(Z_MOTOR_DIRECTION_PIN, Z_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void enable_z_motor(void)
+static inline void unsafe_enable_z_motor(void)
 {
     SET_REG_BIT(Z_MOTOR_ENABLE_PORT, Z_MOTOR_ENABLED);
 }
 
-static inline void disable_z_motor(void)
+static inline void unsafe_disable_z_motor(void)
 {
     SET_REG_BIT(Z_MOTOR_ENABLE_PORT, Z_MOTOR_DISABLED);
 }
 
-static inline void set_z_direction_positive(void)
+static inline void unsafe_set_z_direction_positive(void)
 {
     SET_REG_BIT(Z_MOTOR_DIRECTION_PORT, Z_MOTOR_DIRECTION_POSITIVE);
 }
 
-static inline void set_z_direction_negative(void)
+static inline void unsafe_set_z_direction_negative(void)
 {
     SET_REG_BIT(Z_MOTOR_DIRECTION_PORT, Z_MOTOR_DIRECTION_NEGATIVE);
 }
 
-static inline void enable_z_step(void)
+static inline void unsafe_enable_z_step(void)
 {
     Z_MOTOR_STEP_TCCRA |= _BV(Z_MOTOR_STEP_COM1);
 }
 
-static inline void disable_z_step(void)
+static inline void unsafe_disable_z_step(void)
 {
     Z_MOTOR_STEP_TCCRA &= ~_BV(Z_MOTOR_STEP_COM1);
 }
@@ -288,7 +366,7 @@ static inline void pre_start_z_timer(uint16_t ivl)
     // TCCRB is set in engine.c:start_engine().
 }
 
-static inline uint8_t z_timer_starting_tccrb()
+static inline uint8_t z_timer_starting_tccrb(void)
 {
     return (_BV(Z_MOTOR_STEP_WGM3) |
             _BV(Z_MOTOR_STEP_WGM2) |
@@ -318,7 +396,7 @@ static inline void stop_z_timer_NONATOMIC(void)
     Z_MOTOR_STEP_TIFR  = 0;
 }
 
-static inline void clear_z_step(void)
+static inline void unsafe_clear_z_step(void)
 {
     SET_REG_BIT(Z_MOTOR_STEP_PORT, Z_MOTOR_STEP_OFF);
     Z_MOTOR_STEP_TCCRA &= ~_BV(Z_MOTOR_STEP_COM1);
@@ -327,6 +405,120 @@ static inline void clear_z_step(void)
 static inline void set_z_step_interval(uint16_t ticks)
 {
     Z_MOTOR_STEP_ICR = ticks;
+}
+
+// "Safe" versions
+
+static inline void safe_enable_x_motor(void)
+{
+    if (movement_okay())
+        unsafe_enable_x_motor();
+}
+
+static inline void safe_disable_x_motor(void)
+{
+    unsafe_disable_x_motor();
+}
+
+static inline void safe_set_x_direction_positive(void)
+{
+    unsafe_set_x_direction_positive();
+}
+
+static inline void safe_set_x_direction_negative(void)
+{
+    unsafe_set_x_direction_negative();
+}
+
+static inline void safe_enable_x_step(void)
+{
+    if (movement_okay())
+        unsafe_enable_x_step();
+}
+
+static inline void safe_disable_x_step(void)
+{
+    unsafe_disable_x_step();
+}
+
+static inline void safe_clear_x_step(void)
+{
+    unsafe_clear_x_step();
+}
+
+
+static inline void safe_enable_y_motor(void)
+{
+    if (movement_okay())
+        unsafe_enable_y_motor();
+}
+
+static inline void safe_disable_y_motor(void)
+{
+    unsafe_disable_y_motor();
+}
+
+static inline void safe_set_y_direction_positive(void)
+{
+    unsafe_set_y_direction_positive();
+}
+
+static inline void safe_set_y_direction_negative(void)
+{
+    unsafe_set_y_direction_negative();
+}
+
+static inline void safe_enable_y_step(void)
+{
+    if (movement_okay())
+        unsafe_enable_y_step();
+}
+
+static inline void safe_disable_y_step(void)
+{
+    unsafe_disable_y_step();
+}
+
+static inline void safe_clear_y_step(void)
+{
+    unsafe_clear_y_step();
+}
+
+static inline void safe_enable_z_motor(void)
+{
+    if (movement_okay())
+        unsafe_enable_z_motor();
+}
+
+static inline void safe_disable_z_motor(void)
+{
+    unsafe_disable_z_motor();
+}
+
+static inline void safe_set_z_direction_positive(void)
+{
+    unsafe_set_z_direction_positive();
+}
+
+static inline void safe_set_z_direction_negative(void)
+{
+    unsafe_set_z_direction_negative();
+}
+
+static inline void safe_enable_z_step(void)
+{
+    if (movement_okay())
+        unsafe_enable_z_step();
+}
+
+static inline void safe_disable_z_step(void)
+{
+    unsafe_disable_z_step();
+}
+
+static inline void safe_clear_z_step(void)
+{
+    unsafe_clear_z_step();
 }
 
 #endif /* !MOTORS_included */
