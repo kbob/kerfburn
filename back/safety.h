@@ -7,23 +7,16 @@
 //   + User presses the Big Red Button
 //   + software raises an F_ES fault
 //       - front end sends control-C
-
-// Emergency Stop is cleared when
-
 //
 // Emergency Stop is cleared when:
 //   + User releases the Big Red Button
-//    
+
 
 // Interface
 
 #include <stdbool.h>
 
-typedef void safety_callback(void);
-
 extern void init_safety(void);
-
-extern void set_safety_callback(safety_callback);
 
 extern void emergency_stop(void);
 extern void update_safety(void);
@@ -35,13 +28,14 @@ static inline bool visible_laser_okay(void);
 static inline bool stop_button_is_down(void);
 static inline bool lid_is_open(void);
 
+
 // Implementation
 
 #include <stdint.h>
 
 enum {
-    stop_switch = 1 << 0,
-    lid_switch = 1 << 1,
+    stop_switch_down = 1 << 0,
+    lid_switch_open = 1 << 1,
     
 };
 
@@ -54,12 +48,12 @@ extern struct safety_private {
 
 static inline bool lid_is_open(void)
 {
-    return safety_private.state & lid_switch;
+    return safety_private.state & lid_switch_open;
 }
 
 static inline bool stop_button_is_down(void)
 {
-    return safety_private.state & stop_switch;
+    return safety_private.state & stop_switch_down;
 }
 
 static inline bool movement_okay(void)
