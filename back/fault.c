@@ -79,9 +79,14 @@ void update_overrides(void)
         new_overrides |= 1 << F_LO;
     if (get_enum_variable(V_OC) == 'y')
         new_overrides |= 1 << F_LC;
+    bool changed;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fault_overrides = new_overrides;
+        changed = fault_overrides != new_overrides;
+        if (changed)
+            fault_overrides = new_overrides;
     }
+    if (changed)
+        update_safety();
 }
 
 bool fault_is_set(fault_index findex)
@@ -108,7 +113,7 @@ void clear_fault(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fault_states &= ~findex;
+        fault_states &= ~(1 << findex);
     }
 }
 
@@ -121,6 +126,7 @@ void trigger_fault(fault_index findex)
         start_animation(A_WARNING);
         return;
     }
+    set_fault(findex);
     const void *addr = &fault_descriptors[findex].fd_func;
     f_func *f = (f_func *)pgm_read_word(addr);
     if (f) {

@@ -4,7 +4,12 @@
 #include "config/pin-defs.h"
 
 #include "pin-io.h"
+#include "safety.h"
 
+
+// Interface
+
+// Initialization
 extern void init_motors(void);
 
 
