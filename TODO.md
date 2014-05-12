@@ -31,6 +31,23 @@ Is this a bug database?
 
    - Ditto for motor ISRs.
 
+   - How do we call update_safety() when override vars are changed?
+     **Former me thought of this; the hook is in `update_overrides()`.
+
+   - The "Lid Closed" fault, `F_LC`, is just weird.  It bugs me for
+     two reasons.
+
+       + `F_LC` and `F_LO` are always opposite.  `F_LC` adds no
+         information.
+
+       + It's impossible to be fault-free.  One of them is always raised.
+
+     I think I can do away with fault overrides and change the parser
+     to call `update_safety()` instead of `update_overrides()`.  Then
+     I can eliminate `F_LC`.
+
+
+
 ## Design
 
 * Need a list of fault  states.  In particular, need fault states when
@@ -96,7 +113,7 @@ Is this a bug database?
 
 * Add a command to set the laser power.  I don't think it can be enqueued.
 
-* I need to move the engine to the soft interrupt.
+* I need to move the scheduler to the soft interrupt.
 
 
 ### Thruport
@@ -141,7 +158,7 @@ Is this a bug database?
 
 * Change `fault.h` so most functions are in-line.
 
-* Use `sig_atomic_t` where appropriate.
+* Remove `#if`'d out code from `engine.c`.
 
 * Clean up the makefiles' shebang lines.
   - Makefile needs nothing.
