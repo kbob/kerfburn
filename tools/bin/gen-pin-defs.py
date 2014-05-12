@@ -302,7 +302,7 @@ def make_pin_definitions(mcu_port_pins, mcu_timer_pins, mcu_interrupt_pins):
         intr, grp = parse_pcint_pin(pin)
         ident = make_identifier(desc)
         reg, bit = parse_port_pin(port_pin)
-        add_def(ident + '_PCIE_reg', 'PCIE%s' % grp)
+        add_def(ident + '_PCIE_bit', 'PCIE%d' % grp)
         add_def(ident + '_PCMSK_reg', 'PCMSK%s' % grp)
         add_def(ident + '_PCINT_bit', 'PCINT%d' % intr)
         add_blank_line()
