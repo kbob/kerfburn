@@ -40,10 +40,10 @@ enum {
 };
 
 extern struct safety_private {
-    uint8_t state;
-    bool move_ok;
-    bool main_ok;
-    bool vis_ok;
+    volatile uint8_t state;
+    volatile bool move_ok;
+    volatile bool main_ok;
+    volatile bool vis_ok;
 } safety_private;
 
 static inline bool lid_is_open(void)
