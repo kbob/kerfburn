@@ -43,7 +43,7 @@ static inline char yes_no(bool choice)
 // is taken by report_serial.
 static void report_e_stop(void)
 {
-    printf_P(PSTR("E l=%c b=%c l=%c v=%c m=%c\n"),
+    printf_P(PSTR("E o=%c b=%c l=%c v=%c m=%c\n"),
              yes_no(lid_is_open()),
              yes_no(stop_button_is_down()),
              yes_no(main_laser_okay()),
