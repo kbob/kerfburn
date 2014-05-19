@@ -96,8 +96,6 @@ Is this a bug database?
 * Severe bug: if the laser is in in continuous firing mode, when the
   engine stops, the laser turns on.
   
-* `engine.c`: triggering of F_SU fault is broken.
-
 * Change serial driver so most functions are in-line.
 
 * Define pin mapping function for PCINTn pins.  Define e-stop and lid
@@ -158,8 +156,6 @@ Is this a bug database?
 * Rename `trigger_fault()` to `raise_fault()`.
 
 * Change `fault.h` so most functions are in-line.
-
-* Remove `#if`'d out code from `engine.c`.
 
 * Clean up the makefiles' shebang lines.
   - Makefile needs nothing.
