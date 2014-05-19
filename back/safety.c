@@ -11,6 +11,35 @@
 #include "timer.h"
 #include "variables.h"
 
+// XXX We still aren't there yet.
+// I think that pressing the big red button will not trigger the LED animation.
+// We also need to shut down the lasers and motors directly.
+//
+// Something like this.
+//
+//     def ISR():
+//         if button_down:
+//             button_was_down = True
+//             trigger_fault(F_SE)
+//
+//     def trigger_fault():
+//         set_fault()
+//         update_safety()
+//         start_animation()
+//
+//     def update_safety():
+//         grovel through flags
+//         if not main_ok:
+//             stop_main_laser()
+//         if not vis_ok:
+//             stop_visible_laser()
+//         if not move_ok:
+//             stop_motors()
+//
+//     def parse():
+//         if var.startswith('o'):
+//             update_safety()
+
 #define DEBOUNCE_MSEC 10    // disable interrupts 10 msec to debounce switches
 
 static timeout safety_timeout;
