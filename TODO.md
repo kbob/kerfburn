@@ -46,6 +46,8 @@ Is this a bug database?
      to call `update_safety()` instead of `update_overrides()`.  Then
      I can eliminate `F_LC`.
 
+* Need a version of clear_fault that stops animation.
+
 
 ## Design
 
