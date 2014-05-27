@@ -13,11 +13,8 @@ static int putc_stout(char c, FILE *stream)
 {
     if (c == '\n')
         putc_stout('\r', stream);
-    while (!serial_tx_is_available())
+    while (!serial_tx_put_char(c))
         continue;
-    bool ok = serial_tx_put_char(c);
-    ok = ok;
-    fw_assert(ok);
     return 0;
 }
 

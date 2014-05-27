@@ -98,12 +98,10 @@ uint8_t serial_tx_char_count(void)
 bool serial_tx_put_char(uint8_t c)
 {
     bool ok = true;
-    uint8_t new_tail;
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        if (bit_is_set(UCSR0A, UDRE0))
-            UDR0 = c;
-        else if ((new_tail = (tx_tail + 1) % TX_BUF_SIZE) != tx_head) {
+        uint8_t new_tail = (tx_tail + 1) % TX_BUF_SIZE;
+        if (new_tail != tx_head) {
             tx_buf[tx_tail] = c;
             tx_tail = new_tail;
             UCSR0B |= _BV(UDRIE0);
@@ -117,24 +115,22 @@ bool serial_tx_put_char(uint8_t c)
 
 static inline void tx_send_oob_NONATOMIC(uint8_t c)
 {
-    if (bit_is_set(UCSR0A, UDRE0)) {
-        UDR0 = c;
-    } else {
-        tx_oob_char = c;
-        UCSR0B |= _BV(UDRIE0);
-    }
+    tx_oob_char = c;
+    UCSR0B |= _BV(UDRIE0);
 }
 
 ISR(USART0_UDRE_vect)
 {
-    if (tx_oob_char) {
-        UDR0 = tx_oob_char;
-        tx_oob_char = '\0';
-    } else if (tx_head != tx_tail) {
-        UDR0 = tx_buf[tx_head];
-        tx_head = (tx_head + 1) % TX_BUF_SIZE;
-    } else
-        UCSR0B &= ~_BV(UDRIE0);
+    if (bit_is_set(UCSR0A, UDRE0)) {
+        if (tx_oob_char) {
+            UDR0 = tx_oob_char;
+            tx_oob_char = '\0';
+        } else if (tx_head != tx_tail) {
+            UDR0 = tx_buf[tx_head];
+            tx_head = (tx_head + 1) % TX_BUF_SIZE;
+        } else
+            UCSR0B &= ~_BV(UDRIE0);
+    }
 }
 
 // //  // //   // //  // //    // //  // //   // //  // //     // //  // //
