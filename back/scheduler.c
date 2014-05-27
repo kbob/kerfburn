@@ -305,10 +305,9 @@ static inline void prep_laser_state(laser_timer_state *lp,
 
     if (lasers_are_inactive(ls, pm, md)) {
         // Keep both lasers off; mark time until move over.
-        lp->ls_ts.ts_is_active = false;
-        lp->ls_disable_off     = A_LASERS_OFF;
-        lp->ls_disable_on      = A_LASERS_OFF;
-        lp->ls_t               = 0;
+        lp->ls_ts.ts_is_active    = false;
+        lp->ls_ts.ts_disable_atom = A_LASERS_OFF;
+        lp->ls_t                  = 0;
         q = mt;
         r = 0;
     } else {
@@ -329,9 +328,9 @@ static inline void prep_laser_state(laser_timer_state *lp,
 
         if (pm == 'c') {
             // Continuous laser mode.
-            lp->ls_ts.ts_is_active = false;
-            lp->ls_disable_off     = lp->ls_disable_on;
-            lp->ls_t               = 0;
+            lp->ls_ts.ts_is_active    = false;
+            lp->ls_ts.ts_disable_atom = lp->ls_disable_on; // [some]_LASER_ON
+            lp->ls_t                  = 0;
             q = mt;
             r = 0;
         }
@@ -344,8 +343,10 @@ static inline void prep_laser_state(laser_timer_state *lp,
             } else {
                 // Distance pulse mode
                 fw_assert(pm == 'd');
-                q = mt / md;
-                r = mt % md;
+                uint32_t pd = get_unsigned_variable(V_PD);
+                uint_fast24 pulse_count = md / pd;
+                q = mt / pulse_count;
+                r = mt % pulse_count;
             }
         }
     }
@@ -425,8 +426,6 @@ static inline void gen_laser_atoms(laser_timer_state *lp, queue *qp)
     if (!lp->ls_ts.ts_is_active) {
         // Laser is inactive, so mark time.
         uint32_t dt = lp->ls_mt - lp->ls_t;
-        lp->ls_ts.ts_enable_atom = A_LASERS_OFF;
-        lp->ls_ts.ts_disable_atom = A_LASERS_OFF;
         uint32_t t = subdivide_interval(&lp->ls_ts, dt, &avail, qp);
         lp->ls_t += t;
     } else {

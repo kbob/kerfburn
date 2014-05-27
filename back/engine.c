@@ -155,7 +155,7 @@ ISR(X_MOTOR_STEP_TIMER_OVF_vect)
 #endif
 
             default:
-                fprintf_P(stderr, PSTR("a = %u\n\n"), a);
+                fprintf_P(stderr, PSTR("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
@@ -307,6 +307,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
             switch (a) {
 
             case A_STOP:
+                safe_set_lasers_off();
                 stop_pulse_timer_NONATOMIC();
                 running_queues &= ~qm_p;
                 return;
@@ -348,7 +349,7 @@ ISR(LASER_PULSE_TIMER_OVF_vect)
                 break;
 
             default:
-                fprintf_P(stderr, PSTR("a = %u = %u\n"), a, a);
+                fprintf_P(stderr, PSTR("a = %u\n"), a);
                 fw_assert(false);
             }
         } else {
