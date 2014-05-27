@@ -33,7 +33,7 @@
 typedef struct trace_entry {
     const char *te_func;
     uint16_t    te_line;
-    uint8_t     te_code;
+    uint16_t    te_code;
 } trace_entry;
 
 extern struct trace_private {
@@ -41,7 +41,7 @@ extern struct trace_private {
     trace_entry tp_buffer[TRACE_SIZE];
 } trace_private;
 
-static inline void trace(const char *func, uint16_t line, uint8_t code)
+static inline void trace(const char *func, uint16_t line, uint16_t code)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         if (trace_private.tp_pos < TRACE_SIZE) {

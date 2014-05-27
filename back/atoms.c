@@ -28,7 +28,7 @@ DEFINE_ATOM_NAME(A_VISIBLE_LASER_START);
 DEFINE_ATOM_NAME(A_VISIBLE_LASER_STOP);
 DEFINE_ATOM_NAME(INVALID_ATOM);
 
-static const char *const atom_names[ATOM_COUNT] PROGMEM = {
+static const char *const atom_names[ATOM_COUNT + 1] PROGMEM = {
     A_STOP_name,
     A_DIR_POSITIVE_name,
     A_DIR_NEGATIVE_name,
@@ -47,6 +47,7 @@ static const char *const atom_names[ATOM_COUNT] PROGMEM = {
     A_VISIBLE_LASER_ON_name,
     A_VISIBLE_LASER_START_name,
     A_VISIBLE_LASER_STOP_name,
+    INVALID_ATOM_name,
 };
 
 void init_atoms(void)
@@ -57,10 +58,10 @@ void init_atoms(void)
 
 void print_atom(const char *label, uint16_t a)
 {
-    if (a < ATOM_COUNT) {
+    if (a < ATOM_COUNT + 1) {
         const char *name = (PGM_P)pgm_read_word(&atom_names[a]);
-        fprintf_P(stderr, PSTR("%s %S\n"), label, name);
+        printf_P(PSTR("%s %S"), label, name);
     } else
-        fprintf_P(stderr, PSTR("%s %"PRIu16"\n"), label, a);
+        printf_P(PSTR("%s %"PRIu16), label, a);
 }
 
