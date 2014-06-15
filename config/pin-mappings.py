@@ -53,7 +53,7 @@ def_input_pin     (PJ1,     'Y Min Switch',        reached=high, pull_up=True)
 
 # Misc. switches
 
-def_interrupt_pin (PCINT19, 'Emergency Stop',      stopped=high, pull_up=True)
+def_interrupt_pin (PCINT19, 'Emergency Stop',      stopped=low, pull_up=True)
 def_interrupt_pin (PCINT20, 'Lid',                 open=high,    pull_up=True)
 
 
