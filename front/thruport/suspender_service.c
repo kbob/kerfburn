@@ -28,10 +28,10 @@ static pthread_mutex_t sus_lock = PTHREAD_MUTEX_INITIALIZER;
 //static pthread_cond_t  sus_cond = PTHREAD_COND_INITIALIZER;
 static suspender *suspenders;
 
-static inline bool is_suspended(void)
-{
-    return suspenders != NULL;
-}
+// static inline bool is_suspended(void)
+// {
+//     return suspenders != NULL;
+// }
 
 void *susp_thread_main(void *closure)
 {
