@@ -24,9 +24,9 @@ static void usage(FILE *out) __attribute__((noreturn));
 ///////////////////////////////////////////////////////////////////////////////
 // Control Main and Control Options
 
-static const struct option control_options[] = {
-    {  NULL,                      0, NULL,  0  }
-};
+// static const struct option control_options[] = {
+//     {  NULL,                            0, NULL,  0  }
+// };
 
 static const char *control_options_usage = 
     "Control Options:\n"
@@ -43,7 +43,7 @@ static int control_main(int argc, char *argv[])
 // Send Main and Send Options
 
 static const struct option send_options[] = {
-    {  NULL,                      0, NULL,  0  }
+    {  NULL,                            0, NULL,  0  }
 };
 
 static const char *send_options_usage = 
@@ -76,7 +76,7 @@ static int send_main(int argc, char *argv[])
 // Receive Main and Receive Options
 
 static const struct option receive_options[] = {
-    {  NULL,                      0, NULL,  0  }
+    {  NULL,                            0, NULL,  0  }
 };
 
 static const char *receive_options_usage = 
@@ -109,7 +109,7 @@ static int receive_main(int argc, char *argv[])
 // Suspend Main and Suspend Options
 
 static const struct option suspend_options[] = {
-    {  NULL,                      0, NULL,  0  }
+    {  NULL,                            0, NULL,  0  }
 };
 
 static const char *suspend_options_usage = 
@@ -143,21 +143,24 @@ static int suspend_main(int argc, char *argv[])
 // Daemon Main and Daemon Options
 
 static const struct option daemon_options[] = {
-    { "debug",          no_argument, NULL, 'd' },
-    {  NULL,                      0, NULL,  0  }
+    { "debug",          no_argument,       NULL, 'd' },
+    { "fw-simulator",   required_argument, NULL, 's' },
+    {  NULL,                            0, NULL,  0  }
 };
 
 static const char *daemon_options_usage = 
     "Daemon Options:\n"
     "  -d, --debug         Run in foreground, print debug messages.\n"
+    "  -s, --fw-simulator  Run simulator instead of serial port.\n"
     "\n";
 
 static int daemon_main(int argc, char *argv[])
 {
     bool debug = false;
+    const char *fwsim = NULL;
     optind = 1;
     while (true) {
-        int c = getopt_long(argc, argv, "d", daemon_options, NULL);
+        int c = getopt_long(argc, argv, "ds:", daemon_options, NULL);
         if (c == -1)
             break;
 
@@ -167,6 +170,10 @@ static int daemon_main(int argc, char *argv[])
             debug = true;
             break;
 
+        case 's':
+            fwsim = optarg;
+            break;
+
         default:
             usage(stderr);
         }
@@ -174,7 +181,7 @@ static int daemon_main(int argc, char *argv[])
     if (optind < argc)
         usage(stderr);
 
-    return start_daemon(debug);
+    return start_daemon(debug, fwsim);
 }
 
 
@@ -191,9 +198,9 @@ static const struct action actions[] = {
 static const size_t action_count = sizeof actions / sizeof actions[0];
 
 static const struct option general_options[] = {
-    { "port",     required_argument, NULL, 'p' },
-    { "help",           no_argument, NULL, 'h' },
-    {  NULL,                      0, NULL,  0  }
+    { "port",           required_argument, NULL, 'p' },
+    { "help",                 no_argument, NULL, 'h' },
+    {  NULL,                            0, NULL,  0  }
 };
 
 static const char *general_options_usage =
