@@ -317,7 +317,6 @@ static void *send_thread_main(void *p)
 
 static void *receive_thread_main(void *p)
 {
-    fprintf(stderr, "receive thread main\n");
     while (true) {
         char buf[TTY_BUFSIZ];
         ssize_t nr = whatever_receive(buf, sizeof buf);
