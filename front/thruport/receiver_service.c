@@ -50,6 +50,13 @@ void instantiate_receiver_service(int sock)
 {
     receiver *r = alloc_receiver();
     r->r_fd = sock;
+#ifdef SO_NOSIGPIPE
+    // Suppress SIGPIPE.
+    int set = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof set))
+        syslog(LOG_ERR, "setsockopt(NOSIGPIPE): %m");
+#endif
+
 }
 
 static int send_to_receiver(receiver *r, const char *data, size_t count)
