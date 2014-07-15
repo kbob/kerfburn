@@ -23,6 +23,7 @@ int be_receiver(void)
     setbuf(sockrf, NULL);
     
     // Copy data.
+    setbuf(stdout, NULL);
     char line[BUFSIZ];
     while (fgets(line, sizeof line, sockrf))
         fputs(line, stdout);

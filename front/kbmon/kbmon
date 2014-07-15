@@ -1,0 +1,710 @@
+#!/usr/bin/python
+
+from collections import namedtuple
+import curses
+import math
+import optparse
+import os
+import re
+import select
+import string
+import subprocess
+import sys
+import time
+
+use_curses = True
+
+# intialization:
+#  start "thruport receive"
+#  thruport-send "rx=y\nR"
+#  put keyboard in rare mode
+
+# main loop:
+#  select from stdin, thruport, timer
+#  when stdin ready:
+#   parse and execute 1-char command
+#  when thruport ready:
+#   read and parse one line
+#   update vars
+#   update screen
+
+# This is going to want an MVC thing.
+# Maybe I should start by writing the Model.
+
+# Model:
+#  Status
+#   overall
+#   lasers
+#   motors
+#  Vars
+#   [list all 25]
+#  Faults
+#   [list all 12]
+#  Enabled
+#   [list 7, not reporting_enabled]
+#  State
+#   limit switches
+#   safety switches
+#   queues
+#   memory
+#   serial
+#   lv power ready
+
+
+class FaultDesc(namedtuple('FaultDesc', 'id name')):
+    pass
+
+
+all_faults = {f[0]: FaultDesc(*f) for f in (
+    ('ES', 'Emergency Stop'),
+    ('LO', 'Lid Open'),
+    ('LC', 'Lid Closed'),
+    ('WF', 'Water Flow'),
+    ('WT', 'Water Temperature'),
+    ('SF', 'Serial Frame Error'),
+    ('SO', 'Serial Overrun'),
+    ('SP', 'Serial Parity Error'),
+    ('SL', 'Software Lexical Error'),
+    ('SS', 'Software Syntax Error'),
+    ('SU', 'Software Underflow'),
+    ('SI', 'Software Missed Interrupt'),
+    )}
+
+
+class Unsigned:
+
+    @classmethod
+    def default_value(cls):
+        return 0
+
+    @classmethod
+    def format(cls, value, verbose=False):
+        return str(value)
+
+class Signed:
+
+    @classmethod
+    def default_value(cls):
+        return 0
+
+    @classmethod
+    def format(cls, value, verbose=False):
+        return '%+d' % value
+
+class Enum(dict):
+
+    def __init__(self, contents, default):
+        super(Enum, self).__init__(contents)
+        self.default = default
+
+    def default_value(self):
+        return self.default
+
+    def format(self, value, verbose=False):
+        v = self[value]
+        if not verbose:
+            v = {
+                'Complete': 'Comp',
+                'Continuous': 'Cont',
+                'Distance': 'Dist',
+                'Main Laser': 'Main',
+                'Startup': 'Start',
+                'Visible Laser': 'Vis',
+                'Warning': 'Warn',
+                }.get(v, v)
+        return v
+
+enum_ny    = Enum({'n': 'No', 'y': 'Yes'}, default='n')
+
+enum_yn    = Enum({'n': 'No', 'y': 'Yes'}, default='y')
+
+enum_ncswa = Enum({'n': 'None',
+                   'c': 'Complete',
+                   's': 'Startup',
+                   'w': 'Warning',
+                   'a': 'Alert'},
+                  default='n')
+
+enum_nmv   = Enum({'n': 'None',
+                   'm': 'Main Laser',
+                   'v': 'Visible Laser'},
+                default='n')
+
+enum_octd  = Enum({'o': 'Off',
+                   'c': 'Continuous',
+                   't': 'Timed',
+                   'd': 'Distance'},
+                  default='o')
+
+
+class VarDesc(namedtuple('VarDesc', 'id type short_name full_name')):
+
+    def default_value(self):
+        return self.type.default_value()
+
+    def format(self, value, verbose=False):
+        return self.type.format(value, verbose)
+
+    def is_report(self):
+        i = self.id
+        return i.startswith('r') and i != 'ri'
+
+all_vars = {v[0]: VarDesc(*v) for v in (
+    ('ia', enum_ncswa, 'Illum. Anim.',    'Illumination Animation'),
+    ('il', Unsigned,   'Illum. Level',    'Illumination Level'),
+    ('lp', Unsigned,   'Laser Power',     'Laser Power'),
+    ('ls', enum_nmv,   'Laser Select',    'Laser Select'),
+    ('mt', Unsigned,   'Move Time',       'Move Time'),
+    ('oc', enum_ny,    "O'ride Lid Shut", 'Override Lid Closed'),
+    ('oo', enum_ny,    "O'ride Lid Open", 'Override Lid Open'),
+    ('pd', Unsigned,   'Pulse Distance',  'Pulse Distance'),
+    ('pi', Unsigned,   'Pulse Interval',  'Pulse Interval'),
+    ('pm', enum_octd,  'Pulse Mode',      'Pulse Mode'),
+    ('pw', Unsigned,   'Pulse Width',     'Pulse Width'),
+    ('re', enum_yn,    'Report E-Stop',   'Report Emergency Stop Status'),
+    ('rf', enum_yn,    'Report Faults',   'Report Fault Status'),
+    ('ri', Unsigned,   'Rep. Interval',   'Reporting Interval (msec)'),
+    ('rl', enum_ny,    'Report Limits',   'Report Limit Switch Status'),
+    ('rm', enum_ny,    'Report Motors',   'Report Motor Status'),
+    ('rp', enum_ny,    'Report Power',    'Report Power Status'),
+    ('rq', enum_ny,    'Report Queues',   'Report Queue Status'),
+    ('rr', enum_ny,    'Report RAM Use',  'Report RAM Status'),
+    ('rs', enum_ny,    'Report Serial',   'Report Serial Status'),
+    ('rv', enum_ny,    'Report Vars',     'Report Variables'),
+    ('rw', enum_ny,    'Report Water',    'Report Water Status'),
+    ('xd', Signed,     'X Distance',      'X Distance'),
+    ('yd', Signed,     'Y Distance',      'Y Distance'),
+    ('zd', Signed,     'Z Distance',      'Z Distance'),
+    )}
+
+
+class Model(object):
+
+    def __init__(self):
+        self.status = None
+        self.version_string = '--'
+        self.vars = {n: desc.default_value()
+                     for (n, desc) in all_vars.iteritems()}
+        self.faults = {f: False for f in all_faults}
+        self.enabled = {}
+        self.state = {}
+        self.changes = 0
+
+    def __str__(self):
+        s = 'Model(\n'
+        s += '      status:  %r\n' % self.status
+        s += '      vars:    %r\n' % self.vars
+        s += '      faults:  %r\n' % self.faults
+        s += '      enabled: %r\n' % self.enabled
+        s += '      state:   %r\n' % self.state
+        s += '      changes: %r'   % self.changes
+        return s
+       
+    def overall_status(self):
+        if self.status:
+            return self.status
+        ss = self.state
+        for q in ('xqueue', 'yqueue', 'zqueue', 'pqueue'):
+            qv = ss.get(q)
+            if qv is None:
+                return '--'
+            if qv != '0':
+                return 'Running'
+        return 'Idle'
+
+    def laser_status(self):
+        # XXX Check E-stop and lid switches
+        if self.faults['ES']:
+            return ('Emergency Stop', True)
+        ls = self.vars['ls']
+        s = all_vars['ls'].format(ls, verbose=True)
+        if ls == 'n':
+            return s
+        pm = self.vars['pm']
+        pm_str = all_vars['pm'].format(pm, verbose=True)
+        if pm == 'o':
+            pm_str = '!' + pm_str + '!'
+        s = 'Pulse Mode: ' + pm_str
+        
+        if ls == 'm':
+            if self.faults['LO'] and self.vars['oo'] == 'n':
+                s = '!lid open!'
+            elif self.enabled['high_voltage']:
+                lp = self.vars['lp']
+                if not lp:
+                    s = '!power level zero!'
+            else:
+                s = '!high voltage disabled!'
+            if not self.enabled['air']:
+                s = '!air assist off!, ' + s
+            if not self.enabled['water']:
+                s = '!water off!, ' + s
+            s = 'Main Laser, ' + s
+        if ls == 'v':
+            if not self.faults['LO'] and self.vars['oc'] == 'n':
+                s = '!lid closed!'
+            elif not self.enabled['low_voltage']:
+                s = '!low voltage disabled!'
+            elif self.state['low_voltage_ready'] == 'n':
+                s = '!low voltage not ready!'
+            s = 'Visible Laser, ' + s
+        return s
+
+    def motor_status(self):
+
+        def format_dir(dir):
+            if dir == '+':
+                return 'pos'
+            elif dir == '-':
+                return 'neg'
+            else:
+                return ''
+
+        ok = True
+        s = ''
+        if self.faults['ES']:
+            s += ', !Emergency Stop!'
+            ok = False
+        if not self.enabled.get('low_voltage', True):
+            s += ', !low voltage disabled!'
+            ok = False
+        elif not self.state.get('low_voltage_ready', True):
+            s += ', !low voltage not ready!'
+            ok = False
+        if ok:
+            xe = self.enabled.get('x_motor')
+            ye = self.enabled.get('y_motor')
+            ze = self.enabled.get('z_motor')
+            if xe is None or ye is None or ze is None:
+                pass
+            elif not xe and not ye and not ze:
+                s += ', !all disabled!'
+                ok = False
+            else:
+                if xe:
+                    xd = format_dir(self.state['x_dir'])
+                    s += ', X ' + xd
+                else:
+                    s += ', X disabled'
+                if ye:
+                    yd = format_dir(self.state['y_dir'])
+                    s += ', Y ' + yd
+                else:
+                    s += ', Y disabled'
+                if ze:
+                    zd = format_dir(self.state['z_dir'])
+                    s += ', Z ' + zd
+                else:
+                    s += ', Z disabled'
+                    
+        if ok:
+            s = 'Enabled' + s
+        else:
+            s = 'Disabled' + s
+        return s
+
+def update_faults(line, vars):
+    faults_set = set(line.split()[1:])
+    m_f = model.faults
+    for f in all_faults:
+        b = f in faults_set
+        if m_f[f] != b:
+            m_f[f] = b
+            model.changes += 1
+        
+
+def update_state(line, vars):
+    m_e = model.enabled
+    m_s = model.state
+    for (name, value) in vars.iteritems():
+        if name.endswith('_enabled'):
+            short_name = name.replace('_enabled', '')
+            value = {'n': False, 'y': True, 'd': False, 'e': True}[value]
+            if m_e.get(short_name) != value:
+                m_e[short_name] = value
+                model.changes += 1
+        else:
+            if m_s.get(name) != vars[name]:
+                m_s[name] = value
+                model.changes += 1
+
+
+def update_version(line, vars):
+    model.version_string = 'Kerfburn ' + vars['version_string']
+    model.status = None
+    model.changes += 1
+
+def parse_var(exp):
+    m = re.match(r'([a-z]{2})=(.*)', exp)
+    assert m, 'exp=%r' % exp
+    return m.groups()
+
+
+def update_vars(line, vars):
+    m_v = model.vars
+    exprs = line.split()[1:]
+    for exp in exprs:
+        name, value = parse_var(exp)
+        try:
+            value = int(value)
+        except ValueError:
+            pass
+        if m_v[name] != value:
+            m_v[name] = value
+            model.changes += 1
+
+
+def update_water(line, vars):
+    pass
+
+
+updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
+
+        # E = Emergency Stop report
+        (r'E o=(?P<lid_open>[yn]) '
+            'b=(?P<stop_button>[yn]) '
+            'l=(?P<main_laser_ok>[yn]) '
+            'v=(?P<vis_laser_ok>[yn]) '
+            'm=(?P<motors_ok>[yn])',
+         update_state),
+
+        # F - fault report
+        (r'F', update_faults),
+
+        # Kerfburn - version string
+        (r'Kerfburn Back End, built +(?P<version_string>.*)', update_version),
+
+        # L - limit switch report
+        (r'L x=(?P<xmin>[-ny])(?P<xmax>[-ny]) '
+            'y=(?P<ymin>[-ny])(?P<ymax>[-ny]) '
+            'z=(?P<zmin>[-ny])(?P<zmax>[-ny])',
+         update_state),
+
+        # M - motor report
+        (r'M x=(?P<x_motor_enabled>[de])(?P<x_dir>[-+]) '
+            'y=(?P<y_motor_enabled>[de])(?P<y_dir>[-+]) '
+            'z=(?P<z_motor_enabled>[de])(?P<z_dir>[-+])',
+         update_state),
+
+        # P - power report
+        (r'P le=(?P<low_voltage_enabled>[ny]) '
+            'lr=(?P<low_voltage_ready>[ny]) '
+            'he=(?P<high_voltage_enabled>[ny]) '
+            'ae=(?P<air_enabled>[ny]) '
+            'we=(?P<water_enabled>[ny])',
+         update_state),
+
+        # Q - queues report
+        (r'Q x=(?P<xqueue>\d+) '
+            'y=(?P<yqueue>\d+) '
+            'z=(?P<zqueue>\d+) '
+            'p=(?P<pqueue>\d+)',
+         update_state),
+
+        # R - RAM report
+        (r'R t=(?P<text_size>\d+) '
+            'd=(?P<data_size>\d+) '
+            'b=(?P<bss_size>\d+) '
+            'f=(?P<free_size>\d+) '
+            's=(?P<stack_size>\d+)',
+         update_state),
+
+        # S - serial report
+        (r'S rx c=(?P<rx_chars>\d+) '
+               'l=(?P<rx_lines>\d+) '
+               'e=(?P<rx_error>0x[\dA-Fa-f]+), '
+            'tx c=(?P<tx_chars>\d+) '
+               'e=(?P<tx_error>0x[\dA-Fa-f]+)',
+         update_state),
+
+
+        # V - variables report
+        (r'V', update_vars),
+
+        # W - water report
+        (r'W', update_water),
+
+        )}
+ 
+
+def update_model(line):
+    key = line[:1]
+    if key in updaters:
+        pf = updaters[key]
+        if pf:
+            pat, func = pf
+            m = pat.match(line)
+            if m:
+                func(line, m.groupdict())
+            else:
+                raise Exception('not match: ' + line)
+    else:
+        model.status = '!' + line
+        model.changes += 1
+
+
+def pad(w, s):
+    s = str(s)[:w]
+    s += ' ' * (w - len(s))
+    return s
+
+
+def lpad(w, s):
+    s = str(s)[:w]
+    s = ' ' * (w - len(s)) + s
+    return s
+
+def record_update(line, screen):
+    try:
+        update_model(line)
+    except Exception, x:
+        screen.addstr(2, 2, pad(76, x.message))
+
+
+def send_enable_reporting():
+    send_proc = subprocess.Popen(['thruport', 'send'],
+                                 stdin=subprocess.PIPE,
+                                 stderr=open('/dev/null', 'w'),
+                                 bufsize=0)
+    sender = send_proc.stdin
+    for v in all_vars:
+        if v.startswith('r') and v != 'ri':
+            sender.write('%s=y\n' % v)
+    sender.write('ri=300\n')
+    sender.write('Er\n')
+    sender.flush()
+    sender.close()
+    send_proc.wait()
+
+
+def init():
+
+    global model, receiver, receive_proc
+
+    model = Model()
+    receive_proc = subprocess.Popen(['thruport', 'receive'],
+                                    stdout=subprocess.PIPE,
+                                    bufsize=0)
+    receiver = receive_proc.stdout
+
+    send_enable_reporting()
+
+
+def report_mask():
+    mask = ''
+    for var in sorted(all_vars):
+        desc = all_vars[var]
+        value = model.vars[var]
+        if desc.is_report():
+            l = var[1]
+            L = l.upper()
+            mask += [l, L][value == 'y']
+    return mask
+
+def addnstr_attr(win, y, x, w, s):
+    attrs = (curses.A_NORMAL, curses.color_pair(1) | curses.A_BOLD)
+    ai = 0
+    for substr in s.split('!'):
+        substr = substr[:w]
+        win.addstr(y, x, substr, attrs[ai])
+        x += len(substr)
+        w -= len(substr)
+        ai = 1 - ai
+    if w:
+        win.addstr(y, x, ' ' * w, attrs[0])
+                   
+
+def update_screen(win):
+    from curses import ACS_HLINE, ACS_VLINE, ACS_BSSS, ACS_SBSS, ACS_SSBB
+    from curses import ACS_SSSB
+    h, w = win.getmaxyx()
+
+    win.addstr(0, 0, 'Laser Cutter Monitor', curses.A_BOLD)
+    win.addstr(0, 25, 'Version: ')
+    win.addstr(0, 34, model.version_string)
+
+    win.addstr(2, 2, 'Status: ')
+    win.addstr(3, 2, 'Laser:  ')
+    win.addstr(4, 2, 'Motors: ')
+    addnstr_attr(win, 2, 10, 68, model.overall_status())
+    addnstr_attr(win, 3, 10, 68, model.laser_status())
+    addnstr_attr(win, 4, 10, 68, model.motor_status())
+    win.noutrefresh()
+
+    f_win = curses.newwin(13, 41, 6, 0)
+    f_win.border(' ', ' ', ACS_HLINE, ' ', ACS_HLINE, ACS_HLINE, ' ', ' ')
+    f_win.addstr(0, 1, ' Faults ', curses.A_BOLD)
+    f_win.noutrefresh()
+    row = 1
+    for f in sorted(all_faults):
+        if f == 'LC':
+            continue
+        desc = all_faults[f]
+        value = model.faults[f]
+        if value:
+            attr = curses.color_pair(1) | curses.A_BOLD
+        else:
+            attr = curses.A_NORMAL
+        f_win.addstr(row, 2, pad(5, ['   ok', 'FAULT'][value]), attr)
+        f_win.addstr(row, 9, pad(30, desc.name), attr)
+        row += 1
+    f_win.noutrefresh()
+
+    var_win = curses.newwin(18, 24, 6, 56)
+    var_win.border(ACS_VLINE, ' ', ACS_HLINE, ' ',
+                   ACS_BSSS, ACS_HLINE, ACS_VLINE, ' ')
+    var_win.addstr(0, 2, ' Variables ', curses.A_BOLD)
+    row = 1
+    for v in sorted(all_vars):
+        desc = all_vars[v]
+        if desc.is_report():
+            continue
+        name = desc.short_name
+        value = desc.format(model.vars[v])
+        nw = len(name)
+        var_win.addstr(row, 3, name)
+        var_win.addstr(row, 3 + nw, lpad(20 - nw, value))
+        row += 1
+    var_win.addstr(row, 3, 'Reports')
+    var_win.addstr(row, 13, report_mask())
+    var_win.noutrefresh()
+
+    lim_win = curses.newwin(9, 16, 6, 41)
+    lim_win.border(ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE,
+                   ACS_BSSS, ACS_BSSS, ACS_SSBB, ACS_SBSS)
+    lim_win.addstr(0, 2, ' Limits ', curses.A_BOLD)
+    lim_win.addstr(1, 6, 'Min Max')
+    lim_win.addstr(2, 3, 'X')
+    lim_win.addstr(3, 3, 'Y')
+    lim_win.addstr(4, 3, 'Z')
+    lim_win.addstr(2, 7, model.state.get('xmin', ' '))
+    lim_win.addstr(3, 7, model.state.get('ymin', ' '))
+    lim_win.addstr(4, 7, model.state.get('zmin', ' '))
+    lim_win.addstr(2, 11, model.state.get('xmax', ' '))
+    lim_win.addstr(3, 11, model.state.get('ymax', ' '))
+    lim_win.addstr(4, 11, model.state.get('zmax', ' '))
+    lim_win.noutrefresh()
+        
+    ser_win = curses.newwin(13, 16, 14, 41)
+    ser_win.border(ACS_VLINE, ACS_VLINE, ACS_HLINE, ' ',
+                   ACS_SSSB, ACS_SBSS, ' ', ' ')
+    ser_win.addstr(0, 2, ' Serial ', curses.A_BOLD)
+    ser_win.addstr(1, 3, 'RX')
+    ser_win.addstr(2, 3, lpad(4, model.state.get('rx_lines')))
+    ser_win.addstr(2, 8, 'lines')
+    ser_win.addstr(3, 3, lpad(4, model.state.get('rx_chars')))
+    ser_win.addstr(3, 8, 'chars')
+    ser_win.addstr(4, 3, lpad(4, model.state.get('rx_error')))
+    ser_win.addstr(4, 8, 'error')
+    ser_win.addstr(6, 3, 'TX')
+    ser_win.addstr(7, 3, lpad(4, model.state.get('tx_chars')))
+    ser_win.addstr(7, 8, 'chars')
+    ser_win.addstr(8, 3, lpad(4, model.state.get('tx_error')))
+    ser_win.addstr(8, 8, 'error')
+    ser_win.noutrefresh()
+
+
+displayed_time = ''
+
+def adjust_time(win):
+    global displayed_time
+    now = int(time.time())
+    if now != displayed_time:
+        time_str = time.strftime('%H:%M:%S', time.localtime(now))
+        win.addstr(0, 71, time_str)
+        win.noutrefresh()
+
+
+
+def curses_main(stdscr):
+    init()
+
+    curses.use_default_colors()
+    curses.curs_set(0)
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED);
+
+    # stdscr.addstr("Laser Cutter Monitor", curses.A_BOLD)
+    update_screen(stdscr)
+    stdscr.refresh()
+        
+    inbuf = ''
+    tt = 0
+    while True:
+        timeout = 1.0 - math.modf(time.time())[0]
+        ret = select.select([sys.stdin, receiver], [], [], timeout)
+        if receiver in ret[0]:
+            b = os.read(receiver.fileno(), 10)
+            if b == '':
+                break
+            inbuf += b
+            while '\n' in inbuf:
+                line, inbuf = inbuf.split('\n', 1)
+                record_update(line, stdscr)
+        if sys.stdin in ret[0]:
+            ch = os.read(sys.stdin.fileno(), 1)
+            if ch.upper() == 'Q':
+                break
+
+        adjust_time(stdscr)
+        if model.changes:
+            update_screen(stdscr)
+            model.changes = 0
+        curses.doupdate()
+    
+
+def logging_main():
+    init()
+
+    inbuf = ''
+    line_count = 0
+    while True:
+        b = receiver.read(10)
+        if b == '':
+            break
+        inbuf += b
+        while '\n' in inbuf:
+            line, inbuf = inbuf.split('\n', 1)
+            line_count += 1
+            update_model(line)
+            print repr(line)[1:-1]
+        if not inbuf and line_count >= 10:
+            break
+
+
+def main(argv):
+    parser = optparse.OptionParser()
+    parser.add_option('-l', '--log', action='store_true', help='logging mode')
+    (options, args) = parser.parse_args(argv[1:])
+    if args:
+        parser.print_help()
+        exit()
+    if options.log:
+        logging_main()
+    else:
+        curses.wrapper(curses_main)
+
+if __name__ == '__main__':
+    main(sys.argv)
+
+    import pprint
+    print 'Model'
+    print
+    print 'status'
+    pprint.pprint(model.status)
+    print
+    print 'vars'
+    pprint.pprint(model.vars)
+    print
+    print 'faults'
+    pprint.pprint(model.faults)
+    print
+    print 'enabled'
+    pprint.pprint(model.enabled)
+    print
+    print 'state'
+    pprint.pprint(model.state)
+    print
+    print 'changes'
+    pprint.pprint(model.changes)
+    print
+    print model.laser_status()[0]

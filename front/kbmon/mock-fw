@@ -1,0 +1,214 @@
+#!/usr/bin/python
+
+import os
+import select
+import sys
+import time
+
+cmd_table = {}
+
+
+class U(int):
+    def __init__(self, value):
+        if value < 0:
+            raise ValueError()
+        super(U, self).__init__(value)
+
+class Signed(int):
+
+    def __str__(self):
+        return '%+d' % self
+
+class E(str):
+    def __new__(cls, vals, value=None):
+        obj = super(E, cls).__new__(cls, value or vals[0])
+        obj.vals = vals
+        return obj
+
+    def __nonzero__(self):
+        return self == 'y'
+
+vars = {
+    'ia': E('ncswa'),
+    'il': U(0),
+    'lp': U(0),
+    'ls': E('nmv'),
+    'mt': U(0),
+    'oc': E('ny'),
+    'oo': E('ny'),
+    'pd': U(0),
+    'pi': U(0),
+    'pm': E('octd'),
+    'pw': U(0),
+    're': E('yn'),
+    'rf': E('yn'),
+    'ri': U(0),
+    'rl': E('ny'),
+    'rm': E('ny'),
+    'rp': E('ny'),
+    'rq': E('ny'),
+    'rr': E('ny'),
+    'rs': E('ny'),
+    'rv': E('ny'),
+    'rw': E('ny'),
+    'xd': Signed(0),
+    'yd': Signed(0),
+    'zd': Signed(0),
+}
+
+def cmd(func):
+    cmd_table[func.func_name] = func
+    return func
+
+enabled = {f: False for f in 'ahlrwxyz'}
+faults = {f: False for f in 'ES LO LC WF WT SF SO SP SL SS SU SI'.split()}
+faults['LO'] = True
+
+def enable(f):
+    enabled[f] = True
+
+def disable(f):
+    enabled[f] = False
+
+for f in enabled:
+    cmd_table['E' + f] = lambda f=f: enable(f)
+    cmd_table['D' + f] = lambda f=f: disable(f)
+
+@cmd
+def I():
+    pass
+
+@cmd
+def Qc():
+    pass
+
+@cmd
+def Qd():
+    pass
+
+@cmd
+def Qe():
+    pass
+
+@cmd
+def Qh():
+    pass
+
+@cmd
+def Qm():
+    pass
+
+@cmd
+def R():
+    report()
+
+@cmd
+def S():
+    pass
+
+@cmd
+def W():
+    pass
+
+def yes_no(b):
+    return 'y' if b else 'n'
+
+def report():
+    print version_string()
+    if vars['re']:
+        print'E o=%c b=%c l=%c v=%c m=%c' % ('n', 'n', 'y', 'n', 'y')
+    if vars['rf']:
+        print 'F' + ''.join(' ' + f for f in sorted(faults) if faults[f])
+    if vars['rl']:
+        print 'L x=%s- y=%s- z=nn' % ('n', 'n')
+    if vars['rm']:
+        xe = 'de'[enabled['x']]
+        ye = 'de'[enabled['y']]
+        ze = 'de'[enabled['z']]
+        print 'M x=%s%s y=%s%s z=%s%s' % (xe, '+', ye, '+', ze, '+')
+    if vars['rp']:
+        le = lr = yes_no(enabled['l'])
+        he = yes_no(enabled['h'])
+        ae = yes_no(enabled['a'])
+        we = yes_no(enabled['w'])
+        print 'P le=%s lr=%s he=%s ae=%s we=%s' % (le, lr, he, ae, we)
+    if vars['rq']:
+        print 'Q x=%d y=%d z=%d p=%d' % (0, 0, 0, 0)
+    if vars['rr']:
+        print 'R t=%d d=%d b=%d f=%d s=%d' % (44244, 58, 1924, 5850, 160)
+    if vars['rs']:
+        print 'S rx c=%d l=%d e=%#x, tx c=%d e=%#x' % (0, 0, 0, 0, 0)
+    if vars['rv']:
+        print ' '.join(['V'] + ['%s=%s' % (n, vars[n]) for n in sorted(vars)])
+    if vars['rw']:
+        print 'W'
+    sys.stdout.flush()
+
+def do_assignment(name, value):
+    var = vars.get(name)
+    if var is None:
+        print >>sys.stderr, 'Parse Error 1: unknown var %s' % (name,)
+    elif isinstance(var, Signed):
+        try:
+            vars[name] = Signed(int(value))
+        except ValueError:
+            print >>sys.stderr, 'Parse Error 2 in %s=%s' % (name, value)
+    elif isinstance(var, U):
+        try:
+            vars[name] = U(int(value))
+        except ValueError:
+            print >>sys.stderr, 'Parse Error 3 in %s=%s' % (name, value)
+    elif isinstance(var, E):
+        if value in var.vals and len(value) == 1:
+            vars[name] = E(var.vals, value)
+    else:
+        msg = 'Parse Error 4: can\'t parse "%s=%s"' % (name, value)
+        print >>sys.stderr, msg
+
+def parse(line):
+    line = line.strip()
+    if line in cmd_table:
+        cmd_table[line]()
+    elif line[2:3] == '=':
+        name = line[:2]
+        value = line[3:]
+        do_assignment(name, value)
+    else:
+        print >>sys.stderr, 'Parse Error 5: can\'t parse %r' % line
+
+def version_string():
+    global memoed_vs
+    try:
+        return memoed_vd
+    except NameError:
+        build_time = os.stat(sys.argv[0]).st_mtime
+        bt_str = time.strftime('%Y-%m-%dT%H:%M:%S%z', time.localtime(build_time))
+        memoed_vs = 'Kerfburn Back End, built ' + bt_str
+        return memoed_vs
+
+def calc_timeout():
+    if enabled['r'] and vars['ri']:
+        return vars['ri'] / 1000.0
+    return None
+
+def main(argv):
+    print version_string()
+    sys.stdout.flush()
+    inbuf = ''
+    while True:
+        timeout = calc_timeout()
+        rfds, wfds, xfds = select.select([sys.stdin], [], [], timeout)
+        if rfds:
+            b = os.read(sys.stdin.fileno(), 10)
+            if b == '':
+                break
+            inbuf += b
+            while '\n' in inbuf:
+                line, inbuf = inbuf.split('\n', 1)
+                parse(line)
+        else:
+            report()
+
+
+if __name__ == '__main__':
+    main(sys.argv)

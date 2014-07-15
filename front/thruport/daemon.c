@@ -16,6 +16,7 @@
 
 #include "client.h"
 #include "debug.h"
+#include "fwsim.h"
 #include "io.h"
 #include "paths.h"
 #include "receiver_service.h"
@@ -37,13 +38,13 @@ typedef struct service {
     service_instantiation_func *s_instantiate;
 } service;
 
-static service services[] = {
+static const service services[] = {
     // { "controller", CT_CONTROLLER, instantiate_controller_service },
     { "sender",     CT_SENDER,     instantiate_sender_service     },
     { "receiver",   CT_RECEIVER,   instantiate_receiver_service   },
     { "suspender",  CT_SUSPENDER,  instantiate_suspender_service  },
 };
-static size_t service_count = sizeof services / sizeof services[0];
+static const size_t service_count = sizeof services / sizeof services[0];
 
 static struct {
     pthread_mutex_t ds_lock;
@@ -64,11 +65,33 @@ static struct {
 };
 
 static bool      debug_daemon  = false;
+static bool      use_fwsim     = false;
 static int       listen_socket = -1;
 static pthread_t main_thread;
 static pthread_t acceptor_thread;
 static pthread_t send_thread;
 static pthread_t receive_thread;
+
+// Poor man's virtual functions
+static int open_whatever(void)
+{
+    return (use_fwsim ? open_fwsim : open_serial)();
+}
+
+static void close_whatever(void)
+{
+    (use_fwsim ? close_fwsim : close_serial)();
+}
+
+static int whatever_transmit(const char *buf, size_t count)
+{
+    return (use_fwsim ? fwsim_transmit : serial_transmit)(buf, count);
+}
+
+static ssize_t whatever_receive(char *buf, size_t max)
+{
+    return (use_fwsim ? fwsim_receive : serial_receive)(buf, max);
+}
 
 static void report_daemon_error(const char *label)
 {
@@ -171,7 +194,7 @@ static void accept_client_connection(void)
     }
 
     for (size_t i = 0; i < service_count; i++) {
-        service *sp = &services[i];
+        const service *sp = &services[i];
         if (c == sp->s_client_type) {
             syslog(LOG_INFO, "New %s client", sp->s_name);
             (*sp->s_instantiate)(client_sock);
@@ -283,7 +306,7 @@ static void *send_thread_main(void *p)
                 syslog(LOG_INFO, "EOF on sender");
                 break;          // XXX stop daemon and clean up
             }
-            if (serial_transmit(buf, nr))
+            if (whatever_transmit(buf, nr))
                 report_sender_error(LOG_ERR, "serial transmit failed");
         }
         free(buf);
@@ -296,7 +319,7 @@ static void *receive_thread_main(void *p)
 {
     while (true) {
         char buf[TTY_BUFSIZ];
-        ssize_t nr = serial_receive(buf, sizeof buf);
+        ssize_t nr = whatever_receive(buf, sizeof buf);
         if (nr > 0)
             broadcast_to_receivers(buf, nr);
         if (nr == 0) {
@@ -386,12 +409,17 @@ int resume_daemon(void)
 }
 
 __attribute__((noreturn))
-static void run_daemon(void)
+static void run_daemon(const char *fwsim)
 {
     int option = debug_daemon ? LOG_PERROR : 0;
     openlog("thruport", option, LOG_USER);
-    if (init_serial())
-        exit(EXIT_FAILURE);
+    if (fwsim) {
+        if (init_fwsim(fwsim))
+            exit(EXIT_FAILURE);
+    } else {
+        if (init_serial())
+            exit(EXIT_FAILURE);
+    }
     if (init_service())
         exit(EXIT_FAILURE);
 
@@ -400,7 +428,7 @@ static void run_daemon(void)
         bool use_timeout = false;
         if (daemon_state.ds_serial == SS_FAILED) {
             destroy_IO_threads();
-            close_serial();
+            close_whatever();
             disconnect_sender("serial port failure");
             const char msg[] = "[serial disconnect]\n";
             broadcast_to_receivers(msg, sizeof msg - 1);
@@ -409,13 +437,13 @@ static void run_daemon(void)
         if (daemon_state.ds_suspender_count) {
             if (daemon_state.ds_serial != SS_CLOSED) {
                 destroy_IO_threads();
-                close_serial();
+                close_whatever();
                 disconnect_sender("suspended");
                 daemon_state.ds_serial = SS_CLOSED;
             }
             pthread_cond_signal(&daemon_state.ds_suspender_cond);
         } else if (daemon_state.ds_serial == SS_CLOSED) {
-            if (open_serial() == 0) {
+            if (open_whatever() == 0) {
                 // succeeded
                 create_IO_threads();
                 daemon_state.ds_serial = SS_OPEN;
@@ -450,16 +478,17 @@ static void run_daemon(void)
 }
 
 // called when daemon explicitly started.
-int start_daemon(bool debug)
+int start_daemon(bool debug, const char *fwsim)
 {
     debug_daemon = debug;
+    use_fwsim = fwsim != NULL;
     int r = daemonize();
     if (r < 0)
         return r;
     if (r > 0)
         return 0;               // nonzero PID => success
     main_thread = pthread_self();
-    run_daemon();
+    run_daemon(fwsim);
 }
 
 // called when daemon auto-started by client.
@@ -471,5 +500,5 @@ int spawn_daemon(void)
     if (r > 0)
         return 0;
     main_thread = pthread_self();
-    run_daemon();
+    run_daemon(NULL);
 }
