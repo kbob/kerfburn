@@ -233,7 +233,7 @@ void report_all(void)
 
 void report_version(void)
 {
-    printf_P(PSTR("%S"), version);
+    printf_P(PSTR("%S\n"), version);
 }
 
 extern void enable_reporting(void)
