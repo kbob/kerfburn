@@ -5,42 +5,30 @@ Is this a bug database?
 
 ## Next!
 
-* Wire up back panel, power distribution, and relays.
+* Safety and fault improvments:
+
+   - rename `trigger_fault()` to `raise_fault()`.
+
+   - LO fault: only asserted if main laser selected
+
+   - LC fault:
+      - only asserted if visible laser selected
+      - add to kbmon.
+
+   - add a command to clear ES fault.
+
+      - When either SW or the button raises ES, it latches.
+
+      - It unlatches when the "clear fault" command arrives and the
+        button is up.  Use a state machine.
+
+   - when ES asserted, discard all motion and dwell commands.
+
+* Laser Power:
+  - write the i2c driver.
+  - ensure the LP is set to zero at boot time.
 
 * How are safety and back panel going to work?
-
-   - need an interrupt.  That's the first thing.  (I feel another
-     pun: switch-intr.)  **Done.**
-
-   - ISR sets a flag, immediately clears (or sets) output.
-     **Done.**
-
-   - Put the ISR and existing `e-stop.h` code into `safety.h`.
-     **Done.**
-
-   - <s>`safety-lasers.h` will have functions that enable/disable
-     lasers as safety faults allow.  `safety-lasers` depends on
-     `safety`, `fault`, and `lasers`.</s>
-    
-     <s>`safety-policy` would be a better name, but `safety-lasers` is
-     cuter.  The policy affects the motors as well as the lasers.</s>
-     **safety and safety-policy are merged.**
-
-   - Laser ISRs will call functions in safety-lasers.h to set/clear
-     OCnx pins according to safety policy.  **Done.**
-
-   - Ditto for motor ISRs.
-
-   - How do we call update_safety() when override vars are changed?
-     **Former me thought of this; the hook is in `update_overrides()`.
-
-   - The "Lid Closed" fault, `F_LC`, is just weird.  It bugs me for
-     two reasons.
-
-       + `F_LC` and `F_LO` are always opposite.  `F_LC` adds no
-         information.
-
-       + It's impossible to be fault-free.  One of them is always raised.
 
      I think I can do away with fault overrides and change the parser
      to call `update_safety()` instead of `update_overrides()`.  Then
@@ -51,13 +39,11 @@ Is this a bug database?
 
 ## Design
 
-* Need a list of fault  states.  In particular, need fault states when
-  we  fail to move  off the  limit switches.   If you  move 1  cm, and
-  you're still on the switch, the switch must be disconnected/broken.
+* Need fault states when we fail to move off the limit switches.  If
+  you move 1 cm, and you're still on the switch, the switch must be
+  disconnected/broken.
 
-  Also need to think about how faults are stored and reported.
-
-* If pulse width exceets pulse interval, the firmware crashes.  Where
+* If pulse width exceeds pulse interval, the firmware crashes.  Where
   should this be checked and prevented?
 
 
