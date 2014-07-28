@@ -619,7 +619,6 @@ def adjust_time(win):
         win.noutrefresh()
 
 
-
 def curses_main(stdscr):
     init()
 
@@ -694,25 +693,25 @@ def main(argv):
 if __name__ == '__main__':
     main(sys.argv)
 
-    import pprint
-    print 'Model'
-    print
-    print 'status'
-    pprint.pprint(model.status)
-    print
-    print 'vars'
-    pprint.pprint(model.vars)
-    print
-    print 'faults'
-    pprint.pprint(model.faults)
-    print
-    print 'enabled'
-    pprint.pprint(model.enabled)
-    print
-    print 'state'
-    pprint.pprint(model.state)
-    print
-    print 'changes'
-    pprint.pprint(model.changes)
-    print
-    print model.laser_status()[0]
+    # import pprint
+    # print 'Model'
+    # print
+    # print 'status'
+    # pprint.pprint(model.status)
+    # print
+    # print 'vars'
+    # pprint.pprint(model.vars)
+    # print
+    # print 'faults'
+    # pprint.pprint(model.faults)
+    # print
+    # print 'enabled'
+    # pprint.pprint(model.enabled)
+    # print
+    # print 'state'
+    # pprint.pprint(model.state)
+    # print
+    # print 'changes'
+    # pprint.pprint(model.changes)
+    # print
+    # print model.laser_status()[0]
