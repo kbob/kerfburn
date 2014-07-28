@@ -311,6 +311,9 @@ def update_faults(line, vars):
             model.changes += 1
         
 
+def update_ready(line, vars):
+    send_enable_reporting()
+
 def update_state(line, vars):
     m_e = model.enabled
     m_s = model.state
@@ -646,7 +649,10 @@ def curses_main(stdscr):
             while '\n' in inbuf:
                 line, inbuf = inbuf.split('\n', 1)
                 line = line.rstrip('\r')
-                record_update(line, stdscr)
+                if line == 'Ready':
+                    send_enable_reporting()
+                else:
+                    record_update(line, stdscr)
         if sys.stdin in ret[0]:
             ch = os.read(sys.stdin.fileno(), 1)
             if ch.upper() == 'Q':
