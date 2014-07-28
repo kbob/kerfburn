@@ -17,6 +17,7 @@
 #include "serial.h"
 #include "timer.h"
 #include "variables.h"
+#include "version.h"
 
 typedef void report_func(void);
 
@@ -218,6 +219,7 @@ void report_all(void)
     if (reporting_is_active)
         return;
     reporting_is_active = true;
+    report_version();
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
         const v_index var = pgm_read_byte(&rdp->rd_var);
@@ -227,6 +229,11 @@ void report_all(void)
         }
     }
     reporting_is_active = false;
+}
+
+void report_version(void)
+{
+    printf_P(PSTR("%S"), version);
 }
 
 extern void enable_reporting(void)

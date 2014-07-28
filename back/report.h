@@ -4,6 +4,7 @@
 extern void init_reporting(void);
 
 extern void report_all(void);
+extern void report_version(void);
 
 extern void enable_reporting(void);
 extern void disable_reporting(void);

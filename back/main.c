@@ -21,7 +21,6 @@
 #include "serial.h"
 #include "timer.h"
 #include "variables.h"
-#include "version.h"
 
 static void initialize_devices(void)
 {
@@ -64,7 +63,7 @@ static void trigger_serial_faults(uint8_t e)
 static void do_background_task(void)
 {
     serial_rx_start();
-    printf_P(version);
+    report_version();
     printf_P(PSTR("\nReady\n"));
     while (true) {
         while (!serial_rx_has_lines())
