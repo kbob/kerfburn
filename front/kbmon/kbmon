@@ -12,8 +12,6 @@ import subprocess
 import sys
 import time
 
-use_curses = True
-
 # intialization:
 #  start "thruport receive"
 #  thruport-send "rx=y\nR"
@@ -215,7 +213,7 @@ class Model(object):
     def laser_status(self):
         # XXX Check E-stop and lid switches
         if self.faults['ES']:
-            return ('Emergency Stop', True)
+            return '!Emergency Stop!'
         ls = self.vars['ls']
         s = all_vars['ls'].format(ls, verbose=True)
         if ls == 'n':
@@ -375,9 +373,9 @@ updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
         (r'Kerfburn Back End, built +(?P<version_string>.*)', update_version),
 
         # L - limit switch report
-        (r'L x=(?P<xmin>[-ny])(?P<xmax>[-ny]) '
-            'y=(?P<ymin>[-ny])(?P<ymax>[-ny]) '
-            'z=(?P<zmin>[-ny])(?P<zmax>[-ny])',
+        (r'L x=(?P<xmin>[_ny])(?P<xmax>[_ny]) '
+            'y=(?P<ymin>[_ny])(?P<ymax>[_ny]) '
+            'z=(?P<zmin>[_ny])(?P<zmax>[_ny])',
          update_state),
 
         # M - motor report
@@ -412,9 +410,9 @@ updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
         # S - serial report
         (r'S rx c=(?P<rx_chars>\d+) '
                'l=(?P<rx_lines>\d+) '
-               'e=(?P<rx_error>0x[\dA-Fa-f]+), '
+               'e=(?P<rx_error>(?:0x)?[\dA-Fa-f]+), '
             'tx c=(?P<tx_chars>\d+) '
-               'e=(?P<tx_error>0x[\dA-Fa-f]+)',
+               'e=(?P<tx_error>(?:0x)?[\dA-Fa-f]+)',
          update_state),
 
 
@@ -458,7 +456,12 @@ def record_update(line, screen):
     try:
         update_model(line)
     except Exception, x:
-        screen.addstr(2, 2, pad(76, x.message))
+        addnstr_attr(screen, 2, 2, 76, '!Exception!: !%s!' % x.message)
+
+        # attr = curses.color_pair(1) | curses.A_BOLD
+        # screen.addstr(2, 2, 'Exception: ', attr)
+        # screen.addstr(2, 13, pad(67, x.message), attr)
+        # screen.addstr(2, 2, pad(76, x.message))
 
 
 def send_enable_reporting():
@@ -470,7 +473,7 @@ def send_enable_reporting():
     for v in all_vars:
         if v.startswith('r') and v != 'ri':
             sender.write('%s=y\n' % v)
-    sender.write('ri=300\n')
+    sender.write('ri=500\n')
     sender.write('Er\n')
     sender.flush()
     sender.close()
@@ -504,6 +507,7 @@ def report_mask():
 def addnstr_attr(win, y, x, w, s):
     attrs = (curses.A_NORMAL, curses.color_pair(1) | curses.A_BOLD)
     ai = 0
+    assert type(s) == str, 's=%r' % (s,)
     for substr in s.split('!'):
         substr = substr[:w]
         win.addstr(y, x, substr, attrs[ai])
@@ -631,7 +635,10 @@ def curses_main(stdscr):
     tt = 0
     while True:
         timeout = 1.0 - math.modf(time.time())[0]
-        ret = select.select([sys.stdin, receiver], [], [], timeout)
+        try:
+            ret = select.select([sys.stdin, receiver], [], [], timeout)
+        except select.error:
+            continue
         if receiver in ret[0]:
             b = os.read(receiver.fileno(), 10)
             if b == '':
@@ -639,6 +646,7 @@ def curses_main(stdscr):
             inbuf += b
             while '\n' in inbuf:
                 line, inbuf = inbuf.split('\n', 1)
+                line = line.rstrip('\r')
                 record_update(line, stdscr)
         if sys.stdin in ret[0]:
             ch = os.read(sys.stdin.fileno(), 1)

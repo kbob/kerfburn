@@ -120,7 +120,7 @@ def report():
     if vars['rf']:
         print 'F' + ''.join(' ' + f for f in sorted(faults) if faults[f])
     if vars['rl']:
-        print 'L x=%s- y=%s- z=nn' % ('n', 'n')
+        print 'L x=%s_ y=%s_ z=nn' % ('n', 'n')
     if vars['rm']:
         xe = 'de'[enabled['x']]
         ye = 'de'[enabled['y']]
