@@ -139,8 +139,6 @@ Is this a bug database?
 
 ## Cleanup
 
-* Rename `trigger_fault()` to `raise_fault()`.
-
 * Change `fault.h` so most functions are in-line.
 
 * Replace divide + modulus with div(3).  Benchmark it first.

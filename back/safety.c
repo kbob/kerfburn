@@ -20,9 +20,9 @@
 //     def ISR():
 //         if button_down:
 //             button_was_down = True
-//             trigger_fault(F_SE)
+//             raise_fault(F_SE)
 //
-//     def trigger_fault():
+//     def raise_fault():
 //         set_fault()
 //         update_safety()
 //         start_animation()

@@ -221,7 +221,7 @@ ISR(USART0_RX_vect)
     if (bit_is_set(UCSR0A, RXC0)) {
         uint8_t c = UDR0;
         if (c == ASCII_CAN)
-            trigger_fault(F_ES);
+            raise_fault(F_ES);
         else {
             uint8_t new_tail = rx_tail + 1;
             if (new_tail == rx_head)

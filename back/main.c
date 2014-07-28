@@ -53,18 +53,18 @@ static void initialize_devices(void)
 static void trigger_serial_faults(uint8_t e)
 {
     if (e & SE_FRAME_ERROR)
-        trigger_fault(F_SF);
+        raise_fault(F_SF);
     if (e & SE_DATA_OVERRUN)
-        trigger_fault(F_SO);
+        raise_fault(F_SO);
     if (e & SE_PARITY_ERROR)
-        trigger_fault(F_SP);
+        raise_fault(F_SP);
 }
 
 static void do_background_task(void)
 {
     serial_rx_start();
     report_version();
-    printf_P(PSTR("\nReady\n"));
+    printf_P(PSTR("Ready\n"));
     while (true) {
         while (!serial_rx_has_lines())
             continue;

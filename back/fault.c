@@ -117,8 +117,8 @@ void clear_fault(fault_index findex)
     }
 }
 
-// N.B.  trigger_fault() is called both from interrupts and from base level.
-void trigger_fault(fault_index findex)
+// N.B.  raise_fault() is called both from interrupts and from base level.
+void raise_fault(fault_index findex)
 {
     if (fault_is_set(findex))
         return;

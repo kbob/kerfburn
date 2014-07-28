@@ -13,5 +13,5 @@ void init_lasers(void)
 
 ISR(LASER_WATCHDOG_TIMER_COMP_vect)
 {
-    trigger_fault(F_SI);
+    raise_fault(F_SI);
 }

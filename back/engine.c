@@ -76,7 +76,7 @@ void start_engine(void)
 
         // Some queues have stopped.  Raise a Software Underflow Fault,
         // wait for all queues to stop, then restart the engine.
-        trigger_fault(F_SU);
+        raise_fault(F_SU);
         await_engine_stopped();
     }
 }
