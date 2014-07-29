@@ -211,6 +211,8 @@ class Model(object):
         return 'Idle'
 
     def laser_status(self):
+        if self.status:
+            return ''
         # XXX Check E-stop and lid switches
         if self.faults['ES']:
             return '!Emergency Stop!'
@@ -258,43 +260,44 @@ class Model(object):
             else:
                 return ''
 
+        if self.status:
+            return ''
         ok = True
         s = ''
         if self.faults['ES']:
             s += ', !Emergency Stop!'
             ok = False
-        if not self.enabled.get('low_voltage', True):
+        xe = self.enabled.get('x_motor')
+        ye = self.enabled.get('y_motor')
+        ze = self.enabled.get('z_motor')
+        if xe is None or ye is None or ze is None:
+            pass
+        elif not xe and not ye and not ze:
+            # s += ', !all disabled!'
+            ok = False
+        elif not self.enabled.get('low_voltage', True):
             s += ', !low voltage disabled!'
             ok = False
         elif not self.state.get('low_voltage_ready', True):
             s += ', !low voltage not ready!'
             ok = False
         if ok:
-            xe = self.enabled.get('x_motor')
-            ye = self.enabled.get('y_motor')
-            ze = self.enabled.get('z_motor')
-            if xe is None or ye is None or ze is None:
-                pass
-            elif not xe and not ye and not ze:
-                s += ', !all disabled!'
-                ok = False
+            if xe:
+                xd = format_dir(self.state['x_dir'])
+                s += ', X ' + xd
             else:
-                if xe:
-                    xd = format_dir(self.state['x_dir'])
-                    s += ', X ' + xd
-                else:
-                    s += ', X disabled'
-                if ye:
-                    yd = format_dir(self.state['y_dir'])
-                    s += ', Y ' + yd
-                else:
-                    s += ', Y disabled'
-                if ze:
-                    zd = format_dir(self.state['z_dir'])
-                    s += ', Z ' + zd
-                else:
-                    s += ', Z disabled'
-                    
+                s += ', X disabled'
+            if ye:
+                yd = format_dir(self.state['y_dir'])
+                s += ', Y ' + yd
+            else:
+                s += ', Y disabled'
+            if ze:
+                zd = format_dir(self.state['z_dir'])
+                s += ', Z ' + zd
+            else:
+                s += ', Z disabled'
+
         if ok:
             s = 'Enabled' + s
         else:
@@ -545,6 +548,10 @@ def update_screen(win):
     row = 1
     for f in sorted(all_faults):
         if f == 'LC':
+            continue
+        if model.status:
+            f_win.addstr(row, 2, pad(5, ''), curses.A_NORMAL)
+            f_win.addstr(row, 8, pad(30, ''), curses.A_NORMAL)
             continue
         desc = all_faults[f]
         value = model.faults[f]
