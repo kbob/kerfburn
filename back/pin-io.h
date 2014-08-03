@@ -15,7 +15,10 @@
 // then REG_BIT_IS(FROB_STATE_PIN, FROB_STATE_DISABLED) would compile into
 // code equivalent to this.
 //
-//     (PINA & (1 << 2))
+//     ((PINA & (1 << 2)) == HIGH)
+//
+// (N.B., gen_pin_mappings defines some antonym symbols: enabled !=
+// disabled, on != off, etc.)
 
 #define REG_BIT_IS(reg_bit, value)                              \
     ((value) ?                                                  \
@@ -32,7 +35,7 @@
 // then SET_REG_BIT(FOO_BAR, FOO_BAR_CRUMMY) would compile into code
 // equivalent to this.
 //
-//     PORTB |= 1 << 5.
+//     (PORTB |= 1 << 5)
 
 #define SET_REG_BIT(reg_bit, value)                             \
     SET_BIT(reg_bit##_reg, reg_bit##_bit, (value))
