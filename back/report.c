@@ -228,6 +228,7 @@ void report_all(void)
             (*func)();
         }
     }
+    puts("---\n");
     reporting_is_active = false;
 }
 

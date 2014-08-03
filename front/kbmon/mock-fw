@@ -113,6 +113,10 @@ def W():
 def yes_no(b):
     return 'y' if b else 'n'
 
+def limits():
+    t = int(time.time())
+    return yes_no(t & 2), yes_no(t & 1);
+
 def report():
     print version_string()
     if vars['re']:
@@ -120,7 +124,7 @@ def report():
     if vars['rf']:
         print 'F' + ''.join(' ' + f for f in sorted(faults) if faults[f])
     if vars['rl']:
-        print 'L x=%s_ y=%s_ z=nn' % ('n', 'n')
+        print 'L x=%s_ y=%s_ z=nn' % limits()
     if vars['rm']:
         xe = 'de'[enabled['x']]
         ye = 'de'[enabled['y']]
@@ -137,11 +141,13 @@ def report():
     if vars['rr']:
         print 'R t=%d d=%d b=%d f=%d s=%d' % (44244, 58, 1924, 5850, 160)
     if vars['rs']:
-        print 'S rx c=%d l=%d e=%#x, tx c=%d e=%#x' % (0, 0, 0, 0, 0)
+        rx_chars = int(time.time()) % 256
+        print 'S rx c=%d l=%d e=%#x, tx c=%d e=%#x' % (rx_chars, 0, 0, 0, 0)
     if vars['rv']:
         print ' '.join(['V'] + ['%s=%s' % (n, vars[n]) for n in sorted(vars)])
     if vars['rw']:
         print 'W'
+    print '---'
     sys.stdout.flush()
 
 def do_assignment(name, value):
@@ -193,6 +199,7 @@ def calc_timeout():
 
 def main(argv):
     print version_string()
+    print 'Ready'
     sys.stdout.flush()
     inbuf = ''
     while True:

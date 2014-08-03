@@ -1,57 +1,106 @@
-#!/usr/bin/python
+#!/bin/python
 
+# XXX
+log_entries = []
+def log(s):
+    log_entries.append(s)
+
+
+from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
+import copy
 import curses
+from curses.ascii import ESC
+import functools
 import math
 import optparse
 import os
 import re
 import select
-import string
 import subprocess
 import sys
 import time
 
-# intialization:
-#  start "thruport receive"
-#  thruport-send "rx=y\nR"
-#  put keyboard in rare mode
 
-# main loop:
-#  select from stdin, thruport, timer
-#  when stdin ready:
-#   parse and execute 1-char command
-#  when thruport ready:
-#   read and parse one line
-#   update vars
-#   update screen
+# Observer and Observable
 
-# This is going to want an MVC thing.
-# Maybe I should start by writing the Model.
 
-# Model:
-#  Status
-#   overall
-#   lasers
-#   motors
-#  Vars
-#   [list all 25]
-#  Faults
-#   [list all 12]
-#  Enabled
-#   [list 7, not reporting_enabled]
-#  State
-#   limit switches
-#   safety switches
-#   queues
-#   memory
-#   serial
-#   lv power ready
+class Observer(object):
 
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        self._observeds = []
+        self._observations = dict()
+
+    # Subclass interface
+
+    def observe(self, observable):
+        observable.add_observer(self)
+        self._observeds = []
+        self._observations.setdefault(observable, None)
+
+    @abstractmethod
+    def make_observation(self, observed):
+        pass
+
+    @abstractmethod
+    def observe_change(self, observed):
+        """subclasses override to process changes."""
+
+    def last_observation(self, observed):
+        return self._observations[observed]
+
+    # Observed object interface
+
+    def check_observed(self, observed):
+        state = self.make_observation(observed)
+        if self._observations[observed] != state:
+            self._observations[observed] = copy.copy(state)
+            self.observe_change(observed)
+        
+
+class Observable(object):
+
+    def __init__(self):
+        super(Observable, self).__init__()
+        self._observers = set()
+
+    def add_observer(self, observer):
+        self._observers.add(observer)
+
+    def notify_observers(self):
+        for observer in self._observers:
+            observer.check_observed(self)
+
+
+# The basic design is Model-View-Controller.
+#
+# The Model is a passive object, the singleton member of class Model.
+# It stores all the information that the Controller retrieves about
+# the laser cutter's current state.
+#
+# The View either displays the model's information.  By default, it
+# displays on a terminal in full screen mode.  It can alternately
+# output a one-time snapshot as text.
+#
+# The Controller opens a thruport connection to the laser cutter,
+# enables frequent reporting, and uses the resulting reports to update
+# the model and, indirectly, the view.
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# MODEL
+#
+
+
+# A Fault Descriptor describes a fault.  (duh...)
 
 class FaultDesc(namedtuple('FaultDesc', 'id name')):
     pass
 
+# Describe all faults.
 
 all_faults = {f[0]: FaultDesc(*f) for f in (
     ('ES', 'Emergency Stop'),
@@ -68,6 +117,10 @@ all_faults = {f[0]: FaultDesc(*f) for f in (
     ('SI', 'Software Missed Interrupt'),
     )}
 
+
+# The laser cutter has variables, and the veriables are of three types:
+# signed integer, unsigned integer, and enumeration.  These classes
+# help with the semantics of those types.
 
 class Unsigned:
 
@@ -113,27 +166,26 @@ class Enum(dict):
         return v
 
 enum_ny    = Enum({'n': 'No', 'y': 'Yes'}, default='n')
-
 enum_yn    = Enum({'n': 'No', 'y': 'Yes'}, default='y')
-
 enum_ncswa = Enum({'n': 'None',
                    'c': 'Complete',
                    's': 'Startup',
                    'w': 'Warning',
                    'a': 'Alert'},
                   default='n')
-
 enum_nmv   = Enum({'n': 'None',
                    'm': 'Main Laser',
                    'v': 'Visible Laser'},
                 default='n')
-
 enum_octd  = Enum({'o': 'Off',
                    'c': 'Continuous',
                    't': 'Timed',
                    'd': 'Distance'},
                   default='o')
 
+
+# A Variable Descriptor describes a variable -- not its current value,
+# but what it is: name, type, description.
 
 class VarDesc(namedtuple('VarDesc', 'id type short_name full_name')):
 
@@ -143,9 +195,12 @@ class VarDesc(namedtuple('VarDesc', 'id type short_name full_name')):
     def format(self, value, verbose=False):
         return self.type.format(value, verbose)
 
+    @property
     def is_report(self):
         i = self.id
         return i.startswith('r') and i != 'ri'
+
+# All variables described.
 
 all_vars = {v[0]: VarDesc(*v) for v in (
     ('ia', enum_ncswa, 'Illum. Anim.',    'Illumination Animation'),
@@ -176,17 +231,24 @@ all_vars = {v[0]: VarDesc(*v) for v in (
     )}
 
 
+model_status = Observable()
+model_clock = Observable()
+model_updates = Observable()
+
+
 class Model(object):
 
     def __init__(self):
-        self.status = None
+        super(Model, self).__init__()
+        self._status = None
         self.version_string = '--'
         self.vars = {n: desc.default_value()
                      for (n, desc) in all_vars.iteritems()}
         self.faults = {f: False for f in all_faults}
         self.enabled = {}
         self.state = {}
-        self.changes = 0
+        self.clock = None
+        self.seq = 0
 
     def __str__(self):
         s = 'Model(\n'
@@ -195,7 +257,6 @@ class Model(object):
         s += '      faults:  %r\n' % self.faults
         s += '      enabled: %r\n' % self.enabled
         s += '      state:   %r\n' % self.state
-        s += '      changes: %r'   % self.changes
         return s
        
     def overall_status(self):
@@ -213,7 +274,6 @@ class Model(object):
     def laser_status(self):
         if self.status:
             return ''
-        # XXX Check E-stop and lid switches
         if self.faults['ES']:
             return '!Emergency Stop!'
         ls = self.vars['ls']
@@ -304,18 +364,733 @@ class Model(object):
             s = 'Disabled' + s
         return s
 
+    LimitsState = namedtuple('limits', 'xmin xmax ymin ymax zmin zmax')
+    
+    SerialState = namedtuple('serial',
+                             'rx_lines rx_chars rx_error tx_chars tx_error')
+
+    def limits(self):
+        return self._subset_state(self.LimitsState)
+
+    def serial(self):
+        return self._subset_state(self.SerialState)
+
+    def _subset_state(self, cls):
+        return cls(*(self.state.get(f, ' ') for f in cls._fields))
+
+    def get_status(self):
+        return self._status
+
+    def set_status(self, value):
+        self._status = value
+        model_status.notify_observers()
+
+    status = property(get_status, set_status)
+
+model = Model()
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+#  VIEW
+#
+
+# This is a perfectly ordinary object oriented GUI.  There are two
+# interpenetrating hierarchies.  The inheritance hierarchy is rooted
+# at the superclass, Window, and various types of windows subclass
+# Window.  The layout hierarchy is rooted at the Screen, and child
+# windows cover rectangular subregions of their parents.
+#
+# Each Window has a curses window as a member, which it uses for
+# drawing.
+#
+
+# Utilities.
+
+# front end for curses.addstr().  The string is padded to the width s.
+# Exclamation points (!)  are replaced with attribute changes.
+# Odd-numbered excls switch to Dangerous Red, and even-numbered excls
+# switch back to normal text.
+
+def addnstr_attr(win, y, x, w, s):
+    attrs = (curses.A_NORMAL, curses.color_pair(1) | curses.A_BOLD)
+    ai = 0
+    assert type(s) == str, 's=%r' % (s,)
+    for substr in s.split('!'):
+        substr = substr[:w]
+        win.addstr(y, x, substr, attrs[ai])
+        x += len(substr)
+        w -= len(substr)
+        ai = 1 - ai
+    if w:
+        win.addstr(y, x, ' ' * w, attrs[0])
+
+# pad or truncate the string to the width.
+def pad(w, s):
+    s = str(s)[:w]
+    s += ' ' * (w - len(s))
+    return s
+
+# left-pad or left-truncate the string to the width.
+def lpad(w, s):
+    s = str(s)[:w]
+    s = ' ' * (w - len(s)) + s
+    return s
+
+
+# Points and Rects are used for window layout.
+class Point(namedtuple('Point', 'y x')):
+
+    def __add__(self, other):
+        return Point(self.y + other[0], self.x + other[1])
+
+    def __sub__(self, other):
+        # Arrrgh!  I've been reading too much Smalltalk code.
+        return Point(self.y - other[0], self.x - other[1])
+
+
+class Rect(namedtuple('Rect', 'origin size')):
+
+    @property
+    def extent(self):
+        return self.origin + self.size
+
+
+class Window(object):
+
+    """the abstract base class of the window class hierarchy."""
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, title=None, children=[], curses_window=None):
+        super(Window, self).__init__()
+        self.parent = None
+        self.children = children
+        self.cwin = curses_window or curses.newwin(0, 0)
+        self.title = title
+        for child in children:
+            child.parent = self
+
+    # Geometry
+
+    @abstractproperty
+    def best_size(self):
+        """Return a point."""
+
+    @property
+    def stretches(self):
+        """Does this window stretch in Y or X?"""
+        return (False, False)
+
+    def layout(self, rect):
+        # Windows with children will want to override this method.
+        # N.B., rect is in absolute screen coordinates.
+        self.bounds = rect
+
+    # x_ticks and y_ticks are used by Row and Column to draw separators.
+    x_ticks = y_ticks = {}
+
+    # Contents
+
+    @abstractmethod
+    def draw_unchanging(self):
+        """Draw elements that won't change unless the window resizes"""
+
+    @abstractmethod
+    def draw_changing(self):
+        """Draw elements that may change at any time."""
+
+    def refresh(self, full):
+        if full:
+            self.cwin.erase()
+            self.draw_unchanging()
+        self.draw_changing()
+        self.cwin.noutrefresh()
+
+    refresh_list = []
+
+    def needs_refresh(self):
+        type(self).refresh_list.append(self)
+
+    def all_need_refresh(self):
+        self.needs_refresh()
+        for child in self.children:
+            child.all_need_refresh()
+
+    # Geometric Properties
+
+    def get_size(self):
+        w = self.cwin
+        return Point(*w.getmaxyx())
+
+    def set_size(self, value):
+        if value != self.size:
+            w = self.cwin
+            w.resize(*value)
+
+    size = property(get_size, set_size)
+
+    # N.B., a window's origin and bounds.origin are in abosolute
+    # screen coordinates.  Its offset is relative to its parent's
+    # origin.
+
+    def get_origin(self):
+        w = self.cwin
+        origin = Point(*w.getbegyx())
+        return origin
+
+    def set_origin(self, value):
+        w = self.cwin
+        if value != self.origin:
+            w.mvwin(*value)
+
+    origin = property(get_origin, set_origin)
+
+    def get_bounds(self):
+        return Rect(self.origin, self.size)
+
+    def set_bounds(self, value):
+        self.size = Point(min(self.size.y, value.size.y),
+                          min(self.size.x, value.size.x))
+        self.origin = value.origin
+        self.size = value.size
+
+    bounds = property(get_bounds, set_bounds)
+
+    @property
+    def offset(self):
+        offset = self.origin
+        if self.parent:
+            offset -= self.parent.origin
+        return offset
+
+
+class Screen(Window):
+
+    """A Window class that represents the whole screen."""
+
+    def __init__(self, curses_screen, child):
+        super(Screen, self).__init__(None, [child], curses_screen)
+        self._prev_size = None
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        return self.child.best_size
+
+    def layout(self, rect):
+        self.child.layout(rect)
+
+    # Contents
+
+    def draw_unchanging(self):
+        pass
+
+    def draw_changing(self):
+        pass
+
+    def refresh(self, full=False):
+        size_changed = self._prev_size != self.size
+        if size_changed:
+            self.layout(self.bounds)
+            self._prev_size = self.size
+            self.cwin.erase()
+            self.all_need_refresh()
+        refreshees = self.refresh_list[:]
+        self.refresh_list[:] = []
+        for window in refreshees:
+            window.refresh(size_changed)
+        curses.doupdate()
+
+    # Hierarchy
+
+    @property
+    def child(self):
+        return self.children[0]
+
+
+class Column(Window):
+
+    """A window subclass that arranges its children in a column."""
+    def __init__(self, children):
+        title = children[0].title if children else None
+        super(Column, self).__init__(title, children)
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        cs = [child.best_size for child in self.children]
+        h = sum((size.y for size in cs), 0) + len(self.children) - 1
+        w = max(size.x for size in cs)
+        return Point(h, w)
+
+    @property
+    def stretches(self):
+        cs = [child.stretches for child in self.children]
+        return (any(s[0] for s in cs), all(s[1] for s in cs))
+
+    def layout(self, rect):
+        super(Column, self).layout(rect)
+        heights = [child.best_size.y for child in self.children]
+        excess_height = rect.size.y - self.best_size.y
+        if excess_height > 0:
+            stretchers = [i
+                          for i, child in enumerate(self.children)
+                          if child.stretches[0]]
+            if stretchers:
+                # XXX distribute evenly
+                heights[stretchers[0]] += excess_height
+        y, x = rect.origin
+        h, w = rect.size
+        for child, cheight in zip(self.children, heights):
+            csize = Point(cheight, w)
+            crect = Rect(Point(y, x), csize)
+            child.layout(crect)
+            y += cheight + 1
+        self.y_ticks = [sum(heights[:i]) + i - 1
+                        for i in range(1, len(heights))]
+
+    # Contents
+
+    def draw_unchanging(self):
+        from curses import ACS_HLINE, ACS_TTEE, ACS_BTEE, ACS_PLUS
+        w = self.cwin
+        for uchild, lchild in zip(self.children[:-1], self.children[1:]):
+            y = lchild.offset.y - 1
+            w.hline(y, 0, ACS_HLINE, self.size.x)
+            for x in uchild.x_ticks:
+                w.vline(y, x, ACS_BTEE, 1)
+            for x in lchild.x_ticks:
+                ch = ACS_TTEE
+                if x in uchild.x_ticks:
+                    ch = ACS_PLUS
+                w.vline(y, x, ch, 1)
+            if lchild.title:
+                w.addstr(y, 1, ' %s ' % lchild.title, curses.A_BOLD)
+            # XXX do this better.
+            # XXX get rid of A_BOLD and use  title_attr.
+            for i, x in enumerate(lchild.x_ticks, 1):
+                w.addstr(y, x + 2,
+                         ' %s ' % lchild.children[i].title,
+                         curses.A_BOLD)
+
+    def draw_changing(self):
+        pass
+
+
+class Row(Window):
+
+    """A window subclass that arranges its children in a row."""
+
+    def __init__(self, children):
+        title = children[0].title if children else None
+        super(Row, self).__init__(title, children)
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        cs = [child.best_size for child in self.children]
+        h = max(size.y for size in cs)
+        w = sum((size.x for size in cs), 0) + len(self.children) - 1
+        return Point(h, w)
+
+    @property
+    def stretches(self):
+        cs = [child.stretches for child in self.children]
+        return (all(s[0] for s in cs), any(s[1] for s in cs))
+
+    def layout(self, rect):
+        super(Row, self).layout(rect)
+        widths = [child.best_size.x for child in self.children]
+        excess_width = rect.size.x - self.best_size.x
+        if excess_width > 0:
+            stretchers = [i
+                          for i, child in enumerate(self.children)
+                          if child.stretches[1]]
+            if stretchers:
+                # XXX distribute evenly
+                widths[stretchers[0]] += excess_width
+
+        y, x = rect.origin
+        h, w = rect.size
+        for child, cwidth in zip(self.children, widths):
+            csize = Point(h, cwidth)
+            crect = Rect(Point(y, x), csize)
+            child.layout(crect)
+            x += cwidth + 1
+        self.x_ticks = [sum(widths[:i]) + i - 1 for i in range(1, len(widths))]
+
+    # Contents
+
+    def draw_unchanging(self):
+        from curses import ACS_VLINE, ACS_LTEE, ACS_RTEE, ACS_PLUS
+        w = self.cwin
+        for lchild, rchild in zip(self.children[:-1], self.children[1:]):
+            x = rchild.origin.x - 1
+            w.vline(0, x, ACS_VLINE, self.size.y)
+            for y in lchild.y_ticks:
+                w.hline(y, x, ACS_RTEE, 1)
+            for y in rchild.y_ticks:
+                ch = ACS_LTEE
+                if y in lchild.y_ticks:
+                    ch = ACS_PLUS
+                w.hline(y, x, ch, 1)
+
+
+    def draw_changing(self):
+        pass
+
+
+class StatusWindow(Window, Observer):
+
+    """A window subclass that shows the laser cutter's overall status."""
+
+    def __init__(self, title):
+        super(StatusWindow, self).__init__(title)
+        self.observe(model_updates)
+        self.observe(model_status)
+        self.observe(model_clock)
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        return Point(6, 80)
+
+    # Observation
+
+    def make_observation(self, observed):
+        if observed is model_updates:
+            return model.seq
+        if observed is model_status:
+            return model.status
+        if observed is model_clock:
+            return model.clock
+        assert False
+
+    def observe_change(self, observed):
+        self.needs_refresh()
+
+    # Contents
+
+    def draw_unchanging(self):
+        w = self.cwin
+        w.addstr(0, 2, self.title, curses.A_BOLD)
+        w.addstr(2, 2, 'Status: ')
+        w.addstr(3, 2, 'Laser:  ')
+        w.addstr(4, 2, 'Motors: ')
+
+    def draw_changing(self):
+        w = self.cwin
+        pw = self.size.x - 12
+        now = self.last_observation(model_clock)
+        time_str = time.strftime('%H:%M:%S', time.localtime(now))
+        w.addstr(0, self.size.x - 9, time_str)
+        addnstr_attr(w, 2, 10, pw, model.overall_status())
+        addnstr_attr(w, 3, 10, pw, model.laser_status())
+        addnstr_attr(w, 4, 10, pw, model.motor_status())
+
+
+class ModelWindow(Window, Observer):
+
+    def __init__(self, title):
+        super(ModelWindow, self).__init__(title)
+        self.observe(model_updates)
+        self.observe(model_status)
+
+    # Observation
+
+    def make_observation(self, observed):
+        if observed is model_updates:
+            return self.observe_model()
+        if observed is model_status:
+            return model.status
+        assert False
+
+    def observe_change(self, observed):
+        self.needs_refresh()
+
+    @abstractmethod
+    def observe_model(self):
+        pass
+
+    # Geometry
+
+    def draw_changing(self):
+        status = self.last_observation(model_status)
+        state = self.last_observation(model_updates)
+        if status or not state:
+            self.blank_values()
+        else:
+            self.draw_values(state)
+
+    @abstractmethod
+    def blank_values(self):
+        pass
+
+    @abstractmethod
+    def draw_values(self, state):
+        pass
+
+
+class FaultWindow(ModelWindow):
+
+    """A window subclass that shows the laser cutter's fault states."""
+
+    def __init__(self, title):
+        super(FaultWindow, self).__init__(title)
+        self._name_w = max(len(desc.name) for desc in all_faults.values())
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        h = len(all_faults) + 1
+        w = self._name_w + 11
+        return Point(h, w)
+
+    @property
+    def stretches(self):
+        return (True, True)
+
+    # Observation
+
+    def observe_model(self):
+        return model.faults
+             
+    # Contents
+
+    def draw_unchanging(self):
+        pass
+
+    def blank_values(self):
+        w = self.cwin
+        faults = sorted(f for f in all_faults if f != 'LC')
+        nw = self.size.x - 11
+        for row in range(len(faults)):
+            w.addstr(row, 2, ' ' * 5)
+            w.addstr(row, 9, ' ' * nw)
+
+    def draw_values(self, state):
+        w = self.cwin
+        faults = sorted(f for f in all_faults if f != 'LC')
+        nw = self.size.x - 11
+        for row, f in enumerate(faults):
+            if state:
+                if state[f]:
+                    value = 'FAULT'
+                    attr = curses.color_pair(1) | curses.A_BOLD
+                else:
+                    value = '   ok'
+                    attr = curses.A_NORMAL
+            else:
+                value = '     '
+                attr = curses.A_NORMAL
+            name = all_faults[f].name
+            w.addstr(row, 2, value, attr)
+            w.addstr(row, 9, pad(nw, name), attr)
+
+
+class VariablesWindow(ModelWindow):
+
+    """A window subclass that shows the laser cutter's variables."""
+
+    def __init__(self, title):
+
+        def fmt_var(state, v):
+            return all_vars[v].format(state[v])
+
+        def fmt_reports(state):
+            return ''.join([v[1], v[1].upper()][state[v] == 'y']
+                           for v in reports)
+
+        super(VariablesWindow, self).__init__(title)
+        vars = sorted(all_vars.iteritems())
+        reports = [v for v, d in vars if d.is_report]
+        non_reports = [(v, d) for v, d in vars if not d.is_report]
+        rlabel = 'Reports'
+        self._labels = [d.short_name for v, d in non_reports] + [rlabel]
+        self._vars = [(len(d.short_name),
+                       functools.partial(fmt_var, v=v))
+                      for v, d in non_reports] + [(len(rlabel), fmt_reports)]
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        h = len(self._labels) + 1
+        w = 2 + 20 + 1
+        return Point(h, w)
+
+    @property
+    def stretches(self):
+        return (True, False)
+
+    # Observation
+
+    def observe_model(self):
+        return model.vars
+
+    # Contents
+
+    def draw_unchanging(self):
+        w = self.cwin
+        row = 0
+        for label in self._labels:
+            w.addstr(row, 2, label)
+            row += 1
+
+    def blank_values(self):
+        w = self.cwin
+        rx = self.size.x - 3
+        for row, (lw, fmt) in enumerate(self._vars):
+            w.addstr(row, 2 + lw, ' ' * (rx - lw))
+
+    def draw_values(self, vars):
+        w = self.cwin
+        rx = self.size.x - 3
+        for row, (lw, fmt) in enumerate(self._vars):
+            value = fmt(vars)
+            w.addstr(row, 2 + lw, lpad(rx - lw, value))
+
+
+class LimitsWindow(ModelWindow):
+
+    """A window subclass that shows the laser cutter's limit switches."""
+    def __init__(self, title):
+        super(LimitsWindow, self).__init__(title)
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        return Point(4, 14)
+
+    @property
+    def stretches(self):
+        return (True, False)
+
+    # Observation
+
+    def observe_model(self):
+        return model.limits()
+
+    # Contents
+
+    def draw_unchanging(self):
+        w = self.cwin
+        w.addstr(0, 5, 'Min Max')
+        w.addstr(1, 2, 'X')
+        w.addstr(2, 2, 'Y')
+        w.addstr(3, 2, 'Z')
+
+    def blank_values(self):
+        w = self.cwin
+        for row in (1, 2, 3):
+            for col in (6, 10):
+                w.addstr(row, col, ' ')
+        
+    def draw_values(self, limits):
+        w = self.cwin
+        w.addstr(1, 6, limits.xmin or ' ')
+        w.addstr(1, 10, limits.xmax or ' ')
+        w.addstr(2, 6, limits.ymin or ' ')
+        w.addstr(2, 10, limits.ymax or ' ')
+        w.addstr(3, 6, limits.zmin or ' ')
+        w.addstr(3, 10, limits.zmax or ' ')
+
+
+class SerialWindow(ModelWindow):
+
+    """A window subclass that shows the laser cutter's serial status."""
+
+    def __init__(self, title):
+        super(SerialWindow, self).__init__(title)
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        return Point(9, 14)
+
+    # Observation
+
+    def observe_model(self):
+        return model.serial()
+
+    # Contents
+
+    def draw_unchanging(self):
+        w = self.cwin
+        w.addstr(0, 2, 'RX')
+        w.addstr(1, 7, 'lines')
+        w.addstr(2, 7, 'chars')
+        w.addstr(3, 7, 'error')
+
+        w.addstr(5, 2, 'TX')
+        w.addstr(6, 7, 'chars')
+        w.addstr(7, 7, 'error')
+
+    def blank_values(self):
+        w = self.cwin
+        for row in (1, 2, 3, 6, 7):
+            w.addstr(row, 2, '    ')
+        
+    def draw_values(self, serial):
+        w = self.cwin
+        w.addstr(1, 2, lpad(4, serial.rx_lines))
+        w.addstr(2, 2, lpad(4, serial.rx_chars))
+        w.addstr(3, 2, lpad(4, serial.rx_error))
+
+        w.addstr(6, 2, lpad(4, serial.tx_chars))
+        w.addstr(7, 2, lpad(4, serial.rx_error))
+
+
+def layout_screen(screen):
+
+    """Create the window hierarchy for the screen."""
+
+    # set some global curses state
+    curses.use_default_colors()
+    curses.curs_set(0)
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED);
+
+    # create window hierarchy
+    return Screen(screen,
+                  Column([
+                StatusWindow('Laser Cutter Monitor'),
+                Row([
+                        FaultWindow('Faults'),
+                        Column([
+                                LimitsWindow('Limits'),
+                                SerialWindow('Serial'),
+                                ]),
+                        VariablesWindow('Variables')
+                        ])
+                ])
+                  )
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+#  CONTROLLER
+#
+
+
 def update_faults(line, vars):
     faults_set = set(line.split()[1:])
     m_f = model.faults
     for f in all_faults:
         b = f in faults_set
-        if m_f[f] != b:
-            m_f[f] = b
-            model.changes += 1
+        m_f[f] = b
         
 
 def update_ready(line, vars):
     send_enable_reporting()
+
 
 def update_state(line, vars):
     m_e = model.enabled
@@ -324,22 +1099,18 @@ def update_state(line, vars):
         if name.endswith('_enabled'):
             short_name = name.replace('_enabled', '')
             value = {'n': False, 'y': True, 'd': False, 'e': True}[value]
-            if m_e.get(short_name) != value:
-                m_e[short_name] = value
-                model.changes += 1
+            m_e[short_name] = value
         else:
-            if m_s.get(name) != vars[name]:
-                m_s[name] = value
-                model.changes += 1
+            m_s[name] = value
 
 
 def update_version(line, vars):
     model.version_string = 'Kerfburn ' + vars['version_string']
     model.status = None
-    model.changes += 1
 
-def parse_var(exp):
-    m = re.match(r'([a-z]{2})=(.*)', exp)
+
+def parse_var(exp, _match=re.compile(r'([a-z]{2})=(.*)').match):
+    m = _match(exp)
     assert m, 'exp=%r' % exp
     return m.groups()
 
@@ -353,16 +1124,25 @@ def update_vars(line, vars):
             value = int(value)
         except ValueError:
             pass
-        if m_v[name] != value:
-            m_v[name] = value
-            model.changes += 1
+        m_v[name] = value
 
 
 def update_water(line, vars):
     pass
 
 
+def update_complete(line, vars):
+    model.seq += 1
+    model_updates.notify_observers()
+
+
+# map the first lettter of each report line to a regular expression
+# that parses the line and a function that updates the model.
+
 updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
+
+        # --- = end of reports
+        (r'---', update_complete),
 
         # E = Emergency Stop report
         (r'E o=(?P<lid_open>[yn]) '
@@ -432,45 +1212,143 @@ updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
  
 
 def update_model(line):
-    key = line[:1]
-    if key in updaters:
-        pf = updaters[key]
-        if pf:
-            pat, func = pf
-            m = pat.match(line)
-            if m:
-                func(line, m.groupdict())
+    if line:
+        key = line[0]
+        if key in updaters:
+            pf = updaters[key]
+            if pf:
+                pat, func = pf
+                m = pat.match(line)
+                if m:
+                    func(line, m.groupdict())
+                else:
+                    raise Exception('not match: ' + line)
+        else:
+            model.status = '!' + line
+
+
+class Waitable(object):
+
+    """abstract base class for things that select() can wait for."""
+
+    __metaclass__ = ABCMeta
+
+    @property
+    def readfd(self):
+        return None
+
+    @property
+    def writefd(self):
+        return None
+
+    @property
+    def exceptfd(self):
+        return None
+
+    @property
+    def timeout(self):
+        return None
+
+    @classmethod
+    def select(cls, waitables):
+
+        def collect(selector):
+            return [fd
+                    for fd in (selector(w) for w in waitables)
+                    if fd is not None]
+
+        readfds = collect(lambda w: w.readfd)
+        writefds = collect(lambda w: w.writefd)
+        exceptfds = collect(lambda w: w.exceptfd)
+        # Damn it, I've been reading too much Lisp code.
+        timeouts = collect(lambda w: (lambda t: ((t, w)
+                                                 if t is not None
+                                                 else None))(w.timeout))
+        timeout = min(timeouts)[0] if timeouts else None
+
+        try:
+            r, w, x = select.select(readfds, writefds, exceptfds, timeout)
+        except select.error:
+            return
+
+        for rfd in r:
+            waitables[readfds.index(rfd)].do_read()
+        for wfd in w:
+            waitables[writefds.index(wfd)].do_write()
+        for xfd in x:
+            waitables[exceptfds.index(xfd)].do_except()
+        if not any((r, w, x)):
+            for (t, w) in timeouts:
+                if t == timeout:
+                   w.do_timeout()
+
+
+class Clock(Waitable):
+
+    """wait for the next seconds tick."""
+
+    @property
+    def timeout(self):
+        return 1.0 - math.modf(time.time())[0]
+
+    def do_timeout(self):
+        now = int(time.time())
+        if now != model.clock:
+            model.clock = now
+            model_clock.notify_observers()
+
+
+class Receiver(Waitable):
+
+    """accept input from "thruport receive"."""
+
+    def __init__(self):
+        super(Receiver, self).__init__()
+        self.receive_proc = subprocess.Popen(['thruport', 'receive'],
+                                        stdout=subprocess.PIPE,
+                                        bufsize=0)
+        self.rec_stream = self.receive_proc.stdout
+        self.inbuf = ''
+
+    def __del__(self):
+        self.receive_proc.terminate()
+
+    @property
+    def readfd(self):
+        return self.rec_stream
+
+    def do_read(self):
+        b = os.read(self.rec_stream.fileno(), 500)
+        if b == '':
+            exit()
+        self.inbuf += b
+        while '\n' in self.inbuf:
+            line, self.inbuf = self.inbuf.split('\n', 1)
+            line = line.rstrip('\r')
+            if line == 'Ready':
+                send_enable_reporting()
             else:
-                raise Exception('not match: ' + line)
-    else:
-        model.status = '!' + line
-        model.changes += 1
+                update_model(line)
 
 
-def pad(w, s):
-    s = str(s)[:w]
-    s += ' ' * (w - len(s))
-    return s
+class TTY(Waitable):
 
+    """accept TTY input."""
 
-def lpad(w, s):
-    s = str(s)[:w]
-    s = ' ' * (w - len(s)) + s
-    return s
+    @property
+    def readfd(self):
+        return sys.stdin
 
-def record_update(line, screen):
-    try:
-        update_model(line)
-    except Exception, x:
-        addnstr_attr(screen, 2, 2, 76, '!Exception!: !%s!' % x.message)
-
-        # attr = curses.color_pair(1) | curses.A_BOLD
-        # screen.addstr(2, 2, 'Exception: ', attr)
-        # screen.addstr(2, 13, pad(67, x.message), attr)
-        # screen.addstr(2, 2, pad(76, x.message))
+    def do_read(self):
+        ch = os.read(sys.stdin.fileno(), 1)
+        if ch.upper() == 'Q' or ch == chr(ESC):
+            exit()
 
 
 def send_enable_reporting():
+
+    """Send the S-code command to enable full reporting."""
+
     send_proc = subprocess.Popen(['thruport', 'send'],
                                  stdin=subprocess.PIPE,
                                  stderr=open('/dev/null', 'w'),
@@ -486,209 +1364,42 @@ def send_enable_reporting():
     send_proc.wait()
 
 
-def init():
+def curses_main(stdscr):
 
-    global model, receiver, receive_proc
-
-    model = Model()
-    receive_proc = subprocess.Popen(['thruport', 'receive'],
-                                    stdout=subprocess.PIPE,
-                                    bufsize=0)
-    receiver = receive_proc.stdout
-
+    window = layout_screen(stdscr)
+    waitables = [TTY(), Receiver(), Clock()]
     send_enable_reporting()
 
-
-def report_mask():
-    mask = ''
-    for var in sorted(all_vars):
-        desc = all_vars[var]
-        value = model.vars[var]
-        if desc.is_report():
-            l = var[1]
-            L = l.upper()
-            mask += [l, L][value == 'y']
-    return mask
-
-def addnstr_attr(win, y, x, w, s):
-    attrs = (curses.A_NORMAL, curses.color_pair(1) | curses.A_BOLD)
-    ai = 0
-    assert type(s) == str, 's=%r' % (s,)
-    for substr in s.split('!'):
-        substr = substr[:w]
-        win.addstr(y, x, substr, attrs[ai])
-        x += len(substr)
-        w -= len(substr)
-        ai = 1 - ai
-    if w:
-        win.addstr(y, x, ' ' * w, attrs[0])
-                   
-
-def update_screen(win):
-    from curses import ACS_HLINE, ACS_VLINE, ACS_BSSS, ACS_SBSS, ACS_SSBB
-    from curses import ACS_SSSB
-    h, w = win.getmaxyx()
-
-    win.addstr(0, 0, 'Laser Cutter Monitor', curses.A_BOLD)
-    win.addstr(0, 25, 'Version: ')
-    win.addstr(0, 34, model.version_string)
-
-    win.addstr(2, 2, 'Status: ')
-    win.addstr(3, 2, 'Laser:  ')
-    win.addstr(4, 2, 'Motors: ')
-    addnstr_attr(win, 2, 10, 68, model.overall_status())
-    addnstr_attr(win, 3, 10, 68, model.laser_status())
-    addnstr_attr(win, 4, 10, 68, model.motor_status())
-    win.noutrefresh()
-
-    f_win = curses.newwin(13, 41, 6, 0)
-    f_win.border(' ', ' ', ACS_HLINE, ' ', ACS_HLINE, ACS_HLINE, ' ', ' ')
-    f_win.addstr(0, 1, ' Faults ', curses.A_BOLD)
-    f_win.noutrefresh()
-    row = 1
-    for f in sorted(all_faults):
-        if f == 'LC':
-            continue
-        if model.status:
-            f_win.addstr(row, 2, pad(5, ''), curses.A_NORMAL)
-            f_win.addstr(row, 8, pad(30, ''), curses.A_NORMAL)
-            continue
-        desc = all_faults[f]
-        value = model.faults[f]
-        if value:
-            attr = curses.color_pair(1) | curses.A_BOLD
-        else:
-            attr = curses.A_NORMAL
-        f_win.addstr(row, 2, pad(5, ['   ok', 'FAULT'][value]), attr)
-        f_win.addstr(row, 9, pad(30, desc.name), attr)
-        row += 1
-    f_win.noutrefresh()
-
-    var_win = curses.newwin(18, 24, 6, 56)
-    var_win.border(ACS_VLINE, ' ', ACS_HLINE, ' ',
-                   ACS_BSSS, ACS_HLINE, ACS_VLINE, ' ')
-    var_win.addstr(0, 2, ' Variables ', curses.A_BOLD)
-    row = 1
-    for v in sorted(all_vars):
-        desc = all_vars[v]
-        if desc.is_report():
-            continue
-        name = desc.short_name
-        value = desc.format(model.vars[v])
-        nw = len(name)
-        var_win.addstr(row, 3, name)
-        var_win.addstr(row, 3 + nw, lpad(20 - nw, value))
-        row += 1
-    var_win.addstr(row, 3, 'Reports')
-    var_win.addstr(row, 13, report_mask())
-    var_win.noutrefresh()
-
-    lim_win = curses.newwin(9, 16, 6, 41)
-    lim_win.border(ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE,
-                   ACS_BSSS, ACS_BSSS, ACS_SSBB, ACS_SBSS)
-    lim_win.addstr(0, 2, ' Limits ', curses.A_BOLD)
-    lim_win.addstr(1, 6, 'Min Max')
-    lim_win.addstr(2, 3, 'X')
-    lim_win.addstr(3, 3, 'Y')
-    lim_win.addstr(4, 3, 'Z')
-    lim_win.addstr(2, 7, model.state.get('xmin', ' '))
-    lim_win.addstr(3, 7, model.state.get('ymin', ' '))
-    lim_win.addstr(4, 7, model.state.get('zmin', ' '))
-    lim_win.addstr(2, 11, model.state.get('xmax', ' '))
-    lim_win.addstr(3, 11, model.state.get('ymax', ' '))
-    lim_win.addstr(4, 11, model.state.get('zmax', ' '))
-    lim_win.noutrefresh()
-        
-    ser_win = curses.newwin(13, 16, 14, 41)
-    ser_win.border(ACS_VLINE, ACS_VLINE, ACS_HLINE, ' ',
-                   ACS_SSSB, ACS_SBSS, ' ', ' ')
-    ser_win.addstr(0, 2, ' Serial ', curses.A_BOLD)
-    ser_win.addstr(1, 3, 'RX')
-    ser_win.addstr(2, 3, lpad(4, model.state.get('rx_lines')))
-    ser_win.addstr(2, 8, 'lines')
-    ser_win.addstr(3, 3, lpad(4, model.state.get('rx_chars')))
-    ser_win.addstr(3, 8, 'chars')
-    ser_win.addstr(4, 3, lpad(4, model.state.get('rx_error')))
-    ser_win.addstr(4, 8, 'error')
-    ser_win.addstr(6, 3, 'TX')
-    ser_win.addstr(7, 3, lpad(4, model.state.get('tx_chars')))
-    ser_win.addstr(7, 8, 'chars')
-    ser_win.addstr(8, 3, lpad(4, model.state.get('tx_error')))
-    ser_win.addstr(8, 8, 'error')
-    ser_win.noutrefresh()
-
-
-displayed_time = ''
-
-def adjust_time(win):
-    global displayed_time
-    now = int(time.time())
-    if now != displayed_time:
-        time_str = time.strftime('%H:%M:%S', time.localtime(now))
-        win.addstr(0, 71, time_str)
-        win.noutrefresh()
-
-
-def curses_main(stdscr):
-    init()
-
-    curses.use_default_colors()
-    curses.curs_set(0)
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED);
-
-    # stdscr.addstr("Laser Cutter Monitor", curses.A_BOLD)
-    update_screen(stdscr)
-    stdscr.refresh()
-        
-    inbuf = ''
-    tt = 0
     while True:
-        timeout = 1.0 - math.modf(time.time())[0]
-        try:
-            ret = select.select([sys.stdin, receiver], [], [], timeout)
-        except select.error:
-            continue
-        if receiver in ret[0]:
-            b = os.read(receiver.fileno(), 10)
-            if b == '':
-                break
-            inbuf += b
-            while '\n' in inbuf:
-                line, inbuf = inbuf.split('\n', 1)
-                line = line.rstrip('\r')
-                if line == 'Ready':
-                    send_enable_reporting()
-                else:
-                    record_update(line, stdscr)
-        if sys.stdin in ret[0]:
-            ch = os.read(sys.stdin.fileno(), 1)
-            if ch.upper() == 'Q':
-                break
+        Waitable.select(waitables)
+        window.refresh()
 
-        adjust_time(stdscr)
-        if model.changes:
-            update_screen(stdscr)
-            model.changes = 0
-        curses.doupdate()
-    
 
 def logging_main():
-    init()
 
-    inbuf = ''
-    line_count = 0
-    while True:
-        b = receiver.read(10)
-        if b == '':
-            break
-        inbuf += b
-        while '\n' in inbuf:
-            line, inbuf = inbuf.split('\n', 1)
-            line_count += 1
-            update_model(line)
-            print repr(line)[1:-1]
-        if not inbuf and line_count >= 10:
-            break
+    waitables = [Receiver()]
+    send_enable_reporting()
+
+    while model.seq == 0:
+        Waitable.select(waitables)
+
+    print model
+    # init()
+
+    # inbuf = ''
+    # line_count = 0
+    # while True:
+    #     b = receiver.read(10)
+    #     if b == '':
+    #         break
+    #     inbuf += b
+    #     while '\n' in inbuf:
+    #         line, inbuf = inbuf.split('\n', 1)
+    #         line_count += 1
+    #         update_model(line)
+    #         print repr(line)[1:-1]
+    #     if not inbuf and line_count >= 10:
+    #         break
 
 
 def main(argv):
@@ -703,28 +1414,6 @@ def main(argv):
     else:
         curses.wrapper(curses_main)
 
+
 if __name__ == '__main__':
     main(sys.argv)
-
-    # import pprint
-    # print 'Model'
-    # print
-    # print 'status'
-    # pprint.pprint(model.status)
-    # print
-    # print 'vars'
-    # pprint.pprint(model.vars)
-    # print
-    # print 'faults'
-    # pprint.pprint(model.faults)
-    # print
-    # print 'enabled'
-    # pprint.pprint(model.enabled)
-    # print
-    # print 'state'
-    # pprint.pprint(model.state)
-    # print
-    # print 'changes'
-    # pprint.pprint(model.changes)
-    # print
-    # print model.laser_status()[0]
