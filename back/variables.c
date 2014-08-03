@@ -5,6 +5,8 @@
 
 #include <avr/pgmspace.h>
 
+#define MAX_OBSERVERS 1
+
 #define DESC_NAME_OFFSET 0
 #define DESC_PUNC_OFFSET 2
 #define DESC_TYPE_OFFSET 3
@@ -71,6 +73,8 @@ static PGM_P const variable_descriptors[VARIABLE_COUNT] PROGMEM = {
     zd_desc,
 };
 
+static v_observ *observers[VARIABLE_COUNT][MAX_OBSERVERS];
+
 struct variables_private variables_private;
 
 static int8_t cmp2(const char *a, const char *b)
@@ -90,6 +94,16 @@ static PGM_P desc_addr(v_index index)
 {
     fw_assert(index < VARIABLE_COUNT);
     return (PGM_P) pgm_read_word(&variable_descriptors[index]);
+}
+
+static void notify_observers(v_index index)
+{
+    for (uint8_t i = 0; i < MAX_OBSERVERS; i++) {
+        v_observ *observer = observers[index][i];
+        if (!observer)
+            break;
+        (*observer)(index);
+    }
 }
 
 void init_variables(void)
@@ -125,7 +139,7 @@ void reset_all_variables(void)
             break;
 
         case VT_SIGNED:
-            value.vv_signed = 0;
+            value.vv_signed = +0;
             break;
 
         case VT_ENUM:
@@ -137,6 +151,16 @@ void reset_all_variables(void)
             continue;
         }
         variables_private.vp_values[i] = value;
+    }
+}
+
+void set_variable(v_index index, v_value value)
+{
+    fw_assert(index < VARIABLE_COUNT);
+    v_value prev = variables_private.vp_values[index];
+    variables_private.vp_values[index] = value;
+    if (value.vv_unsigned != prev.vv_unsigned) {
+        notify_observers(index);
     }
 }
 
@@ -184,4 +208,14 @@ bool variable_enum_is_OK(v_index index, char e)
         if (e == *p++)
             return true;
     return false;
+}
+
+void observe_variable(v_index index, v_observ func)
+{
+    v_observ **p = observers[index];
+    uint8_t i;
+    for (i = 0; i < MAX_OBSERVERS && p[i]; i++)
+        continue;
+    fw_assert(i < MAX_OBSERVERS);
+    p[i] = func;
 }

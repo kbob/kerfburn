@@ -57,9 +57,21 @@ typedef char                variable_name      [VAR_NAME_SIZE];
 typedef variable_name       v_name;
 typedef char                variable_descriptor[VAR_DESC_SIZE];
 typedef variable_descriptor v_desc;
+typedef void                variable_observer(v_index);
+typedef variable_observer   v_observ;
 
 extern        void     init_variables        (void);
 extern        void     reset_all_variables   (void);
+
+static inline v_value  get_variable          (v_index index);
+static inline uint32_t get_unsigned_variable (v_index index);
+static inline int32_t  get_signed_variable   (v_index index);
+static inline uint8_t  get_enum_variable     (v_index index);
+
+extern        void     set_variable          (v_index, v_value);
+static inline void     set_unsigned_variable (v_index index, uint32_t);
+static inline void     set_signed_variable   (v_index index, int32_t);
+static inline void     set_enum_variable     (v_index index, uint8_t);
 
 // Reflection interface
 extern        v_index  lookup_variable       (const char *name);
@@ -68,15 +80,8 @@ extern        void     get_variable_name     (v_index index, v_name *out);
 extern        v_type   get_variable_type     (v_index index);
 extern        bool     variable_enum_is_OK   (v_index index, char e);
 
-static inline v_value  get_variable          (v_index index);
-static inline uint32_t get_unsigned_variable (v_index index);
-static inline int32_t  get_signed_variable   (v_index index);
-static inline uint8_t  get_enum_variable     (v_index index);
-
-static inline void     set_variable          (v_index, v_value);
-static inline void     set_unsigned_variable (v_index index, uint32_t);
-static inline void     set_signed_variable   (v_index index, int32_t);
-static inline void     set_enum_variable     (v_index index, uint8_t);
+// Observer interface
+extern        void     observe_variable      (v_index index, v_observ func);
 
 // Implementation
 
@@ -108,11 +113,11 @@ static inline uint8_t get_enum_variable(v_index index)
     return get_variable(index).vv_enum;
 }
 
-static inline void set_variable(v_index index, v_value value)
-{
-    fw_assert(index < VARIABLE_COUNT);
-    variables_private.vp_values[index] = value;
-}
+// static inline void set_variable(v_index index, v_value value)
+// {
+//     fw_assert(index < VARIABLE_COUNT);
+//     variables_private.vp_values[index] = value;
+// }
 
 static inline void set_unsigned_variable(v_index index, uint32_t u)
 {
