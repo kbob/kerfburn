@@ -1,10 +1,4 @@
-#!/bin/python
-
-# XXX
-log_entries = []
-def log(s):
-    log_entries.append(s)
-
+#!/usr/bin/python
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
@@ -1356,7 +1350,7 @@ def send_enable_reporting():
     sender = send_proc.stdin
     for v in all_vars:
         if v.startswith('r') and v != 'ri':
-            sender.write('%s=y\n' % v)
+            sender.write('%s=%s\n' % (v, 'ny'[v not in ('rr', 'rw')]))
     sender.write('ri=500\n')
     sender.write('Er\n')
     sender.flush()
