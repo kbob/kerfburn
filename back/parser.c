@@ -270,10 +270,7 @@ static inline void parse_assignment(uint8_t c0)
         return;
     }
     if (consume_line(pos)) {
-        // printf_P(PSTR("set %s = %"PRId32"\n"), name, value.vv_signed);
         set_variable(index, value);
-        if (name[0] == 'o')
-            update_overrides();
     }
 }
 

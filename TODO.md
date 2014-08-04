@@ -7,8 +7,6 @@ Is this a bug database?
 
 * Safety and fault improvments:
 
-   - rename `trigger_fault()` to `raise_fault()`.
-
    - LO fault: only asserted if main laser selected
 
    - LC fault:

@@ -56,7 +56,6 @@ static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
 };
 
 static fault_word            fault_states;
-static fault_word            fault_overrides;
 
 void get_fault_name(fault_index findex, f_name *name_out)
 {
@@ -69,36 +68,12 @@ void get_fault_name(fault_index findex, f_name *name_out)
 void clear_all_faults(void)
 {
     fault_states = 0;
-    fault_overrides = 0;
-}
-
-void update_overrides(void)
-{
-    fault_word new_overrides = 0;
-    if (get_enum_variable(V_OO) == 'y')
-        new_overrides |= 1 << F_LO;
-    if (get_enum_variable(V_OC) == 'y')
-        new_overrides |= 1 << F_LC;
-    bool changed;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        changed = fault_overrides != new_overrides;
-        if (changed)
-            fault_overrides = new_overrides;
-    }
-    if (changed)
-        update_safety();
 }
 
 bool fault_is_set(fault_index findex)
 {
     fw_assert(findex < FAULT_COUNT);
     return (fault_states & 1 << findex) ? true : false;
-}
-
-bool fault_is_overridden(fault_index findex)
-{
-    fw_assert(findex < FAULT_COUNT);
-    return (fault_overrides & 1 << findex) ? true : false;
 }
 
 void set_fault(fault_index findex)
@@ -122,10 +97,6 @@ void raise_fault(fault_index findex)
 {
     if (fault_is_set(findex))
         return;
-    if (fault_is_overridden(findex)) {
-        start_animation(A_WARNING);
-        return;
-    }
     set_fault(findex);
     const void *addr = &fault_descriptors[findex].fd_func;
     f_func *f = (f_func *)pgm_read_word(addr);

@@ -58,8 +58,6 @@ static void report_faults(void)
     for (uint8_t i = 0; i < FAULT_COUNT; i++) {
         if (fault_is_set(i)) {
             putchar(' ');
-            if (fault_is_overridden(i))
-                putchar('!');
             f_name name;
             get_fault_name(i, &name);
             printf_P(PSTR("%s"), name);
@@ -219,7 +217,7 @@ void report_all(void)
     if (reporting_is_active)
         return;
     reporting_is_active = true;
-    report_version();
+    // report_version();
     for (uint8_t i = 0; i < report_descriptor_count; i++) {
         const r_desc *rdp = report_descriptors + i;
         const v_index var = pgm_read_byte(&rdp->rd_var);

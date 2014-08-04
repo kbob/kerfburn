@@ -12,33 +12,11 @@
 #include "variables.h"
 
 // XXX We still aren't there yet.
-// I think that pressing the big red button will not trigger the LED animation.
-// We also need to shut down the lasers and motors directly.
 //
-// Something like this.
-//
-//     def ISR():
-//         if button_down:
-//             button_was_down = True
-//             raise_fault(F_SE)
-//
-//     def raise_fault():
-//         set_fault()
-//         update_safety()
-//         start_animation()
-//
-//     def update_safety():
-//         grovel through flags
-//         if not main_ok:
-//             stop_main_laser()
-//         if not vis_ok:
-//             stop_visible_laser()
-//         if not move_ok:
-//             stop_motors()
-//
-//     def parse():
-//         if var.startswith('o'):
-//             update_safety()
+// When the button transitions from off to on, we should raise F_ES.
+// When we execute an "S" = stop command, we check the button.
+// If the button is up, we clear F_ES.
+
 
 #define DEBOUNCE_MSEC 10    // disable interrupts 10 msec to debounce switches
 
@@ -53,6 +31,7 @@ void update_safety(void)
     bool move_ok = true;
     bool main_ok = true;
     bool vis_ok = true;
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         uint8_t state = safety_private.state;
         if (state & stop_switch_down) {
@@ -128,8 +107,17 @@ ISR(EMERGENCY_STOP_vect)
     enqueue_timeout(&safety_timeout, DEBOUNCE_MSEC);
 }
 
+static void observe(v_index var)
+{
+    update_safety();
+}
+
 void init_safety(void)
 {
+    // register variable observers
+    observe_variable(V_LP, observe);
+    observe_variable(V_OC, observe);
+    observe_variable(V_OO, observe);
     // Init timeout structure.
     safety_timeout.to_func = delayed_check;
 

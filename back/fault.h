@@ -25,21 +25,20 @@ typedef enum fault_index {
 typedef char fault_name[FAULT_NAME_SIZE];
 typedef fault_name f_name;
 
-// XXX inline all except raise_fault() and update_overrides().
+// XXX inline all except raise_fault() and lower_fault.
 extern void clear_all_faults     (void);
-extern void update_overrides     (void);
 extern bool fault_is_set         (fault_index findex);
 extern bool fault_is_overridden  (fault_index findex);
 extern void get_fault_name       (fault_index findex, f_name *name_out);
 
-// set_fault simply sets the flag.  raise_fault sets the flag and
-// also does associated actions.  (Stop motors, change illumination,
-// etc.)
+// set_fault() and clear_fault() simply set and clear the fault bit.
+// raise_fault() and lower_fault() set/clear the bit and also perform
+// associated actions.  (Stop motors, change illumination, etc.)
+
 extern void raise_fault          (fault_index findex);
+extern void lower_fault          (fault_index findex);
 
 extern void set_fault            (fault_index findex);
 extern void clear_fault          (fault_index findex);
-extern void set_fault_override   (fault_index findex, bool override);
-extern void clear_fault_override (fault_index findex, bool override);
 
 #endif /* !FAULT_included */
