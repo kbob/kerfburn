@@ -113,10 +113,8 @@ int serial_transmit(const char *buf, size_t size)
 {
     pthread_mutex_lock(&serial_lock);
     while (size) {
-        while (!tx_space) {
-            DBG("wait");
+        while (!tx_space)
             pthread_cond_wait(&serial_cond, &serial_lock);
-        }
         size_t ntw = tx_space;
         if (ntw > size)
             ntw = size;
