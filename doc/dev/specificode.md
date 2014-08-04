@@ -278,7 +278,7 @@ commands.
 
 #### S &mdash; Stop.
 
-Shut off lasers, stop motors, flush action queue.
+Shut off lasers, stop motors, flush action queue, clear all faults.
 Variable values are not affected.
 
 

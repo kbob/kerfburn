@@ -8,6 +8,7 @@
 #include "motors.h"
 #include "relays.h"
 #include "report.h"
+#include "safety.h"
 #include "scheduler.h"
 
 #if 0
@@ -58,6 +59,7 @@ void action_stop(void)
 {
     ANNOUNCE_ACTION;
     stop_immediately();
+    clear_emergency();
 }
 
 void action_enqueue_dwell(void)

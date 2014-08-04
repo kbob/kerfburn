@@ -7,7 +7,6 @@
 
 #include "fw_assert.h"
 #include "illum.h"
-#include "safety.h"
 #include "variables.h"
 
 typedef uint16_t fault_word;
@@ -38,21 +37,21 @@ DEFINE_FAULT_NAME(SI);
 
 // XXX Need to add a fault for malfunctioning limit switch.
 //     One fault for all limit switches would be fine -- user
-//     can easily figure out which switch doesn't work.
+//     can figure out which switch doesn't work.
 
 static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
-    { fn_ES, update_safety }, // Emergency Stop
-    { fn_LO, update_safety }, // Lid Open
-    { fn_LC, update_safety }, // Lid Closed
-    { fn_WF, NULL          }, // Water Flow
-    { fn_WT, NULL          }, // Water Temperature
-    { fn_SF, NULL          }, // Serial Frame Error
-    { fn_SO, NULL          }, // Serial Overrun
-    { fn_SP, NULL          }, // Serial Parity Error
-    { fn_SL, NULL          }, // Software Lexical Error
-    { fn_SS, NULL          }, // Software Syntax Error
-    { fn_SU, update_safety }, // Software Underflow
-    { fn_SI, NULL          }, // Software Missed Interrupt
+    { fn_ES, NULL },            // Emergency Stop
+    { fn_LO, NULL },            // Lid Open
+    { fn_LC, NULL },            // Lid Closed
+    { fn_WF, NULL },            // Water Flow
+    { fn_WT, NULL },            // Water Temperature
+    { fn_SF, NULL },            // Serial Frame Error
+    { fn_SO, NULL },            // Serial Overrun
+    { fn_SP, NULL },            // Serial Parity Error
+    { fn_SL, NULL },            // Software Lexical Error
+    { fn_SS, NULL },            // Software Syntax Error
+    { fn_SU, NULL },            // Software Underflow
+    { fn_SI, NULL },            // Software Missed Interrupt
 };
 
 static fault_word            fault_states;
@@ -68,6 +67,7 @@ void get_fault_name(fault_index findex, f_name *name_out)
 void clear_all_faults(void)
 {
     fault_states = 0;
+    start_animation(A_NONE);
 }
 
 bool fault_is_set(fault_index findex)
@@ -104,4 +104,18 @@ void raise_fault(fault_index findex)
         (*f)();
     }
     start_animation(A_ALERT);
+}
+
+void lower_fault(fault_index findex)
+{
+    if (!fault_is_set(findex))
+        return;
+    clear_fault(findex);
+    const void *addr = &fault_descriptors[findex].fd_func;
+    f_func *f = (f_func *)pgm_read_word(addr);
+    if (f) {
+        (*f)();
+    }
+    if (!fault_states)
+        start_animation(A_NONE);
 }

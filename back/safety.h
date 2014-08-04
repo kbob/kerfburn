@@ -18,7 +18,7 @@
 
 extern void init_safety(void);
 
-extern void emergency_stop(void);
+extern void clear_emergency(void);
 extern void update_safety(void);
 
 static inline bool movement_okay(void);

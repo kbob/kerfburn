@@ -1,7 +1,11 @@
 #include "safety.h"
 
+#include <stdio.h>
+
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <util/atomic.h>
+#include <util/delay.h>
 
 #include "config/pin-defs.h"
 
@@ -18,54 +22,134 @@
 // If the button is up, we clear F_ES.
 
 
-#define DEBOUNCE_MSEC 10    // disable interrupts 10 msec to debounce switches
+#define INIT_uSEC     20 // wait 20 usec to read switches
+#define DEBOUNCE_MSEC 10 // disable interrupts 10 msec to debounce switches
 
 static timeout safety_timeout;
-static bool button_was_down;
+// static bool button_was_down;
 
 struct safety_private safety_private;
 
-// called when safety or fault state changes.
+// // called when safety or fault state changes.
+// void update_safety(void)
+// {
+//     bool move_ok = true;
+//     bool main_ok = true;
+//     bool vis_ok = true;
+// 
+//     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+//         uint8_t state = safety_private.state;
+//         if (state & stop_switch_down) {
+//             // Big Red Button is down.
+//             set_fault(F_ES);
+//             move_ok = false;
+//             main_ok = false;
+//             vis_ok  = false;
+//             button_was_down = true;
+//         } else if (button_was_down) {
+//             // Big Red Button was released.
+//             button_was_down = false;
+//             clear_fault(F_ES);
+//         } else if (fault_is_set(F_ES)) {
+//             // Software raised F_ES fault.
+//             move_ok = false;
+//             main_ok = false;
+//             vis_ok  = false;
+//         } 
+//         if (state & lid_switch_open) {
+//             // Lid is open.
+//             set_fault(F_LO);
+//             clear_fault(F_LC);
+//             main_ok = main_ok && get_enum_variable(V_OO) == 'y';
+//         } else {
+//             // Lid is closed.
+//             clear_fault(F_LO);
+//             set_fault(F_LC);
+//             vis_ok = get_enum_variable(V_OC) == 'y';
+//         }
+//         safety_private.move_ok = move_ok;
+//         safety_private.main_ok = main_ok;
+//         safety_private.vis_ok  = vis_ok;
+//     }
+// }
+
+// Update safety-related state whenever anything changes:
+// 
 void update_safety(void)
 {
-    bool move_ok = true;
-    bool main_ok = true;
-    bool vis_ok = true;
+    char ls = get_enum_variable(V_LS);
+    bool oc = get_enum_variable(V_OC) == 'y';
+    bool oo = get_enum_variable(V_OO) == 'y';
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+
         uint8_t state = safety_private.state;
-        if (state & stop_switch_down) {
+        bool ES_is_raised = fault_is_set(F_ES);
+        bool LC_is_raised = fault_is_set(F_LC);
+        bool LO_is_raised = fault_is_set(F_LO);
+
+        // Raise F_ES if the big red button is down.
+        if (!ES_is_raised && (state & stop_switch_down)) {
             // Big Red Button is down.
-            set_fault(F_ES);
-            move_ok = false;
-            main_ok = false;
-            vis_ok  = false;
-            button_was_down = true;
-        } else if (button_was_down) {
-            // Big Red Button was released.
-            button_was_down = false;
-            clear_fault(F_ES);
-        } else if (fault_is_set(F_ES)) {
-            // Software raised F_ES fault.
-            move_ok = false;
-            main_ok = false;
-            vis_ok  = false;
-        } 
-        if (state & lid_switch_open) {
-            // Lid is open.
-            set_fault(F_LO);
-            clear_fault(F_LC);
-            main_ok = main_ok && get_enum_variable(V_OO) == 'y';
-        } else {
-            // Lid is closed.
-            clear_fault(F_LO);
-            set_fault(F_LC);
-            vis_ok = get_enum_variable(V_OC) == 'y';
+            safety_private.move_ok = false;
+            raise_fault(F_ES);
+            ES_is_raised = true;
         }
-        safety_private.move_ok = move_ok;
-        safety_private.main_ok = main_ok;
-        safety_private.vis_ok  = vis_ok;
+
+        // N.B., F_LO and F_LC are set early when the ls variable
+        // changes, not when the engine actually sets the active laser.
+        // The engine should use main_ok and vis_ok instead.
+
+        // Raise F_LO if the main laser is selected, the lid is open,
+        // and the fault is not overridden.
+        if (ls == 'm' && (state & lid_switch_open) && !oo) {
+            if (!LO_is_raised) {
+                raise_fault(F_LO);
+                LO_is_raised = true;
+            }
+        } else {
+            if (LO_is_raised) {
+                lower_fault(F_LO);
+                LO_is_raised = false;
+            }
+        }
+
+        // Raise F_LC if the visible laser is selected, the lid is
+        // closed, and the fault is not overridden.
+        if (ls == 'v' && !(state & lid_switch_open) && !oc) {
+            if (!LC_is_raised) {
+                raise_fault(F_LC);
+                LC_is_raised = true;
+            }
+        } else {
+            if (LC_is_raised) {
+                lower_fault(F_LC);
+                LC_is_raised = false;
+            }
+        }
+
+        // 
+        if (state & lid_switch_open) {
+            safety_private.main_ok = !ES_is_raised && oo;
+            safety_private.vis_ok = !ES_is_raised;
+        } else {
+            safety_private.main_ok = !ES_is_raised;
+            safety_private.vis_ok = !ES_is_raised && oc;
+        }
+
     }
+}
+
+void clear_emergency(void)
+{
+    if (safety_private.state & stop_switch_down) {
+        printf_P(PSTR("E-Stop button engaged\n"));
+        return;
+    }
+    clear_all_faults();
+    safety_private.move_ok = true;
+    update_safety();
+    printf_P(PSTR("Ready\n"));
 }
 
 static inline uint8_t get_state(void)
@@ -115,7 +199,7 @@ static void observe(v_index var)
 void init_safety(void)
 {
     // register variable observers
-    observe_variable(V_LP, observe);
+    observe_variable(V_LS, observe);
     observe_variable(V_OC, observe);
     observe_variable(V_OO, observe);
     // Init timeout structure.
@@ -126,6 +210,8 @@ void init_safety(void)
     INIT_INPUT_PIN(EMERGENCY_STOP);
 
     // Get initial switch state.
+    // XXX do I need a delay here?  Maybe do it twice?
+    _delay_us(INIT_uSEC);
     safety_private.state = get_state();
     update_safety();
 
