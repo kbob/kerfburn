@@ -1196,7 +1196,6 @@ updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
                'e=(?P<tx_error>(?:0x)?[\dA-Fa-f]+)',
          update_state),
 
-
         # V - variables report
         (r'V', update_vars),
 
