@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+loggage = []
+def log(msg):
+    loggage.append(str(msg))
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple, OrderedDict
 import copy
@@ -365,14 +369,22 @@ class Model(object):
     SerialState = namedtuple('serial',
                              'rx_lines rx_chars rx_error tx_chars tx_error')
 
+    PowerState = namedtuple('power',
+                            'low_voltage high_voltage water air')
+
     def limits(self):
-        return self._subset_state(self.LimitsState)
+        return self._subset_dict(self.LimitsState, self.state)
 
     def serial(self):
-        return self._subset_state(self.SerialState)
+        return self._subset_dict(self.SerialState, self.state, default=' ')
 
-    def _subset_state(self, cls):
-        return cls(*(self.state.get(f, ' ') for f in cls._fields))
+    def power(self):
+        return self._subset_dict(self.PowerState, self.enabled)
+
+    def _subset_dict(self, cls, dict_, default=None):
+        return cls(*(dict_.get(f, default) for f in cls._fields))
+
+    # Status is a string property.  It is observable through model_status.
 
     def get_status(self):
         return self._status
@@ -483,8 +495,14 @@ class Window(object):
         # N.B., rect is in absolute screen coordinates.
         self.bounds = rect
 
+    # Decoration
+
     # x_ticks and y_ticks are used by Row and Column to draw separators.
     x_ticks = y_ticks = {}
+
+    def titles(self):
+        return ((0, self.title),)
+    
 
     # Contents
 
@@ -647,6 +665,13 @@ class Column(Window):
             y += cheight + 1
         self.y_ticks = [sum(heights[:i]) + i - 1
                         for i in range(1, len(heights))]
+        if self.children:
+            self.x_ticks = self.children[0].x_ticks
+
+    # Decoration
+
+    def titles(self):
+        return self.children[0].titles() if self.children else ()
 
     # Contents
 
@@ -663,14 +688,8 @@ class Column(Window):
                 if x in uchild.x_ticks:
                     ch = ACS_PLUS
                 w.vline(y, x, ch, 1)
-            if lchild.title:
-                w.addstr(y, 1, ' %s ' % lchild.title, curses.A_BOLD)
-            # XXX do this better.
-            # XXX get rid of A_BOLD and use  title_attr.
-            for i, x in enumerate(lchild.x_ticks, 1):
-                w.addstr(y, x + 2,
-                         ' %s ' % lchild.children[i].title,
-                         curses.A_BOLD)
+            for x, title in lchild.titles():
+                w.addstr(y, x + 1, ' %s ' % title, curses.A_BOLD)
 
     def draw_changing(self):
         pass
@@ -706,9 +725,13 @@ class Row(Window):
             stretchers = [i
                           for i, child in enumerate(self.children)
                           if child.stretches[1]]
-            if stretchers:
-                # XXX distribute evenly
-                widths[stretchers[0]] += excess_width
+            ns = len(stretchers)
+            xw = excess_width
+            for s in stretchers:
+                dw = xw // ns
+                widths[s] += dw
+                xw -= dw
+                ns -= 1
 
         y, x = rect.origin
         h, w = rect.size
@@ -717,7 +740,20 @@ class Row(Window):
             crect = Rect(Point(y, x), csize)
             child.layout(crect)
             x += cwidth + 1
-        self.x_ticks = [sum(widths[:i]) + i - 1 for i in range(1, len(widths))]
+        if self.children:
+            self.y_ticks = self.children[0].y_ticks
+        x_ticks = [child.offset.x - 1 for child in self.children[1:]]
+        x_ticks += [xtik + child.offset.x
+                    for child in self.children
+                    for xtik in child.x_ticks]
+        self.x_ticks = sorted(x_ticks)
+
+    # Decoration
+
+    def titles(self):
+        return [(x + child.offset.x, label)
+                for child in self.children
+                for x, label in child.titles()]
 
     # Contents
 
@@ -832,6 +868,65 @@ class ModelWindow(Window, Observer):
         pass
 
 
+class PowerWindow(ModelWindow):
+
+    def __init__(self, title):
+        super(PowerWindow, self).__init__(title)
+        self._labels = ('Motors', 'Laser', 'Water', 'Air')
+
+    # Geometry
+
+    @property
+    def best_size(self):
+        x = 2 + sum(len(lab) + 2 for lab in self._labels) - 1 + 2
+        return Point(2, x)
+
+    @property
+    def stretches(self):
+        return (False, True)
+
+    def layout(self, rect):
+        super(PowerWindow, self).layout(rect)
+        lablen = sum(len(lab) for lab in self._labels)
+        excess = self.size.x - lablen - 4
+        cols = []
+        x = 2
+        n = len(self._labels)
+        for lab in self._labels:
+            d = excess // n
+            cols.append(x + d // 2)
+            x += len(lab) + d
+            excess -= d
+            n -= 1
+        self._cols = cols
+
+    # Observation
+
+    def observe_model(self):
+        return model.power()
+
+    # Contents
+
+    def draw_unchanging(self):
+        w = self.cwin
+        for x, label in zip(self._cols, self._labels):
+            w.addstr(0, x, label)
+            
+    def blank_values(self):
+        w = self.cwin
+        for x in self._cols:
+            w.addstr(1, x, '   ')
+        
+    def draw_values(self, power):
+        w = self.cwin
+        for value, x, label in zip(power, self._cols, self._labels):
+            if value:
+                w.addstr(1, x, 'ON', curses.color_pair(2) | curses.A_BOLD)
+                w.addstr(1, x + 2, ' ')
+            else:
+                w.addstr(1, x, 'off')
+
+
 class FaultWindow(ModelWindow):
 
     """A window subclass that shows the laser cutter's fault states."""
@@ -867,7 +962,7 @@ class FaultWindow(ModelWindow):
     def blank_values(self):
         w = self.cwin
         nw = self.size.x - 11
-        for row in range(len(self._faults)):
+        for row, desc in self._faults:
             w.addstr(row, 2, ' ' * 5)
             w.addstr(row, 9, ' ' * nw)
 
@@ -1045,26 +1140,30 @@ class SerialWindow(ModelWindow):
         w.addstr(7, 2, lpad(4, serial.rx_error))
 
 
-def layout_screen(screen):
+def create_view(screen):
 
-    """Create the window hierarchy for the screen."""
+    """Create and initialize the (curses) view."""
 
     # set some global curses state
     curses.use_default_colors()
     curses.curs_set(0)
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED);
+    curses.init_pair(2, curses.COLOR_GREEN, -1);
 
-    # create window hierarchy
+    # Create window hierarchy
     return Screen(screen,
                   Column([
                 StatusWindow('Laser Cutter Monitor'),
                 Row([
-                        FaultWindow('Faults'),
+                        Column([
+                                PowerWindow('Power'),
+                                FaultWindow('Faults'),
+                                ]),
                         Column([
                                 LimitsWindow('Limits'),
                                 SerialWindow('Serial'),
                                 ]),
-                        VariablesWindow('Variables')
+                        VariablesWindow('Variables'),
                         ])
                 ])
                   )
@@ -1358,7 +1457,7 @@ def send_enable_reporting():
 
 def curses_main(stdscr):
 
-    window = layout_screen(stdscr)
+    window = create_view(stdscr)
     waitables = [TTY(), Receiver(), Clock()]
     send_enable_reporting()
 
@@ -1408,4 +1507,8 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    finally:
+        for line in loggage:
+            print line
