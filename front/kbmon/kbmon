@@ -103,6 +103,7 @@ all_faults = OrderedDict((f[0], FaultDesc(*f)) for f in (
     ('LC', 'Lid Closed'),
     ('WF', 'Water Flow'),
     ('WT', 'Water Temperature'),
+    ('LS', 'Limit Switch Stuck'),
     ('SF', 'Serial Frame Error'),
     ('SO', 'Serial Overrun'),
     ('SP', 'Serial Parity Error'),

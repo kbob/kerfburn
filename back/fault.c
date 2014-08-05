@@ -27,6 +27,7 @@ DEFINE_FAULT_NAME(LO);
 DEFINE_FAULT_NAME(LC);
 DEFINE_FAULT_NAME(WF);
 DEFINE_FAULT_NAME(WT);
+DEFINE_FAULT_NAME(LS);
 DEFINE_FAULT_NAME(SF);
 DEFINE_FAULT_NAME(SO);
 DEFINE_FAULT_NAME(SP);
@@ -35,16 +36,13 @@ DEFINE_FAULT_NAME(SS);
 DEFINE_FAULT_NAME(SU);
 DEFINE_FAULT_NAME(SI);
 
-// XXX Need to add a fault for malfunctioning limit switch.
-//     One fault for all limit switches would be fine -- user
-//     can figure out which switch doesn't work.
-
 static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
     { fn_ES, NULL },            // Emergency Stop
     { fn_LO, NULL },            // Lid Open
     { fn_LC, NULL },            // Lid Closed
     { fn_WF, NULL },            // Water Flow
     { fn_WT, NULL },            // Water Temperature
+    { fn_LS, NULL },            // Limit Switch Stuck
     { fn_SF, NULL },            // Serial Frame Error
     { fn_SO, NULL },            // Serial Overrun
     { fn_SP, NULL },            // Serial Parity Error
@@ -54,43 +52,7 @@ static const f_desc fault_descriptors[FAULT_COUNT] PROGMEM = {
     { fn_SI, NULL },            // Software Missed Interrupt
 };
 
-static fault_word            fault_states;
-
-void get_fault_name(fault_index findex, f_name *name_out)
-{
-    fw_assert(findex < FAULT_COUNT);
-    PGM_P addr = (PGM_P)pgm_read_word(&fault_descriptors[findex].fd_name);
-    strncpy_P(*name_out, addr, sizeof *name_out);
-    (*name_out)[sizeof *name_out - 1] = '\0';
-}
-
-void clear_all_faults(void)
-{
-    fault_states = 0;
-    start_animation(A_NONE);
-}
-
-bool fault_is_set(fault_index findex)
-{
-    fw_assert(findex < FAULT_COUNT);
-    return (fault_states & 1 << findex) ? true : false;
-}
-
-void set_fault(fault_index findex)
-{
-    fw_assert(findex < FAULT_COUNT);
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fault_states |= 1 << findex;
-    }
-}
-
-void clear_fault(fault_index findex)
-{
-    fw_assert(findex < FAULT_COUNT);
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        fault_states &= ~(1 << findex);
-    }
-}
+struct fault_private fault_private;
 
 // N.B.  raise_fault() is called both from interrupts and from base level.
 void raise_fault(fault_index findex)
@@ -116,6 +78,21 @@ void lower_fault(fault_index findex)
     if (f) {
         (*f)();
     }
-    if (!fault_states)
+    if (!fault_private.fault_states)
         start_animation(A_NONE);
+}
+
+void lower_all_faults(void)
+{
+    for (f_index f = 0; f < FAULT_COUNT; f++)
+        if (fault_is_set(f))
+            lower_fault(f);
+}
+
+void get_fault_name(fault_index findex, f_name *name_out)
+{
+    fw_assert(findex < FAULT_COUNT);
+    PGM_P addr = (PGM_P)pgm_read_word(&fault_descriptors[findex].fd_name);
+    strncpy_P(*name_out, addr, sizeof *name_out);
+    (*name_out)[sizeof *name_out - 1] = '\0';
 }
