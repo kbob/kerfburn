@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from abc import ABCMeta, abstractmethod, abstractproperty
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import copy
 import curses
 from curses.ascii import ESC
@@ -94,9 +94,10 @@ class Observable(object):
 class FaultDesc(namedtuple('FaultDesc', 'id name')):
     pass
 
+
 # Describe all faults.
 
-all_faults = {f[0]: FaultDesc(*f) for f in (
+all_faults = OrderedDict((f[0], FaultDesc(*f)) for f in (
     ('ES', 'Emergency Stop'),
     ('LO', 'Lid Open'),
     ('LC', 'Lid Closed'),
@@ -105,11 +106,11 @@ all_faults = {f[0]: FaultDesc(*f) for f in (
     ('SF', 'Serial Frame Error'),
     ('SO', 'Serial Overrun'),
     ('SP', 'Serial Parity Error'),
-    ('SL', 'Software Lexical Error'),
-    ('SS', 'Software Syntax Error'),
+    ('SL', 'S-code Lexical Error'),
+    ('SS', 'S-code Syntax Error'),
     ('SU', 'Software Underflow'),
     ('SI', 'Software Missed Interrupt'),
-    )}
+    ))
 
 
 # The laser cutter has variables, and the veriables are of three types:
@@ -295,7 +296,7 @@ class Model(object):
                 s = '!water off!, ' + s
             s = 'Main Laser, ' + s
         if ls == 'v':
-            if not self.faults['LO'] and self.vars['oc'] == 'n':
+            if self.faults['LC']:
                 s = '!lid closed!'
             elif not self.enabled['low_voltage']:
                 s = '!low voltage disabled!'
@@ -837,6 +838,8 @@ class FaultWindow(ModelWindow):
     def __init__(self, title):
         super(FaultWindow, self).__init__(title)
         self._name_w = max(len(desc.name) for desc in all_faults.values())
+        self._faults = [(row, desc)
+                        for row, desc in enumerate(all_faults.itervalues())]
 
     # Geometry
 
@@ -862,19 +865,17 @@ class FaultWindow(ModelWindow):
 
     def blank_values(self):
         w = self.cwin
-        faults = sorted(f for f in all_faults if f != 'LC')
         nw = self.size.x - 11
-        for row in range(len(faults)):
+        for row in range(len(self._faults)):
             w.addstr(row, 2, ' ' * 5)
             w.addstr(row, 9, ' ' * nw)
 
     def draw_values(self, state):
         w = self.cwin
-        faults = sorted(f for f in all_faults if f != 'LC')
         nw = self.size.x - 11
-        for row, f in enumerate(faults):
+        for row, desc in self._faults:
             if state:
-                if state[f]:
+                if state[desc.id]:
                     value = 'FAULT'
                     attr = curses.color_pair(1) | curses.A_BOLD
                 else:
@@ -883,7 +884,7 @@ class FaultWindow(ModelWindow):
             else:
                 value = '     '
                 attr = curses.A_NORMAL
-            name = all_faults[f].name
+            name = desc.name
             w.addstr(row, 2, value, attr)
             w.addstr(row, 9, pad(nw, name), attr)
 
@@ -1206,19 +1207,16 @@ updaters = {pat[0]: (re.compile(pat), func) for (pat, func) in (
  
 
 def update_model(line):
-    if line:
-        key = line[0]
-        if key in updaters:
-            pf = updaters[key]
-            if pf:
-                pat, func = pf
-                m = pat.match(line)
-                if m:
-                    func(line, m.groupdict())
-                else:
-                    raise Exception('not match: ' + line)
-        else:
-            model.status = '!' + line
+    key = line[:1]
+    pf = updaters.get(key)
+    if pf:
+        pat, func = pf
+        m = pat.match(line)
+        if m:
+            func(line, m.groupdict())
+            return
+    elif line:
+        model.status = '!' + line
 
 
 class Waitable(object):
