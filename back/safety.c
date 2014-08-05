@@ -15,66 +15,15 @@
 #include "timer.h"
 #include "variables.h"
 
-// XXX We still aren't there yet.
-//
-// When the button transitions from off to on, we should raise F_ES.
-// When we execute an "S" = stop command, we check the button.
-// If the button is up, we clear F_ES.
-
-
 #define INIT_uSEC     20 // wait 20 usec to read switches
 #define DEBOUNCE_MSEC 10 // disable interrupts 10 msec to debounce switches
 
 static timeout safety_timeout;
-// static bool button_was_down;
 
 struct safety_private safety_private;
 
-// // called when safety or fault state changes.
-// void update_safety(void)
-// {
-//     bool move_ok = true;
-//     bool main_ok = true;
-//     bool vis_ok = true;
-// 
-//     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-//         uint8_t state = safety_private.state;
-//         if (state & stop_switch_down) {
-//             // Big Red Button is down.
-//             set_fault(F_ES);
-//             move_ok = false;
-//             main_ok = false;
-//             vis_ok  = false;
-//             button_was_down = true;
-//         } else if (button_was_down) {
-//             // Big Red Button was released.
-//             button_was_down = false;
-//             clear_fault(F_ES);
-//         } else if (fault_is_set(F_ES)) {
-//             // Software raised F_ES fault.
-//             move_ok = false;
-//             main_ok = false;
-//             vis_ok  = false;
-//         } 
-//         if (state & lid_switch_open) {
-//             // Lid is open.
-//             set_fault(F_LO);
-//             clear_fault(F_LC);
-//             main_ok = main_ok && get_enum_variable(V_OO) == 'y';
-//         } else {
-//             // Lid is closed.
-//             clear_fault(F_LO);
-//             set_fault(F_LC);
-//             vis_ok = get_enum_variable(V_OC) == 'y';
-//         }
-//         safety_private.move_ok = move_ok;
-//         safety_private.main_ok = main_ok;
-//         safety_private.vis_ok  = vis_ok;
-//     }
-// }
-
 // Update safety-related state whenever anything changes:
-// 
+// laser selected, lid open/closed override, E-stop or lid switch.
 void update_safety(void)
 {
     char ls = get_enum_variable(V_LS);
@@ -91,7 +40,6 @@ void update_safety(void)
         // Raise F_ES if the big red button is down.
         if (!ES_is_raised && (state & stop_switch_down)) {
             // Big Red Button is down.
-            safety_private.move_ok = false;
             raise_fault(F_ES);
             ES_is_raised = true;
         }
@@ -128,7 +76,8 @@ void update_safety(void)
             }
         }
 
-        // 
+        // Set the "fast" variables here.
+        safety_private.move_ok = !ES_is_raised;
         if (state & lid_switch_open) {
             safety_private.main_ok = !ES_is_raised && oo;
             safety_private.vis_ok = !ES_is_raised;
@@ -136,7 +85,6 @@ void update_safety(void)
             safety_private.main_ok = !ES_is_raised;
             safety_private.vis_ok = !ES_is_raised && oc;
         }
-
     }
 }
 

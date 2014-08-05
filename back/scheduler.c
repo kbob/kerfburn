@@ -5,6 +5,7 @@
 #include "config/geom-defs.h"
 
 #include "engine.h"
+#include "fault.h"
 #include "queues.h"
 #include "variables.h"
 
@@ -620,6 +621,9 @@ void init_scheduler(void)
 
 void enqueue_dwell(void)
 {
+    if (fault_is_set(F_ES))
+        return;
+
     uint32_t mt = get_unsigned_variable(V_MT);
 
     prep_motor_state(&x_state, mt, 0);
@@ -637,6 +641,9 @@ void enqueue_dwell(void)
 
 void enqueue_move(void)
 {
+    if (fault_is_set(F_ES))
+        return;
+
     uint32_t mt = get_unsigned_variable(V_MT);
 
     prep_motor_state(&x_state, mt, get_signed_variable(V_XD));
@@ -654,6 +661,9 @@ void enqueue_move(void)
 
 void enqueue_cut(void)
 {
+    if (fault_is_set(F_ES))
+        return;
+
     uint32_t mt = get_unsigned_variable(V_MT);
     int32_t  xd = get_signed_variable(V_XD);
     int32_t  yd = get_signed_variable(V_YD);
@@ -676,11 +686,17 @@ void enqueue_cut(void)
 
 void enqueue_engrave(void)
 {
+    if (fault_is_set(F_ES))
+        return;
+
     fw_assert(false && "XXX Write me!");
 }
 
 void enqueue_home(void)
 {
+    if (fault_is_set(F_ES))
+        return;
+
     // Call init_motor_timer_state() to force reinitialization of
     // the enable and direction signals on the next move or cut.
 #ifdef X_HOME_SEQ

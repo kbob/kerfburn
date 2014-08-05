@@ -5,34 +5,9 @@ Is this a bug database?
 
 ## Next!
 
-* Safety and fault improvments:
-
-   - LO fault: only asserted if main laser selected
-
-   - LC fault:
-      - only asserted if visible laser selected
-      - add to kbmon.
-
-   - add a command to clear ES fault.
-
-      - When either SW or the button raises ES, it latches.
-
-      - It unlatches when the "clear fault" command arrives and the
-        button is up.  Use a state machine.
-
-   - when ES asserted, discard all motion and dwell commands.
-
 * Laser Power:
   - write the i2c driver.
   - ensure the LP is set to zero at boot time.
-
-* How are safety and back panel going to work?
-
-     I think I can do away with fault overrides and change the parser
-     to call `update_safety()` instead of `update_overrides()`.  Then
-     I can eliminate `F_LC`.
-
-* Need a version of clear_fault that stops animation.
 
 
 ## Design
