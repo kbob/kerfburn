@@ -16,6 +16,7 @@
 // Da Dh Dl Dr Dw Dx Dy Dz
 // Ea Eh El Er Ew Ex Ey Ez
 // I
+// P
 // Qc Qd Qe Qh Qm
 // R
 // S
@@ -54,6 +55,7 @@ DEFINE_COMMAND_NAME(Ex);
 DEFINE_COMMAND_NAME(Ey);
 DEFINE_COMMAND_NAME(Ez);
 DEFINE_COMMAND_NAME(I);
+DEFINE_COMMAND_NAME(P);
 DEFINE_COMMAND_NAME(Qc);
 DEFINE_COMMAND_NAME(Qd);
 DEFINE_COMMAND_NAME(Qe);
@@ -81,6 +83,7 @@ static const c_desc command_descriptors[] PROGMEM = {
     { Ey_name, action_enable_Y_motor       },
     { Ez_name, action_enable_Z_motor       },
     { I_name,  action_illuminate           },
+    { P_name,  action_power                },
     { Qc_name, action_enqueue_cut          },
     { Qd_name, action_enqueue_dwell        },
     { Qe_name, action_enqueue_engrave      },

@@ -5,11 +5,6 @@ Is this a bug database?
 
 ## Next!
 
-* Laser Power:
-  - write the i2c driver.
-  - ensure the LP is set to zero at boot time.
-
-
 ## Design
 
 * Need fault states when we fail to move off the limit switches.  If

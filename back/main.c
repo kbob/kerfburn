@@ -5,9 +5,11 @@
 #include "engine.h"
 #include "fault.h"
 #include "fw_stdio.h"
+#include "i2c.h"
 #include "illum.h"
 #include "lasers.h"
 #include "LEDs.h"
+#include "laser-power.h"
 #include "limit-switches.h"
 #include "low-voltage.h"
 #include "memory.h"
@@ -27,6 +29,7 @@ static void initialize_devices(void)
     // Initialize hardware modules.
     init_timer();
     init_serial();
+    init_i2c();
     init_stdio();
     init_safety();
     init_limit_switches();
@@ -34,6 +37,7 @@ static void initialize_devices(void)
     init_relays();
     init_motors();
     init_lasers();
+    init_laser_power();
     init_LEDs();
     init_illumination();
 

@@ -94,8 +94,9 @@ laser pulses each time the motors have moved the cutting point by
 
 #### lp &mdash; Laser Power
 *unsigned integer*  
-Set the main laser's power level.
+The main laser's power level.
 Legal values range from 0, off, to 4095, full power.
+4095 actually overdrives the laser to an unsafe level.  The maximum safe level is *[TBD]*.
 
 The visible laser's power level can not be changed.
 It always fires at full power.
@@ -175,7 +176,7 @@ letter.
 #### Qd &mdash; Dwell
 
 Stop movement for a specified time.  If a laser is selected and the
-pulse mode is continuous, continue to fire at the current power level.
+ pulse mode is continuous, continue to fire at the current power level.
 If the mode is timed pulse, pulse at the current rate.  If the mode is
 distance pulse, the laser will not fire more than once at the dwell
 location.
@@ -275,6 +276,10 @@ These commands are executed immediately.  In most cases,
 you want to execute a Wait command before other immediate
 commands.
 
+
+#### P &mdash; Power.
+
+Set the main laser power level to the current value of **lp**.
 
 #### S &mdash; Stop.
 

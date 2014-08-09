@@ -6,6 +6,7 @@
 DECLARE_ACTION(wait);
 DECLARE_ACTION(stop);
 DECLARE_ACTION(illuminate);
+DECLARE_ACTION(power);
 DECLARE_ACTION(enqueue_dwell);
 DECLARE_ACTION(enqueue_move);
 DECLARE_ACTION(enqueue_cut);

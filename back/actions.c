@@ -4,12 +4,14 @@
 
 #include <avr/pgmspace.h>
 
+#include "laser-power.h"
 #include "low-voltage.h"
 #include "motors.h"
 #include "relays.h"
 #include "report.h"
 #include "safety.h"
 #include "scheduler.h"
+#include "variables.h"
 
 #if 0
 #define ANNOUNCE_ACTION (printf_P(PSTR("ACTION: %s\n"), __func__ + 7))
@@ -26,6 +28,7 @@
 // DEFINE_UNIMPLEMENTED_ACTION(wait);
 // DEFINE_UNIMPLEMENTED_ACTION(stop);
 DEFINE_UNIMPLEMENTED_ACTION(illuminate);
+//DEFINE_UNIMPLEMENTED_ACTION(power);
 // DEFINE_UNIMPLEMENTED_ACTION(enqueue_dwell);
 //DEFINE_UNIMPLEMENTED_ACTION(enqueue_move);
 //DEFINE_UNIMPLEMENTED_ACTION(enqueue_cut);
@@ -60,6 +63,12 @@ void action_stop(void)
     ANNOUNCE_ACTION;
     stop_immediately();
     clear_emergency();
+}
+
+void action_power(void)
+{
+    ANNOUNCE_ACTION;
+    set_laser_power(get_unsigned_variable(V_LP));
 }
 
 void action_enqueue_dwell(void)
