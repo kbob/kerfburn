@@ -69,6 +69,7 @@ def_output_pin    (SCK,     'SPI SCK')
 def_output_pin    (MOSI,    'SPI MOSI')
 def_output_pin    (MISO,    'SPI MISO')
 
+
 # i2c, used for main laser power
 
 def_input_pin     (SCL,     'I2C_CLOCK',            pull_up=True)
